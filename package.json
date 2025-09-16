@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "expo": "^54.0.7",
+    "react-native": "^0.81.4"
+  }
+}
