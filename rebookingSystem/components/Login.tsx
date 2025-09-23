@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { getApp } from 'firebase/app';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { app, db } from '../config/initialiseFirebase';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -12,8 +12,7 @@ const Login = () => {
   const handleLogin = async () => {
     setLoading(true);
     try {
-      const app = getApp();
-      const db = getFirestore(app);
+  // Use imported db from initialiseFirebase
 
       // Helper to check a collection for matching email and password
     // Modified: get documentId if found
