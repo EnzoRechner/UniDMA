@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { app, db } from '../config/initialiseFirebase';
+import { login as firestoreLogin } from '../dataconnect/firestoreCrud';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -12,40 +11,17 @@ const Login = () => {
   const handleLogin = async () => {
     setLoading(true);
     try {
-  // Use imported db from initialiseFirebase
-
-      // Helper to check a collection for matching email and password
-    // Modified: get documentId if found
-    const checkCollection = async (colName: string) => {
-      const q = query(
-        collection(db, colName),
-        where('email', '==', email),
-        where('password', '==', password)
-      );
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        // Return the documentId (userId)
-        return snapshot.docs[0].id;
-      }
-      return null;
-    };
-
-    const customerId = await checkCollection('customer');
-    const staffId = await checkCollection('staff');
-
-    if (customerId || staffId) {
-      // Set userId globally for customer view
-      globalThis.currentUserId = customerId ?? staffId ?? undefined;
-      // Optionally show a welcome alert, then navigate
-      // Alert.alert('Login Success', `Welcome${staffId ? ' Staff' : ''}!`);
-      if (customerId) {
-        router.replace('/customer');
+      const result = await firestoreLogin(email, password);
+      if (result.userId) {
+        globalThis.currentUserId = result.userId;
+        if (result.role === 'customer') {
+          router.replace('/customer');
+        } else {
+          router.replace('/(tabs)');
+        }
       } else {
-        router.replace('/(tabs)');
+        Alert.alert('Login Failed', 'Invalid email or password.');
       }
-    } else {
-      Alert.alert('Login Failed', 'Invalid email or password.');
-    }
     } catch {
       Alert.alert('Error', 'Failed to login.');
     } finally {
