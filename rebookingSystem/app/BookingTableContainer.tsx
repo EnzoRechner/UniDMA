@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { BookingTable } from '@/app/BookingTable';
 import { db } from '@/config/initialiseFirebase';
-import { collection, getDocs, orderBy, query, limit } from 'firebase/firestore';
-import { BookingTable } from '@/components/BookingTable';
+import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
 
 interface Booking {
   title: string;
