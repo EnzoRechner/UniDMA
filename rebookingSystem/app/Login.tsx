@@ -21,8 +21,6 @@ const Login = () => {
         globalThis.currentUserId = result.userId;
         if (result.role === 'customer') {
         router.replace('/Customer');
-        } else {
-        router.replace('/(tabs)'); // Already correct, tabs layout is in app/(tabs)
         }
       } else {
         Alert.alert('Login Failed', 'Invalid email or password.');
