@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { User, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as firebaseSignOut, updateProfile } from 'firebase/auth';
+import { User, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/firebase';
+import React, { ReactNode, createContext, useContext, useEffect, useState } from 'react';
+// eslint-disable-next-line import/no-unresolved
+import { auth, db } from '../config/initialiseFirebase';
 
 
 interface AuthContextType {
