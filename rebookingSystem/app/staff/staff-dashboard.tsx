@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import BookingView from './BookingView';
+import BookingView from './booking-view';
 
 const StaffDashboard = () => {
   return (

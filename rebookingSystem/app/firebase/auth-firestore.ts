@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
-import { db } from '../config/initialiseFirebase';
-import { Booking, User } from './types';
+import { db } from '../../config/initialiseFirebase';
+import { Booking, User } from '../other/types';
 
 // Utility function to generate a random 6-digit ID
 function generateRandomId(): string {

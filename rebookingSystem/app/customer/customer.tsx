@@ -2,9 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { fetchLatestBookings, fetchUserData } from './auth-firestore';
-import BookingWidget from './BookingWidget';
-import { Booking, User } from './types';
+import { fetchLatestBookings, fetchUserData } from '../firebase/auth-firestore';
+import BookingWidget from '../customer/booking-widget';
+import { Booking, User } from '../other/types';
 
 const { width: windowWidth } = Dimensions.get('window');
 
