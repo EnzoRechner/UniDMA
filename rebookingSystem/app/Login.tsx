@@ -1,29 +1,34 @@
-import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { login as firestoreLogin } from '../dataconnect/firestoreCrud';
-
-// Add type declaration for globalThis.currentUserId
-declare global {
-  var currentUserId: string | undefined;
-}
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { loginUser } from './auth-firestore';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async () => {
     setLoading(true);
     try {
-      const result = await firestoreLogin(email, password);
-      if (result.userId) {
-        globalThis.currentUserId = result.userId;
-        if (result.role === 'customer') {
-        router.replace('/Customer');
+      const { success, message, userId, role } = await loginUser(email, password);
+      if (success && userId) {
+        // Persist userId for future use
+        await AsyncStorage.setItem('userId', userId);
+
+        if (role === 0) {
+          router.replace('./Customer');
+        } else if (role === 1) {
+          router.replace('./Staff');
+        } else if (role === 2) {
+          router.replace('./Admin');
+        } else {
+          Alert.alert('Login Failed', 'Invalid role.');
         }
       } else {
-        Alert.alert('Login Failed', 'Invalid email or password.');
+        Alert.alert('Login Failed', message);
       }
     } catch {
       Alert.alert('Error', 'Failed to login.');
@@ -32,44 +37,54 @@ const Login = () => {
     }
   };
 
-  const router = useRouter();
-  const handleSignUp = () => {
-  router.push('/SignUp');
-  };
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Lekker aand</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <TouchableOpacity
-        style={[styles.glassButton, loading && styles.disabledButton]}
-        onPress={handleLogin}
-        disabled={loading}
-        activeOpacity={0.8}
-      >
-        <View style={styles.glassInner}>
-          <Text style={styles.glassButtonText}>{loading ? 'Logging in...' : 'Login'}</Text>
-        </View>
-      </TouchableOpacity>
-      <View style={styles.signupContainer}>
-        <Text style={styles.signupText}>Don&apos;t have an account?</Text>
-        <Button title="Sign Up" onPress={handleSignUp} color="#2b2b2bff" />
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.container}>
+        <Text style={styles.title}>Die Nag Uil</Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor="#666"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor="#666"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+
+        <TouchableOpacity
+          style={[styles.glassButton, loading && styles.disabledButton]}
+          onPress={handleLogin}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          <View style={styles.glassInner}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.glassButtonText}>Login</Text>
+            )}
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push('/SignUp')} style={styles.linkContainer}>
+          <Text style={styles.linkText}>Don&apos;t have an account? Sign Up</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity onPress={() => router.push('/UpdateLogin')} style={styles.linkContainer}>
+          <Text style={styles.linkText}>Forgot / Update Password?</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </>
   );
 };
 
@@ -82,10 +97,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'thin',
-    marginBottom: 100,
+    fontSize: 36,
+    fontWeight: 'bold',
+    marginBottom: 48,
     color: '#fff',
+    letterSpacing: 1.5,
   },
   input: {
     width: '100%',
@@ -98,14 +114,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     backgroundColor: '#222',
-  },
-  signupContainer: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  signupText: {
-    color: '#fff',
-    marginBottom: 8,
   },
   glassButton: {
     width: '100%',
@@ -121,7 +129,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    // Note: backdropFilter is web only
     backgroundColor: 'rgba(60, 78, 185, 0.37)',
   },
   glassButtonText: {
@@ -132,6 +139,15 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+  linkContainer: {
+    marginTop: 12,
+  },
+  linkText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    opacity: 0.8,
   },
 });
 
