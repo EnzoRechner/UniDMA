@@ -166,6 +166,7 @@ const BookingWidget: React.FC<BookingWidgetProps> = ({ booking, isActive, onConf
 const styles = StyleSheet.create({
   widgetContainer: {
     width: 300,
+    height: 500,
     marginHorizontal: 10,
     padding: 2,
     borderRadius: 20,

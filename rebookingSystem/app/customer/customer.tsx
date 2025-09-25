@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, Text, Vie
 import { fetchLatestBookings, fetchUserData } from '../firebase/auth-firestore';
 import BookingWidget from '../customer/booking-widget';
 import { Booking, User } from '../../lib/types';
+import { Button } from 'react-native';
 
 const { width: windowWidth } = Dimensions.get('window');
 
@@ -75,6 +76,13 @@ const CustomerPage: React.FC = () => {
           <Text style={styles.greetingText}>Good evening, {user.nagName}</Text>
         </View>
 
+        <View>
+          <Button title="Logout" onPress={async () => {
+            await AsyncStorage.removeItem('userId');
+            router.replace('../login-related/Login');
+          }} /> 
+        </View>
+         
         {/* Booking Widgets */}
         <ScrollView
           horizontal
