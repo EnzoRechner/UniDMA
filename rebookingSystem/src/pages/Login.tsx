@@ -38,4 +38,56 @@ export function LoginForm() {
             setError('Too many failed login attempts. Please try again later.');
           } else {
             setError('Failed to log in. Please try again.');
-          } 
+          }
+        }
+    }
+
+  return (
+    <div>
+      <div className="">
+        <h1>Welcome Back</h1>
+        <p>Sign in to your Book One account</p>
+      </div>
+
+      {error && <div className="error-message">{error}</div>}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="form">
+        <div className="form-group">
+          <label htmlFor="email">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            placeholder="Enter your email"
+            {...register('email')}
+          />
+          {errors.email && <p className="text-red-500">{errors.email.message}</p>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            placeholder="Enter your password"
+            {...register('password')}
+          />
+          {errors.password && <p className="text-red-500">{errors.password.message}</p>}
+        </div>
+
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Signing in...' : 'Sign In'}
+        </button>
+      </form>
+
+      <div className="">
+        <p>Don't have an account? <Link to="/signup">Sign up</Link></p>
+      </div>
+    </div>
+  );
+}
+
+export default LoginForm;
