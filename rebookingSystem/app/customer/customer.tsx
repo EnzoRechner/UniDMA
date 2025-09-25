@@ -20,7 +20,7 @@ const CustomerPage: React.FC = () => {
       try {
         const userId = await AsyncStorage.getItem('userId');
         if (!userId) {
-          router.replace('/Login');
+          router.replace('./Login');
           return;
         }
         
