@@ -35,6 +35,7 @@ const Login = () => {
   const router = useRouter();
   const handleSignUp = () => {
   router.push('/SignUp');
+  
   };
 
   return (
