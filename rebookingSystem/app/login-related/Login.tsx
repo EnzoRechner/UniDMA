@@ -19,7 +19,7 @@ const Login = () => {
         await AsyncStorage.setItem('userId', userId);
 
         if (role === 0) {
-          router.replace('./Customer');
+          router.replace('./customer');
         } else if (role === 1) {
           router.replace('./Staff');
         } else if (role === 2) {
