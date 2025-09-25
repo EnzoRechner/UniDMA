@@ -1,5 +1,5 @@
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
-import { db } from '../config/initialiseFirebase';
+import { db } from '../..initialiseFirebase';
 import { Booking, User } from './types';
 
 // Utility function to generate a random 6-digit ID
