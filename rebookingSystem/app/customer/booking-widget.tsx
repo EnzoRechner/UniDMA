@@ -5,7 +5,7 @@ import { getApp } from 'firebase/app';
 import { addDoc, collection, getFirestore } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Booking, User } from '../other/types';
+import { Booking, User } from '../../lib/types';
 
 interface BookingWidgetProps {
   booking?: Booking;

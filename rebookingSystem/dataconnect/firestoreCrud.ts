@@ -1,5 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, updateDoc, where } from 'firebase/firestore';
-import { Booking } from '../app/types';
+import { Booking } from '../lib/types';
 import { db } from '../config/initialiseFirebase';
 
 // Login: returns userId if found, null otherwise

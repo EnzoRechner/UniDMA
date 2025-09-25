@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { fetchLatestBookings, fetchUserData } from '../firebase/auth-firestore';
 import BookingWidget from '../customer/booking-widget';
-import { Booking, User } from '../other/types';
+import { Booking, User } from '../../lib/types';
 
 const { width: windowWidth } = Dimensions.get('window');
 

@@ -23,10 +23,10 @@ const AdminDashboard = () => {
     <View className="flex-1 bg-black p-4">
       <Text className="text-white text-3xl font-bold mb-6">Admin Dashboard</Text>
       <View className="flex-row flex-wrap justify-between">
-        <Tile title="Staff Accounts" route="/StaffDashboard" />
+        <Tile title="Staff Accounts" route="./StaffDashboard" />
         {/* <Tile title="App Settings" route="/app-settings" /> */}
         {/* <Tile title="Branch Locations" route="/branch-locations" /> */}
-        <Tile title="Bookings" route="/BookingView" />
+        <Tile title="Bookings" route="./BookingView" />
       </View>
     </View>
   );
