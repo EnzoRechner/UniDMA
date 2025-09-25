@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { loginUser } from './auth-firestore';
+import { loginUser } from '../firebase/auth-firestore';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -76,11 +76,11 @@ const Login = () => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/SignUp')} style={styles.linkContainer}>
+        <TouchableOpacity onPress={() => router.push('./sign-up')} style={styles.linkContainer}>
           <Text style={styles.linkText}>Don&apos;t have an account? Sign Up</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity onPress={() => router.push('/UpdateLogin')} style={styles.linkContainer}>
+        <TouchableOpacity onPress={() => router.push('./update-login')} style={styles.linkContainer}>
           <Text style={styles.linkText}>Forgot / Update Password?</Text>
         </TouchableOpacity>
       </View>
