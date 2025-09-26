@@ -19,11 +19,11 @@ const Login = () => {
         await AsyncStorage.setItem('userId', userId);
 
         if (role === 0) {
-          router.replace('./customer');
+          router.replace('../customer/customer');
         } else if (role === 1) {
-          router.replace('./Staff');
+          router.replace('../staff/staff-page');
         } else if (role === 2) {
-          router.replace('./Admin');
+          router.replace('../staff/admin-dashboard');
         } else {
           Alert.alert('Login Failed', 'Invalid role.');
         }

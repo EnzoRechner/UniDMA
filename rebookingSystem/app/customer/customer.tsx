@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, Text, View, TouchableOpacity  } from 'react-native';
 import { fetchLatestBookings, fetchUserData } from '../firebase/auth-firestore';
-import BookingWidget from '../customer/booking-widget';
+import BookingWidget from './booking-widget';
 import { Booking, User } from '../../lib/types';
-import { Button } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
 
 const { width: windowWidth } = Dimensions.get('window');
 
@@ -21,7 +21,7 @@ const CustomerPage: React.FC = () => {
       try {
         const userId = await AsyncStorage.getItem('userId');
         if (!userId) {
-          router.replace('./Login');
+          router.replace('../login-related/login');
           return;
         }
         
@@ -76,12 +76,15 @@ const CustomerPage: React.FC = () => {
           <Text style={styles.greetingText}>Good evening, {user.nagName}</Text>
         </View>
 
-        <View>
-          <Button title="Logout" onPress={async () => {
-            await AsyncStorage.removeItem('userId');
-            router.replace('../login-related/Login');
-          }} /> 
-        </View>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={async () => {
+            await AsyncStorage.removeItem("userId");
+            router.replace("../login-related/login");
+          }}>
+          <Ionicons name="log-out-outline" size={20} color="#fff" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
          
         {/* Booking Widgets */}
         <ScrollView
@@ -154,6 +157,26 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 5,
+  },
+    logoutButton: {
+    position: "absolute",
+    top: 40, // adjust for safe area / header height
+    right: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.15)", // glassy
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.25)",
+    backdropFilter: "blur(10px)" as any, // works on web (expo web), ignored on native
+  },
+    logoutText: {
+    color: "#fff",
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: "600",
   },
   greetingText: {
     color: '#fff',

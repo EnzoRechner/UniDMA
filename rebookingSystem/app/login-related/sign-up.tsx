@@ -22,7 +22,7 @@ const SignUp = () => {
         if (userId) {
           await AsyncStorage.setItem('userId', userId);
         }
-        router.replace('./Customer');
+        router.replace('../customer/customer');
       } else {
         Alert.alert('Sign Up Failed', message);
       }
@@ -39,7 +39,7 @@ const SignUp = () => {
       <View style={styles.container}>
         <TouchableOpacity
           style={[styles.glassButton, styles.backButton]}
-          onPress={() => router.replace('./Login')}
+          onPress={() => router.replace('../login-related/login')}
           activeOpacity={0.8}
         >
           <View style={styles.glassInner}>
