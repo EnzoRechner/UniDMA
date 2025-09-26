@@ -112,7 +112,7 @@ export function SignUpForm() {
       <div>
         <p>
           Already have an account?{" "}
-          <Link to="/login">Log In</Link>
+          <Link to="./login-page">Log In</Link>
         </p>
       </div>
     </>

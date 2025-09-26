@@ -39,7 +39,7 @@ const SignUp = () => {
       <View style={styles.container}>
         <TouchableOpacity
           style={[styles.glassButton, styles.backButton]}
-          onPress={() => router.replace('../login-related/login')}
+          onPress={() => router.replace('../login-related/login-page')}
           activeOpacity={0.8}
         >
           <View style={styles.glassInner}>

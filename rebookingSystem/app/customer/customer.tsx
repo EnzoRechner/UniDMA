@@ -21,7 +21,7 @@ const CustomerPage: React.FC = () => {
       try {
         const userId = await AsyncStorage.getItem('userId');
         if (!userId) {
-          router.replace('../login-related/login');
+          router.replace('../login-related/login-page');
           return;
         }
         
@@ -80,7 +80,7 @@ const CustomerPage: React.FC = () => {
           style={styles.logoutButton}
           onPress={async () => {
             await AsyncStorage.removeItem("userId");
-            router.replace("../login-related/login");
+            router.replace("../login-related/login-page");
           }}>
           <Ionicons name="log-out-outline" size={20} color="#fff" />
           <Text style={styles.logoutText}>Logout</Text>
