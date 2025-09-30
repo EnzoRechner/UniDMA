@@ -187,7 +187,11 @@ const BookingView = () => {
 
                 <View style={styles.listContent}>
                     {bookings.length > 0 ? (
-                        bookings.map((item) => renderCard(item, false, false))
+                        bookings.map((item) => (
+                            <React.Fragment key={item.id}>
+                                {renderCard(item, false, false)}
+                            </React.Fragment>
+                        ))
                     ) : (
                         <View style={styles.emptyList}>
                             <Text style={styles.emptyTextPrimary}>🎉 All Caught Up!</Text>
@@ -214,7 +218,11 @@ const BookingView = () => {
 
                 <View style={styles.listContent}>
                     {confirmedBooking.length > 0 ? (
-                        confirmedBooking.map((item) => renderCard(item, false, true))
+                        confirmedBooking.map((item) => (
+                            <React.Fragment key={item.id}>
+                                {renderCard(item, false, true)}
+                            </React.Fragment>
+                        ))
                     ) : (
                         <View style={styles.emptyList}>
                             <Text style={styles.emptyTextPrimary}>Clear History</Text>
@@ -241,7 +249,11 @@ const BookingView = () => {
 
                 <View style={styles.listContent}>
                     {cancelledBooking.length > 0 ? (
-                        cancelledBooking.map((item) => renderCard(item, true, false))
+                        cancelledBooking.map((item) => (
+                            <React.Fragment key={item.id}>
+                                {renderCard(item, true, false)}
+                            </React.Fragment>
+                        ))
                     ) : (
                         <View style={styles.emptyList}>
                             <Text style={styles.emptyTextPrimary}>Ready to Go</Text>
