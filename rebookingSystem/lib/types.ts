@@ -23,7 +23,7 @@ export interface Booking {
   branch: string;
   seats: number;
   message: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed'; // Booking status
   createdAt: number; // Unix timestamp
 }
 

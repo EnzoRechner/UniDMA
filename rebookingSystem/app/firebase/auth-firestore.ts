@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, limit, query, setDoc, where, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, setDoc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/initialiseFirebase';
 import { Booking, User, Staff } from '../../lib/types';
 import { Alert } from 'react-native';
@@ -127,25 +127,21 @@ export async function fetchLatestBookings(userId: string): Promise<Booking[]> {
 }
 
 /**
- * Fetches the most recent bookings for a specific user.
- * @param {string} staffEmail - The staff's email.
+ * Fetches the most recent bookings for a certain branch.
+ * @param {string} staffId - The staff's ID.
  * @returns {Promise<Booking[]>} - A list of the latest bookings.
  */
-export async function fetchStaffLatestBookings(staffEmail: string): Promise<Booking[]> {
+export async function fetchStaffLatestBookings(staffId: string, status: string): Promise<Booking[]> {
   try {
-    const staffQuery = query(
-      collection(db, 'Staff'),
-      where('email', '==', staffEmail),
-      limit(1)
-    );
-    const staffSnapshot = await getDocs(staffQuery);
 
-    if (staffSnapshot.empty) {
-      console.log(`Staff with ID ${staffEmail} not found.`);
+    const staffQuery = doc(db, 'users', staffId);
+    const staffDoc = await getDoc(staffQuery);
+
+    if (!staffDoc.exists()) {
       return [];
     }
 
-    const staffData = staffSnapshot.docs[0].data() as Staff;
+    const staffData = staffDoc.data() as Staff;
     const staffBranch = staffData.branch;
 
     if (!staffBranch) {
@@ -156,15 +152,12 @@ export async function fetchStaffLatestBookings(staffEmail: string): Promise<Book
     const bookingsQuery = query(
       collection(db, 'bookings'),
       where('branch', '==', staffBranch), 
-      where('status', '==', "pending")       
+      where('status', '==', status)       
     );
 
     const querySnapshot = await getDocs(bookingsQuery);
-    console.log(`Bookings querySnapshot size: ${querySnapshot.size}`);
-    console.log(`Bookings querySnapshot empty: ${querySnapshot.empty}`);
 
     if (querySnapshot.empty) {
-      console.log(`No bookings found for branch ${staffBranch}.`);
       return [];
     }
     const bookings = querySnapshot.docs.map(doc => ({
@@ -173,8 +166,6 @@ export async function fetchStaffLatestBookings(staffEmail: string): Promise<Book
     }));
 
     bookings.sort((a, b) => b.createdAt - a.createdAt);
-    
-    console.log(`Fetched ${bookings.length} bookings for branch ${staffBranch}.`);
 
     // Return the top 5
     return bookings.slice(0, 5)
