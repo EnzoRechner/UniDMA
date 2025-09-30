@@ -8,7 +8,6 @@ import { createBooking } from '../../dataconnect/firestoreCrud';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Booking } from '../../lib/types';
 
-
 interface BookingWidgetProps {
   booking?: Booking;
   isActive: boolean;
@@ -131,6 +130,23 @@ const BookingWidget: React.FC<BookingWidgetProps> = ({ booking, isActive, onConf
   const existingStatusText = statusInfo?.text || 'Pending Confirmation'; // Updated text for clarity
 
 
+      useEffect(() => {
+        const checkUserAndFetch = async () => {
+            const userId = await AsyncStorage.getItem('userId');
+            if (!userId) {
+                Alert.alert('Authentication Error', 'You must be logged in to manage bookings.');
+                setLoading(false);
+                return;
+            }
+            // Fetch both lists on initial load
+            await Promise.all([
+                getStatusStyle(booking?.status || 'pending'), // Fetch status style
+            ]);
+            setLoading(false);
+        };
+        checkUserAndFetch();
+    }, []);
+    
   return (
     <View 
       style={[
@@ -445,3 +461,7 @@ const styles = StyleSheet.create({
 });
 
 export default BookingWidget;
+
+function useEffect(arg0: () => void, arg1: never[]) {
+  throw new Error('Function not implemented.');
+}

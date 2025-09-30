@@ -1,16 +1,19 @@
 import { Check, X, MessageSquare } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, StyleSheet } from 'react-native';
-import { Booking } from '../../lib/types';
-import { fetchStaffLatestBookings, updateStatus } from '../firebase/auth-firestore';
+import { Booking, User } from '../../lib/types';
+import { fetchStaffLatestBookings, updateStatus, fetchUserData } from '../firebase/auth-firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BookingView = () => {
-    // --- State and Handlers (Logic kept the same) ---
+    const router = useRouter();
+
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [cancelledBooking, setCancelledBookings] = useState<Booking[]>([]);
     const [confirmedBooking, setConfirmedBookings] = useState<Booking[]>([]);    
     const [loading, setLoading] = useState(true);
+    const [userId, setUserId] = useState<string | null>(null);
 
     // Placeholder for data fetching logic
     const getBookings = async (id: string) => {
@@ -48,19 +51,26 @@ const BookingView = () => {
 
     useEffect(() => {
         const checkUserAndFetch = async () => {
-            const userId = await AsyncStorage.getItem('userId');
-            if (!userId) {
-                Alert.alert('Authentication Error', 'You must be logged in to manage bookings.');
-                setLoading(false);
-                return;
+          try {
+            const Id = await AsyncStorage.getItem('userId');
+            if (!Id) {
+              setLoading(false);
+              router.replace('../login-related/login-page');
+              return;
             }
+            setUserId(Id);
+
             // Fetch both lists on initial load
             await Promise.all([
-                getBookings(userId),
-                getCancelledBookings(userId),
-                getConfirmedBookings(userId)
+                getBookings(Id),
+                getCancelledBookings(Id),
+                getConfirmedBookings(Id)
             ]);
-            setLoading(false);
+          } catch (error) {
+            Alert.alert('Error', `Failed to load user data: ${error}.`);
+          } finally {
+            if (!userId) setLoading(false);
+          }
         };
         checkUserAndFetch();
     }, []);
@@ -176,7 +186,6 @@ const BookingView = () => {
                   <Text style={styles.headerTitle}>Pending ({bookings.length})</Text>
                   <TouchableOpacity
                       onPress={async () => {
-                          const userId = await AsyncStorage.getItem('userId');
                           if (userId) getBookings(userId);
                       }}
                       style={styles.refreshButton}
@@ -207,7 +216,6 @@ const BookingView = () => {
                   <Text style={styles.headerTitle}>Confirmed ({confirmedBooking.length})</Text>
                   <TouchableOpacity
                       onPress={async () => {
-                          const userId = await AsyncStorage.getItem('userId');
                           if (userId) getConfirmedBookings(userId);
                       }}
                       style={styles.refreshButton}
@@ -238,7 +246,6 @@ const BookingView = () => {
                   <Text style={styles.headerTitle}>Cancelled ({cancelledBooking.length})</Text>
                   <TouchableOpacity
                       onPress={async () => {
-                          const userId = await AsyncStorage.getItem('userId');
                           if (userId) getCancelledBookings(userId);
                       }}
                       style={styles.refreshButton}

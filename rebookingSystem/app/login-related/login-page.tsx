@@ -21,7 +21,7 @@ const Login = () => {
         if (role === 0) {
           router.replace('../customer/customer');          
         } else if (role === 1) {
-          router.replace('../staff/StaffDashboard');
+          router.replace('../staff/staff-dashboard');
         } else if (role === 2) {
            router.replace('../admin/admin-dashboard');
         } else {
