@@ -2,7 +2,8 @@ import { User, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAut
 import { doc, setDoc } from 'firebase/firestore';
 import React, { ReactNode, createContext, useContext, useEffect, useState } from 'react';
 // eslint-disable-next-line import/no-unresolved
-import { auth, db } from '../config/initialiseFirebase';
+// Update the import path below if the file is named differently or located elsewhere
+import { auth, db } from '../config/initializeFirebase';
 
 
 interface AuthContextType {

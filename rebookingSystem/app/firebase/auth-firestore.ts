@@ -1,6 +1,8 @@
-import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, setDoc, where, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/initialiseFirebase';
-import { Booking, User } from '../../lib/types';
+import { Booking, User, Staff } from '../../lib/types';
+import { Alert } from 'react-native';
+
 // Utility function to generate a random 6-digit ID
 function generateRandomId(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -123,5 +125,71 @@ export async function fetchLatestBookings(userId: string): Promise<Booking[]> {
     return [];
   }
 }
+
+/**
+ * Fetches the most recent bookings for a certain branch.
+ * @param {string} staffId - The staff's ID.
+ * @returns {Promise<Booking[]>} - A list of the latest bookings.
+ */
+export async function fetchStaffLatestBookings(staffId: string, status: string): Promise<Booking[]> {
+  try {
+
+    const staffQuery = doc(db, 'users', staffId);
+    const staffDoc = await getDoc(staffQuery);
+
+    if (!staffDoc.exists()) {
+      return [];
+    }
+
+    const staffData = staffDoc.data() as Staff;
+    const staffBranch = staffData.branch;
+
+    if (!staffBranch) {
+        console.error("Staff document is missing 'branch'.");
+        return [];
+    }
+
+    const bookingsQuery = query(
+      collection(db, 'bookings'),
+      where('branch', '==', staffBranch), 
+      where('status', '==', status)       
+    );
+
+    const querySnapshot = await getDocs(bookingsQuery);
+
+    if (querySnapshot.empty) {
+      return [];
+    }
+    const bookings = querySnapshot.docs.map(doc => ({
+      ...doc.data() as Omit<Booking, 'id'>,
+      id: doc.id,
+    }));
+
+    bookings.sort((a, b) => b.createdAt - a.createdAt);
+
+    // Return the top 5
+    return bookings.slice(0, 5)
+  } catch (error) {
+    console.error("Error fetching latest bookings:", error);
+    return [];
+  }
+}
+
+/**
+ * Update the status of a booking on the firebase side.
+ * @param {string} id - The id of the booking.
+ * @param {'confirmed' | 'cancelled'} status - The new status.
+ * @returns {Promise<Booking[]>} - A list of the latest bookings.
+ */
+  export const updateStatus = async (id: string, status: 'confirmed' | 'cancelled') => {
+    try {
+      // Update Firestore
+      await updateDoc(doc(db, 'bookings', id), { status });
+      
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update booking status.');
+      console.error('Firestore update error:', error);
+    }
+  };
 
 export default {};

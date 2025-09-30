@@ -78,7 +78,7 @@ const BookingWidget: React.FC<BookingWidgetProps> = ({ booking, isActive, onConf
     setIsSubmitting(true); // Start the button transition immediately (Green -> Yellow)
     
     try {
-      const bookingData: Omit<Booking, 'id' | 'status' | 'createdAt' | 'userId'> = {
+      const bookingData: Omit<Booking, 'id' | 'status' | 'createdAt' | 'userId' | 'custEmail'> = {
         date: date.toISOString().split('T')[0], // YYYY-MM-DD
         time,
         branch,
