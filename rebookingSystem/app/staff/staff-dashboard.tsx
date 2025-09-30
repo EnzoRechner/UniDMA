@@ -4,8 +4,8 @@ import BookingView from './booking-view';
 
 const StaffDashboard = () => {
   return (
-    <View className="flex-1 bg-black p-4">
-      <Text className="text-white text-3xl font-bold mb-4">Bookings</Text>
+    <View style={{ flex: 1, backgroundColor: '#000', padding: 16 }}>
+      <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold', marginBottom: 16 }}>Bookings</Text>
       <BookingView />
     </View>
   );

@@ -66,7 +66,7 @@ export async function deleteDocById(collectionName: string, docId: string) {
  * @param userId - The ID of the customer making the booking.
  * @returns The newly created Booking object.
  */
-export async function createBooking(booking: Omit<Booking, 'id' | 'status' | 'createdAt' | 'userId'>, userId: string): Promise<Booking> {
+export async function createBooking(booking: Omit<Booking, 'id' | 'status' | 'createdAt' | 'userId' | 'custEmail'>, userId: string): Promise<Booking> {
   const bookingData = {
     ...booking,
     userId: userId, // Link the booking to the customer's userId
