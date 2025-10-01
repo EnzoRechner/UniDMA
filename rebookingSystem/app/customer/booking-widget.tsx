@@ -129,8 +129,7 @@ const BookingWidget: React.FC<BookingWidgetProps> = ({ booking, isActive, onConf
   // Status button for existing bookings
   const existingStatusColor = statusInfo?.color || CUSTOM_COLORS.pending;
   const existingStatusText = statusInfo?.text || 'Pending Confirmation'; // Updated text for clarity
-
-
+  
   return (
     <View 
       style={[
