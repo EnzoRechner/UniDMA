@@ -11,11 +11,11 @@ export default function Index() {
     if (!loading) {
       if (user) {
         if (userProfile) {
-          router.replace('./customer/customer');
+          router.replace('/(tabs)');
         } else {
           // User exists but profile is incomplete, redirect to branch selection with user info
           router.replace({
-            pathname: './auth/branch-selection',
+            pathname: '/auth/branch-selection',
             params: { 
               email: user.email || '', 
               displayName: user.displayName || 'User' 
@@ -23,7 +23,7 @@ export default function Index() {
           });
         }
       } else {
-        router.replace('./login-related/branch-selection');
+        router.replace('/auth');
       }
     }
   }, [user, userProfile, loading]);
