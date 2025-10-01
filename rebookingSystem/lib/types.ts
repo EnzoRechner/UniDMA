@@ -11,6 +11,12 @@ export interface User {
   role: number;
 }
 
+export interface Roles {
+  customer: boolean;
+  staff?: boolean;
+  admin?: boolean;
+}
+
 /**
  * Interface representing a booking document in the 'bookings' Firestore collection.
  */

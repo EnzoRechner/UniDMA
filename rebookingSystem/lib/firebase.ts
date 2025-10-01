@@ -1,8 +1,9 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, initializeAuth, getReactNativePersistence, browserLocalPersistence } from 'firebase/auth';
+import { getAuth, initializeAuth, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage, { AsyncStorageStatic } from '@react-native-async-storage/async-storage';
+//import { getReactNativePersistence } from 'firebase/auth/react-native';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -18,15 +19,23 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Initialize Auth with platform-specific persistence
-export const auth = Platform.OS === 'web' 
-  ? initializeAuth(app, {
-      persistence: browserLocalPersistence
-    })
-  : initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage)
-    });
+export const auth = getAuth(app);
+
+// export const auth = Platform.OS === 'web' 
+//   ? initializeAuth(app, {
+//       persistence: browserLocalPersistence
+//     })
+//   : initializeAuth(app, {
+//       persistence: getReactNativePersistence(AsyncStorage)
+//     });
+
+
 
 // Initialize Firestore
 export const db = getFirestore(app);
 
 export default app;
+
+// function getReactNativePersistence(AsyncStorage: AsyncStorageStatic): import("firebase/auth").Persistence | import("firebase/auth").Persistence[] | undefined {
+//   throw new Error('Function not implemented.asb');
+// }

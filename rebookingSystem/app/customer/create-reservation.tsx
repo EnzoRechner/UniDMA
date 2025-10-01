@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,10 +15,9 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Calendar, Clock, Users, MessageSquare, Save } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/lib/AuthContext';
 import { router } from 'expo-router';
-import { addReservation } from '@/utils/firestore';
-import { useEffect } from 'react';
+import { addReservation } from '@/lib/firestore';
 
 const branches = [
   'Paarl',

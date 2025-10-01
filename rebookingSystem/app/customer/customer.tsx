@@ -1,352 +1,612 @@
-// customer.tsx
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+  Animated,
+  Image,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Settings, Plus, Clock, Users, MapPin, Calendar } from 'lucide-react-native';
+import { useAuth } from '@/lib/AuthContext';
+import { router, useFocusEffect } from 'expo-router';
+import { getReservations, ReservationDetails } from '@/lib/firestore';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, Text, View, TouchableOpacity  } from 'react-native';
-// Import only the required functions
-import { fetchUserData } from '../firebase/auth-firestore';
-import { onSnapshotUserBookings } from '../../dataconnect/firestoreCrud';
-import BookingWidget from './booking-widget';
-import { Booking, User } from '../../lib/types';
-import { Ionicons } from "@expo/vector-icons";
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = width * 0.8;
+const CARD_SPACING = 20;
 
-const { width: windowWidth } = Dimensions.get('window');
+export default function HomeScreen() {
+  const { user } = useAuth();
+  const [activeCard, setActiveCard] = useState(0);
+  const [reservations, setReservations] = useState<ReservationDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const scrollX = useRef(new Animated.Value(0)).current;
 
-// --- Responsive Sizing Constants ---
-const WIDGET_WIDTH_PERCENT = 0.85; // Use 85% of screen width
-const WIDGET_MAX_WIDTH = 360; // Max width cap for larger screens
-const WIDGET_MARGIN_H = 10; // Margin applied to the widget
-
-// Calculate dynamic width and derived constants
-const DYNAMIC_WIDGET_WIDTH = Math.min(windowWidth * WIDGET_WIDTH_PERCENT, WIDGET_MAX_WIDTH);
-const SNAP_INTERVAL = DYNAMIC_WIDGET_WIDTH + (WIDGET_MARGIN_H * 2);
-const PADDING_HORIZONTAL_SCROLL = (windowWidth - SNAP_INTERVAL) / 2 + WIDGET_MARGIN_H; 
-// --- End Sizing Constants ---
-
-const CustomerPage: React.FC = () => {
-  const router = useRouter();
-  const scrollViewRef = useRef<ScrollView>(null);
-  
-  const [user, setUser] = useState<User | null>(null);
-  const [latestBookings, setLatestBookings] = useState<Booking[]>([]); // This holds the list of real, sorted bookings
-  const [loading, setLoading] = useState<boolean>(true);
-  const [userId, setUserId] = useState<string | null>(null);
-  
-  const [bookings, setBookings] = useState<Booking[]>([]); // This now holds [...REAL, NEW, BLANK]
-  const [activeIndex, setActiveIndex] = useState(0); // Start on the most recent booking index
-  
-  const NEW_BOOKING_ID = 'new';
-  const BLANK_PLACEHOLDER_ID = 'blank';
-  
-  /**
-   * Structures the widgets list: [Oldest Booking, ..., Newest Booking, New Booking, Placeholder]
-   * @param sortedBookings The list of actual bookings, already sorted oldest to newest.
-   */
-  const structureWidgets = useCallback((sortedBookings: Booking[]) => {
-    // New structure: [...REAL (Oldest to Newest), NEW, BLANK]
-    const newBookingWidget: Booking = { 
-        id: NEW_BOOKING_ID, date: '', time: '', branch: '', seats: 0, 
-        message: '', 
-        status: 'pending' as Booking['status'], 
-        createdAt: 0, userId: userId || '' 
-    } as Booking;
+  const fetchReservations = async () => {
+    if (!user) return;
     
-    // We still keep the blank placeholder in the state list to simplify index calculations 
-    // but we will filter it out before rendering.
-    const blankPlaceholderWidget: Booking = { 
-        id: BLANK_PLACEHOLDER_ID, date: '', time: '', branch: '', seats: 0, 
-        message: '', 
-        status: 'pending' as Booking['status'], 
-        createdAt: 0, userId: userId || '' 
-    } as Booking;
-
-    return [
-      // Index 0 onwards: The actual bookings (Oldest to Newest/Most Recent)
-      ...sortedBookings,
-      
-      // Next Index: New Booking widget (now positioned after the real bookings)
-      newBookingWidget,
-      
-      // Last Index: Blank Placeholder widget 
-      blankPlaceholderWidget
-    ];
-  }, [userId]);
-
-  // Effect for initial loading (User Data and Auth Check)
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const id = await AsyncStorage.getItem('userId');
-        if (!id) {
-          router.replace('../login-related/login-page');
-          return;
-        }
-        setUserId(id);
-
-        const userData = await fetchUserData(id);
-        setUser(userData);
-      } catch (error) {
-        Alert.alert('Error', `Failed to load user data: ${error}.`);
-      } finally {
-        if (!userId) setLoading(false);
-      }
-    };
-    
-    loadUserData();
-  }, [userId]);
-
-  // Effect for real-time booking listener
-  useEffect(() => {
-    if (!userId) return;
-
-    setLoading(true);
-
-    const unsubscribe = onSnapshotUserBookings(userId, (fetchedBookings: any) => {
-      
-      // 1. Sort bookings from OLDEST to MOST RECENT (Ascending createdAt)
-      const sortedBookings = fetchedBookings.sort((a: any, b: any) => a.createdAt - b.createdAt);
-      
-      const prevBookingCount = latestBookings.length;
-      const currentBookingCount = sortedBookings.length;
-      const isNewBookingAdded = currentBookingCount > prevBookingCount;
-      
-      setLatestBookings(sortedBookings);
-      setBookings(structureWidgets(sortedBookings));
+    try {
+      setLoading(true);
+      const userReservations = await getReservations(user.uid);
+      setReservations(userReservations);
+    } catch (error) {
+      console.error('Error fetching reservations:', error);
+    } finally {
       setLoading(false);
-      
-      if (isNewBookingAdded) {
-          // The newly created booking is the most recent, located at the end of sortedBookings.
-          // In the new structure [...REAL, NEW, BLANK], the new booking is at index: sortedBookings.length - 1
-          const newBookingIndex = sortedBookings.length - 1; 
-          const scrollPosition = newBookingIndex * SNAP_INTERVAL;
-          
-          scrollViewRef.current?.scrollTo({ x: scrollPosition, animated: true });
-          setActiveIndex(newBookingIndex);
-      }
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchReservations();
+    }, [user])
+  );
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return '#10B981';
+      case 'pending':
+        return '#C89A5B';
+      case 'rejected':
+        return '#EF4444';
+      default:
+        return '#6B7280';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return 'Confirmed';
+      case 'pending':
+        return 'Awaiting Confirmation';
+      case 'rejected':
+        return 'Rejected';
+      default:
+        return 'Unknown';
+    }
+  };
+
+  const handleReservationPress = (reservation: ReservationDetails) => {
+    // TODO: Navigate to booking confirmation screen with pre-filled details
+    console.log('Book reservation:', reservation);
+  };
+
+  const renderReservationCard = (item: ReservationDetails, index: number) => {
+    const inputRange = [
+      (index - 1) * (CARD_WIDTH + CARD_SPACING),
+      index * (CARD_WIDTH + CARD_SPACING),
+      (index + 1) * (CARD_WIDTH + CARD_SPACING),
+    ];
+
+    const scale = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.9, 1, 0.9],
+      extrapolate: 'clamp',
     });
 
-    return () => unsubscribe();
-  }, [userId, structureWidgets, latestBookings.length]);
+    const opacity = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.7, 1, 0.7],
+      extrapolate: 'clamp',
+    });
 
-  // Effect to scroll to the initial active widget
-  useEffect(() => {
-    if (!loading && latestBookings.length > 0) {
-      // Index of the most recent real booking in the new structure: latestBookings.length - 1
-      const initialIndex = latestBookings.length - 1;
-      const scrollPosition = initialIndex * SNAP_INTERVAL;
-      
-      scrollViewRef.current?.scrollTo({ x: scrollPosition, animated: false }); 
-      setActiveIndex(initialIndex);
-    } 
-    // New: If no bookings, default to the 'New Booking' widget. 
-    // In the new structure, the 'New Booking' widget is at index: 0 + 0 real bookings = 0
-    else if (!loading && latestBookings.length === 0) {
-        // The New Booking widget is the first (and only visible) item, at index 0
-        const initialIndex = 0; 
-        const scrollPosition = initialIndex * SNAP_INTERVAL;
-        
-        scrollViewRef.current?.scrollTo({ x: scrollPosition, animated: false }); 
-        setActiveIndex(initialIndex);
-    }
-  }, [loading, latestBookings.length]);
+    const isActive = activeCard === index;
 
-
-  const onScroll = (event: any) => {
-    const scrollPosition = event.nativeEvent.contentOffset.x;
-    const newIndex = Math.round(scrollPosition / SNAP_INTERVAL);
-    setActiveIndex(newIndex);
-  };
-
-  /**
-   * Handler when a new booking is successfully confirmed.
-   * We do not need to pass data or scroll here, as the firestore snapshot listener handles the state update and scroll.
-   */
-  const handleBookingConfirm = () => {
-    // Scroll and state update is handled by the useEffect watching for booking count changes.
-  };
-  
-  if (loading || !user) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#d97706" />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
+      <Animated.View
+        key={item.id}
+        style={[
+          styles.reservationCard,
+          {
+            transform: [{ scale }],
+            opacity,
+          },
+          isActive && styles.activeCard,
+        ]}
+      >
+        <TouchableOpacity onPress={() => handleReservationPress(item)}>
+          <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
+            <View style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardType}>{item.name}</Text>
+                <View style={[styles.statusPill, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
+                  <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
+                  <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                    {getStatusText(item.status)}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.cardDetails}>
+                <View style={styles.detailRow}>
+                  <Calendar size={16} color="#C89A5B" />
+                  <Text style={styles.detailText}>{item.date}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Clock size={16} color="#C89A5B" />
+                  <Text style={styles.detailText}>{item.time}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Users size={16} color="#C89A5B" />
+                  <Text style={styles.detailText}>{item.guests} guests</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <MapPin size={16} color="#C89A5B" />
+                  <Text style={styles.detailText}>{item.branch}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <MapPin size={16} color="#C89A5B" />
+                  <Text style={styles.detailText}>{item.seat}</Text>
+                </View>
+              </View>
+
+              {item.message && (
+                <View style={styles.messageContainer}>
+                  <Text style={styles.messageLabel}>Note:</Text>
+                  <Text style={styles.messageText}>{item.message}</Text>
+                </View>
+              )}
+            </View>
+          </BlurView>
+        </TouchableOpacity>
+      </Animated.View>
     );
-  }
-  
-  // Filter out the blank placeholder widget before rendering. 
-  // This removes the extra widget on the right.
-  const widgetsToRender = bookings.filter(b => b.id !== BLANK_PLACEHOLDER_ID);
-  
+  };
+
+  const renderNewCard = () => (
+    <TouchableOpacity 
+      style={[styles.reservationCard, styles.newCard]}
+      onPress={() => router.push('./create-reservation')}
+    >
+      <BlurView intensity={20} tint="dark" style={styles.cardBlur}>
+        <View style={styles.newCardContent}>
+          <View style={styles.plusIcon}>
+            <Plus size={32} color="#C89A5B" />
+          </View>
+          <Text style={styles.newCardText}>Create New</Text>
+          <Text style={styles.newCardSubtext}>Reservation template</Text>
+        </View>
+      </BlurView>
+    </TouchableOpacity>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <BlurView intensity={25} tint="dark" style={styles.emptyCard}>
+        <Text style={styles.emptyTitle}>No Reservations Yet</Text>
+        <Text style={styles.emptySubtitle}>
+          Create your first reservation template for quick booking
+        </Text>
+        <TouchableOpacity 
+          style={styles.createButton}
+          onPress={() => router.push('./create-reservation')}
+        >
+          <LinearGradient
+            colors={['#C89A5B', '#B8864A']}
+            style={styles.createButtonGradient}
+          >
+            <Plus size={20} color="white" />
+            <Text style={styles.createButtonText}>Create Reservation</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </BlurView>
+    </View>
+  );
+
+  const totalCards = reservations.length + 1; // +1 for the "Make New" card
+
   return (
-    <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <LinearGradient
+        colors={['#0D0D0D', '#1A1A1A', '#0D0D0D']}
+        style={styles.background}
+      />
+      
+      <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logoText}>Die Nag Uil</Text>
-          <Text style={styles.greetingText}>Good evening, {user.nagName}</Text>
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.greeting}>Good Evening</Text>
+              <Text style={styles.userName}>{user?.displayName || 'Guest'}</Text>
+            </View>
+            <TouchableOpacity style={styles.settingsButton}>
+              <BlurView intensity={20} tint="dark" style={styles.settingsBlur}>
+                <Settings size={20} color="#C89A5B" />
+              </BlurView>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.logoContainer}>
+            <BlurView intensity={30} tint="dark" style={styles.logoBlur}>
+              <Image source={require('../../assets/images/icon.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </BlurView>
+          </View>
+          
+          <Text style={styles.restaurantName}>Die Nag Uil</Text>
+          <Text style={styles.subtitle}>Kroeg • Eetsaal</Text>
         </View>
 
-        {/* Logout Button with Glassy Style */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={async () => {
-            await AsyncStorage.removeItem("userId");
-            router.replace("../login-related/login-page");
-          }}>
-          <Ionicons name="log-out-outline" size={20} color="#fff" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-         
-        {/* Booking Widgets */}
-        <ScrollView
-          ref={scrollViewRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollViewContent}
-          decelerationRate="fast"
-          snapToInterval={SNAP_INTERVAL} 
-        >
-          {widgetsToRender.map((booking, index) => (
-            <BookingWidget
-              key={booking.id}
-              booking={booking.id === BLANK_PLACEHOLDER_ID ? undefined : booking}
-              isActive={index === activeIndex}
-              onConfirm={handleBookingConfirm}
-              widgetWidth={DYNAMIC_WIDGET_WIDTH} 
-              widgetMargin={WIDGET_MARGIN_H} 
-            />
-          ))}
-        </ScrollView>
+        {/* Loading State */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#C89A5B" />
+            <Text style={styles.loadingText}>Loading reservations...</Text>
+          </View>
+        ) : reservations.length === 0 ? (
+          renderEmptyState()
+        ) : (
+          <>
+            {/* Reservation Cards */}
+            <View style={styles.cardsSection}>
+              <Text style={styles.sectionTitle}>Your Reservations</Text>
+              
+              <Animated.ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={CARD_WIDTH + CARD_SPACING}
+                decelerationRate="fast"
+                contentContainerStyle={styles.cardsContainer}
+                onScroll={Animated.event(
+                  [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                  { 
+                    useNativeDriver: true,
+                    listener: (event: any) => {
+                      const index = Math.round(event.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_SPACING));
+                      setActiveCard(index);
+                    }
+                  }
+                )}
+                scrollEventThrottle={16}
+              >
+                {reservations.map((item, index) => renderReservationCard(item, index))}
+                {renderNewCard()}
+              </Animated.ScrollView>
+            </View>
 
-        {/* Pagination Dots */}
-        <View style={styles.dotContainer}>
-          {/* Use the filtered array for dots */}
-          {widgetsToRender.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                index === activeIndex ? styles.activeDot : styles.inactiveDot,
-              ]}
-            />
-          ))}
-        </View>
-
-        {/* Loyalty Program Placeholder */}
-        <View style={styles.loyaltyProgram}>
-          <Text style={styles.loyaltyText}>Loyalty Program</Text>
-        </View>
+            {/* Card Indicators */}
+            <View style={styles.indicators}>
+              {Array.from({ length: totalCards }).map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.indicator,
+                    activeCard === index && styles.activeIndicator,
+                  ]}
+                />
+              ))}
+            </View>
+          </>
+        )}
       </View>
-    </>
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+  },
+  background: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  content: {
+    flex: 1,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 30,
     alignItems: 'center',
-    paddingTop: 50,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 20,
+  },
+  greeting: {
+    fontSize: 16,
+    color: 'rgba(200, 154, 91, 0.8)',
+    marginBottom: 4,
+    fontFamily: 'Inter-Regular',
+  },
+  userName: {
+    fontSize: 20,
+    fontFamily: 'PlayfairDisplay-Bold',
+    color: 'white',
+  },
+  settingsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(200, 154, 91, 0.4)',
+    shadowColor: '#C89A5B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  settingsBlur: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderWidth: 2,
+    borderColor: 'rgba(200, 154, 91, 0.6)',
+    marginBottom: 15,
+    position: 'relative',
+    shadowColor: '#C89A5B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+  },
+  logoBlur: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoImage: {
+    width: 240,
+    height: 240,
+  },
+  restaurantName: {
+    fontSize: 36,
+    fontFamily: 'PlayfairDisplay-Black',
+    color: '#C89A5B',
+    textAlign: 'center',
+    marginBottom: 5,
+    textShadowColor: 'rgba(200, 154, 91, 0.4)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 6,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 15,
   },
   loadingText: {
-    color: '#d97706',
-    marginTop: 10,
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255, 255, 255, 0.8)',
   },
-  header: {
-    width: '100%',
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 40,
   },
-  logoText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  logoutButton: {
-    position: "absolute",
-    top: 40, 
-    right: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.15)", 
+  emptyCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.5)", // Lighter top bevel/reflection
-    
-    // Glassy shadow for depth/gradient effect (subtle fade to black)
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 8, 
-  },
-    logoutText: {
-    color: "#fff",
-    marginLeft: 6,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  greetingText: {
-    color: '#fff',
-    fontSize: 15, 
-    opacity: 0.8,
-  },
-  scrollView: {
+    borderColor: 'rgba(200, 154, 91, 0.4)',
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
     width: '100%',
-    flexGrow: 0,
+    shadowColor: '#C89A5B',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
   },
-  scrollViewContent: {
-    paddingHorizontal: PADDING_HORIZONTAL_SCROLL, 
+  emptyTitle: {
+    fontSize: 24,
+    fontFamily: 'PlayfairDisplay-Bold',
+    color: '#C89A5B',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 24,
+  },
+  createButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#C89A5B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  createButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    gap: 8,
+  },
+  createButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: 'white',
+  },
+  cardsSection: {
+    flex: 1,
+    paddingTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontFamily: 'PlayfairDisplay-Bold',
+    color: '#C89A5B',
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  cardsContainer: {
+    paddingHorizontal: (width - CARD_WIDTH) / 2,
+    paddingVertical: 10,
+  },
+  reservationCard: {
+    width: CARD_WIDTH,
+    minHeight: 280,
+    marginHorizontal: CARD_SPACING / 2,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(200, 154, 91, 0.4)',
+    shadowColor: '#C89A5B',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  activeCard: {
+    borderColor: 'rgba(200, 154, 91, 0.8)',
+    shadowOpacity: 0.6,
+    shadowRadius: 24,
+    backgroundColor: 'rgba(200, 154, 91, 0.1)',
+  },
+  cardBlur: {
+    flex: 1,
+  },
+  cardContent: {
+    flex: 1,
+    padding: 20,
+  },
+  cardHeader: {
+    marginBottom: 20,
+  },
+  cardType: {
+    fontSize: 22,
+    fontFamily: 'PlayfairDisplay-Bold',
+    color: 'white',
+    marginBottom: 12,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+  },
+  cardDetails: {
+    marginTop: 10,
+    gap: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  detailText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  messageContainer: {
+    marginTop: 15,
+    padding: 12,
+    backgroundColor: 'rgba(200, 154, 91, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(200, 154, 91, 0.2)',
+  },
+  messageLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    color: '#C89A5B',
+    marginBottom: 4,
+  },
+  messageText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontStyle: 'italic',
+  },
+  newCard: {
+    borderStyle: 'dashed',
+    borderColor: 'rgba(200, 154, 91, 0.6)',
+    backgroundColor: 'rgba(200, 154, 91, 0.05)',
+  },
+  newCardContent: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  dotContainer: {
+  plusIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(200, 154, 91, 0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(200, 154, 91, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  newCardText: {
+    fontSize: 18,
+    fontFamily: 'PlayfairDisplay-Bold',
+    color: '#C89A5B',
+    marginBottom: 5,
+  },
+  newCardSubtext: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  indicators: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginVertical: 20,
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 8,
   },
-  dot: {
+  indicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginHorizontal: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
-  activeDot: {
-    backgroundColor: '#fff',
-  },
-  inactiveDot: {
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-  },
-  loyaltyProgram: {
-    width: '90%',
-    height: 150,
-    backgroundColor: '#D1D5DB',
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-    padding: 15,
-  },
-  loyaltyText: {
-    color: '#000',
-    fontSize: 18,
-    fontWeight: 'bold',
+  activeIndicator: {
+    backgroundColor: '#C89A5B',
+    width: 24,
   },
 });
-
-export default CustomerPage;

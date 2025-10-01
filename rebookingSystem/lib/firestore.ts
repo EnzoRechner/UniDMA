@@ -1,5 +1,5 @@
 import { collection, addDoc, getDocs, query, where, orderBy, Timestamp, doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/config/firebase';
+import { db } from './firebase';
 
 export interface ReservationDetails {
   id?: string;
