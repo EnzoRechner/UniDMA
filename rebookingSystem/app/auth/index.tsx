@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, User, Lock, Eye, EyeOff, Scroll } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/lib/AuthContext';
 import { router } from 'expo-router';
 
 export default function AuthScreen() {
@@ -99,7 +99,7 @@ export default function AuthScreen() {
         await signUp(email.trim(), password, nagName.trim());
         // After successful signup, user will be redirected to branch selection
         router.replace({
-          pathname: '/auth/branch-selection',
+          pathname: './auth/branch-selection',
           params: { email: email.trim(), displayName: nagName.trim() }
         });
       } else {

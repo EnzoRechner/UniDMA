@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MapPin, Wine, CheckCircle } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/lib/AuthContext';
 import { router, useLocalSearchParams } from 'expo-router';
 
 const branches = [
@@ -58,7 +58,7 @@ export default function BranchSelectionScreen() {
         preferredBranch: selectedBranch,
       });
 
-      router.replace('/(tabs)');
+      router.replace('../customer/customer');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to complete setup');
     } finally {

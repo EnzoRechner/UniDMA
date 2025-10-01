@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { loginUser } from '../firebase/auth-firestore';
+import { loginUser } from '../app/firebase/auth-firestore';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -21,7 +21,7 @@ const Login = () => {
         if (role === 0) {
           router.replace('../customer/customer');          
         } else if (role === 1) {
-          router.replace('../staff/StaffDashboard');
+          router.replace('../staff/staff-dashboard');
         } else if (role === 2) {
            router.replace('../admin/admin-dashboard');
         } else {
