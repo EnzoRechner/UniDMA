@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { signUpUser } from '../firebase/auth-firestore';
+import { signUpUser } from '../app/firebase/auth-firestore';
 
 const SignUp = () => {
   const router = useRouter();

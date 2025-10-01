@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { loginUser } from '../firebase/auth-firestore';
+import { loginUser } from '../app/firebase/auth-firestore';
 
 const Login = () => {
   const [email, setEmail] = useState('');

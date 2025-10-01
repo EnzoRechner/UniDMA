@@ -4,9 +4,9 @@ import { Picker } from '@react-native-picker/picker';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 // NOTE: Assuming createBooking is correctly imported from the relative path based on your provided code structure
-import { createBooking } from '../../dataconnect/firestoreCrud'; 
+import { createBooking } from '../dataconnect/firestoreCrud'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Booking } from '../../lib/types';
+import { Booking } from '../lib/types';
 
 interface BookingWidgetProps {
   booking?: Booking;
