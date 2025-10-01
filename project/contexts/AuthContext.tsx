@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
-import { auth } from './firebase';
-import { createUserProfile, getUserProfile, UserProfile } from './firestore';
+import { auth } from '@/config/firebase';
+import { createUserProfile, getUserProfile, UserProfile } from '@/utils/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -69,7 +69,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      
     } catch (error: any) {
       console.error('Error signing in:', error);
       throw new Error(error.message || 'Failed to sign in. Please check your credentials.');

@@ -14,9 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Settings, Plus, Clock, Users, MapPin, Calendar } from 'lucide-react-native';
-import { useAuth } from '@/lib/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { router, useFocusEffect } from 'expo-router';
-import { getReservations, ReservationDetails } from '@/lib/firestore';
+import { getReservations, ReservationDetails } from '@/utils/firestore';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.8;
@@ -165,7 +165,7 @@ export default function HomeScreen() {
   const renderNewCard = () => (
     <TouchableOpacity 
       style={[styles.reservationCard, styles.newCard]}
-      onPress={() => router.push('./create-reservation')}
+      onPress={() => router.push('/(tabs)/create-reservation')}
     >
       <BlurView intensity={20} tint="dark" style={styles.cardBlur}>
         <View style={styles.newCardContent}>
@@ -188,7 +188,7 @@ export default function HomeScreen() {
         </Text>
         <TouchableOpacity 
           style={styles.createButton}
-          onPress={() => router.push('./create-reservation')}
+          onPress={() => router.push('/(tabs)/create-reservation')}
         >
           <LinearGradient
             colors={['#C89A5B', '#B8864A']}
