@@ -135,24 +135,34 @@ const BookingView = () => {
                     <View style={styles.cardContent}>
                         
                         <View style={styles.cardHeader}>
-                            <View style={styles.headerInfo}>
-                                <Text style={styles.cardTitle} numberOfLines={1}>
-                                    {customerDisplayName}
-                                </Text>
+                            
+                            {/* LEFT COLUMN: Name + Seat (on one line) and Date/Time (next line) */}
+                            <View style={styles.leftContent}>
+                                
+                                {/* 1. Name & Seats Row (Horizontal) */}
+                                <View style={styles.nameAndSeatsRow}>
+                                    {/* Name */}
+                                    <Text style={styles.cardTitle} numberOfLines={1}>
+                                        {customerDisplayName}
+                                    </Text>
+                                    
+                                    {/* Seats container (Directly to the right of the name) */}
+                                    <View style={[styles.seatsContainer, { borderColor: infoAccentColor }]}>
+                                        <Text style={[styles.seatsLabel, { color: infoAccentColor }]}>🪑 </Text>
+                                        <Text style={[styles.seatsValue, { color: infoAccentColor }]}>{item.seats}</Text>
+                                    </View>
+                                </View>
+
+                                {/* 2. Date/Time Row (Below Name/Seats) */}
                                 <View style={styles.infoRow}>
                                     <Text style={[styles.infoLabel, { color: infoAccentColor }]}>📅</Text>
                                     <Text style={styles.infoValueSmall}>{item.date} @ {item.time}</Text>
                                 </View>
                             </View>
 
-                            <View style={styles.rightSection}>
-                                {/* Seats container */}
-                                <View style={[styles.seatsContainer, { borderColor: infoAccentColor }]}>
-                                    <Text style={[styles.seatsValue, { color: infoAccentColor }]}>{item.seats}</Text>
-                                </View>
-
-                                {/* Action Buttons Container */}
-                                <View style={styles.actionButtonsContainerHorizontal}> 
+                            {/* RIGHT COLUMN: Action Buttons (Stacked Vertically) */}
+                            <View style={styles.rightContent}>
+                                <View style={styles.actionButtonsContainer}> 
                                     
                                     {!isConfirmed && (
                                         <TouchableOpacity
@@ -415,25 +425,39 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         padding: 14, 
     },
+    
+    // MODIFIED: cardHeader is the primary row container (Left Content vs Right Buttons)
     cardHeader: {
-        flexDirection: 'row',
+        flexDirection: 'row', 
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 8,
     },
-    headerInfo: {
-        flex: 1,
-        marginRight: 10,
+    
+    // NEW: Left content stack (Name, Seats, Date)
+    leftContent: {
+        flex: 1, // Takes up horizontal space (allowing action buttons room)
+        flexDirection: 'column',
+        marginRight: 8, // Space between left content and buttons
     },
+
+    // NEW: Row to hold Name and Seats (Horizontal inside Left Column)
+    nameAndSeatsRow: {
+        flexDirection: 'row',
+        alignItems: 'center', // Align vertically
+        marginBottom: 4, 
+    },
+    
     cardTitle: {
+        flexShrink: 1, // Allow name to wrap/truncate
         color: '#fff',
         fontSize: 18, 
         fontWeight: 'bold',
-        marginBottom: 4,
+        marginRight: 10, // Space between name and seats
     },
     infoRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginBottom: 10, // Space before the message container
     },
     infoLabel: {
         fontWeight: 'bold',
@@ -445,24 +469,31 @@ const styles = StyleSheet.create({
         fontSize: 12,
     },
     
-    rightSection: {
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        marginTop: 5, 
-    },
+    // Seats styling 
     seatsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 6,
-        paddingHorizontal: 8,
+        paddingVertical: 4,
+        paddingHorizontal: 6,
         backgroundColor: 'transparent', 
         borderRadius: 8,
-        marginRight: 10,
         borderWidth: 1, 
+    },
+    seatsLabel: {
+        fontWeight: 'bold',
+        fontSize: 14, 
+        marginRight: 4,
     },
     seatsValue: {
         fontWeight: 'bold',
         fontSize: 16, 
+    },
+    
+    // Right content stack (Action Buttons)
+    rightContent: {
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        justifyContent: 'flex-start', // Align buttons to the top
     },
 
     messageContainer: {
@@ -482,7 +513,7 @@ const styles = StyleSheet.create({
     },
 
     // --- Action Buttons (Clean Translucent) ---
-    actionButtonsContainerHorizontal: { 
+    actionButtonsContainer: {
         flexDirection: 'row', 
         gap: 8,
     },
