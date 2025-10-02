@@ -192,4 +192,5 @@ export async function fetchStaffLatestBookings(staffId: string, status: string):
     }
   };
 
+  
 export default {};
