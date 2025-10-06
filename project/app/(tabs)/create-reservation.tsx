@@ -111,14 +111,19 @@ export default function CreateReservationScreen() {
 
     setLoading(true);
     try {
-      await addReservation(user.uid, {
+      const payload = {
         name: formData.name.trim(),
+        customerName: userProfile?.displayName || user.displayName || 'Unknown',
         date: formData.date.trim(),
         time: formData.time.trim(),
         guests: parseInt(formData.guests) || 2,
         branch: formData.branch,
         seat: formData.seat,
         message: formData.message.trim(),
+      };
+      console.log('Creating reservation payload:', payload);
+      await addReservation(user.uid, {
+        ...payload,
       });
 
       Alert.alert('Success', 'Reservation template created successfully!', [
@@ -239,7 +244,7 @@ export default function CreateReservationScreen() {
 
   const renderSeatingSelector = () => (
     <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>Seating Location</Text>
+      <Text style={styles.inputLabel}>Seating Preference</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.branchScroll}>
         {seating.map((seat) => (
           <TouchableOpacity

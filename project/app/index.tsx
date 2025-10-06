@@ -1,17 +1,28 @@
 import { useEffect } from 'react';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function Index() {
   const { user, userProfile, loading } = useAuth();
+  const params = useLocalSearchParams();
+
+  // If skipIndex is present we won't auto-redirect (used by login flow to avoid race)
+  const skipIndex = params?.skipIndex === 'true';
 
   useEffect(() => {
+    if (skipIndex) return; // explicit skip requested
+
     if (!loading) {
       if (user) {
         if (userProfile) {
-          router.replace('/(tabs)');
+
+          if(userProfile.role === 'admin') {
+            router.replace('/(admin)/reservations');
+          } else {
+            router.replace('/(tabs)');
+          }
         } else {
           // User exists but profile is incomplete, redirect to branch selection with user info
           router.replace({
@@ -26,7 +37,7 @@ export default function Index() {
         router.replace('/auth');
       }
     }
-  }, [user, userProfile, loading]);
+  }, [user, userProfile, loading, skipIndex]);
 
   return (
     <View style={styles.container}>
