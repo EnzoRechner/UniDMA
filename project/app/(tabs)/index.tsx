@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   Dimensions,
   Animated,
+  Alert,
+  ActivityIndicator,
   Image,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -17,6 +18,8 @@ import { Settings, Plus, Clock, Users, MapPin, Calendar } from 'lucide-react-nat
 import { useAuth } from '@/contexts/AuthContext';
 import { router, useFocusEffect } from 'expo-router';
 import { getReservations, ReservationDetails } from '@/utils/firestore';
+import { addReservation } from '@/utils/firestore';
+import ReservationConfirmationModal from '@/components/ReservationConfirmationModal';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.8;
@@ -27,6 +30,8 @@ export default function HomeScreen() {
   const [activeCard, setActiveCard] = useState(0);
   const [reservations, setReservations] = useState<ReservationDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isConfirmationModalVisible, setIsConfirmationModalVisible] = useState(false);
+  const [selectedReservationToConfirm, setSelectedReservationToConfirm] = useState<ReservationDetails | null>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
 
   const fetchReservations = async () => {
@@ -75,9 +80,37 @@ export default function HomeScreen() {
     }
   };
 
-  const handleReservationPress = (reservation: ReservationDetails) => {
-    // TODO: Navigate to booking confirmation screen with pre-filled details
-    console.log('Book reservation:', reservation);
+  const handleBookReservation = (reservation: ReservationDetails) => {
+    setSelectedReservationToConfirm(reservation);
+    setIsConfirmationModalVisible(true);
+  };
+
+  const handleConfirmBooking = async (reservation: ReservationDetails) => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to make a reservation');
+      return;
+    }
+
+    try {
+      await addReservation(user.uid, {
+        name: reservation.name,
+        date: reservation.date,
+        time: reservation.time,
+        guests: reservation.guests,
+        branch: reservation.branch,
+        seat: reservation.seat,
+        message: reservation.message || '',
+      });
+
+      Alert.alert('Success', 'Your reservation has been confirmed!', [
+        { text: 'OK', onPress: () => {
+          setIsConfirmationModalVisible(false);
+          fetchReservations(); // Refresh the reservations list
+        }}
+      ]);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to confirm reservation. Please try again.');
+    }
   };
 
   const renderReservationCard = (item: ReservationDetails, index: number) => {
@@ -113,51 +146,59 @@ export default function HomeScreen() {
           isActive && styles.activeCard,
         ]}
       >
-        <TouchableOpacity onPress={() => handleReservationPress(item)}>
-          <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
-            <View style={styles.cardContent}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardType}>{item.name}</Text>
-                <View style={[styles.statusPill, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
-                  <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-                  <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                    {getStatusText(item.status)}
-                  </Text>
-                </View>
+        <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
+          <View style={styles.cardContent}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardType}>{item.name}</Text>
+              <View style={[styles.statusPill, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
+                <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
+                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                  {getStatusText(item.status)}
+                </Text>
               </View>
-
-              <View style={styles.cardDetails}>
-                <View style={styles.detailRow}>
-                  <Calendar size={16} color="#C89A5B" />
-                  <Text style={styles.detailText}>{item.date}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Clock size={16} color="#C89A5B" />
-                  <Text style={styles.detailText}>{item.time}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Users size={16} color="#C89A5B" />
-                  <Text style={styles.detailText}>{item.guests} guests</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <MapPin size={16} color="#C89A5B" />
-                  <Text style={styles.detailText}>{item.branch}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <MapPin size={16} color="#C89A5B" />
-                  <Text style={styles.detailText}>{item.seat}</Text>
-                </View>
-              </View>
-
-              {item.message && (
-                <View style={styles.messageContainer}>
-                  <Text style={styles.messageLabel}>Note:</Text>
-                  <Text style={styles.messageText}>{item.message}</Text>
-                </View>
-              )}
             </View>
-          </BlurView>
-        </TouchableOpacity>
+
+            <View style={styles.cardDetails}>
+              <View style={styles.detailRow}>
+                <Calendar size={16} color="#C89A5B" />
+                <Text style={styles.detailText}>{item.date}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Clock size={16} color="#C89A5B" />
+                <Text style={styles.detailText}>{item.time}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Users size={16} color="#C89A5B" />
+                <Text style={styles.detailText}>{item.guests} guests</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <MapPin size={16} color="#C89A5B" />
+                <Text style={styles.detailText}>{item.branch}</Text>
+              </View>
+            </View>
+
+            {item.message && (
+              <View style={styles.messageContainer}>
+                <Text style={styles.messageLabel}>Note:</Text>
+                <Text style={styles.messageText}>{item.message}</Text>
+              </View>
+            )}
+
+            <View style={styles.bookButtonContainer}>
+              <TouchableOpacity 
+                style={styles.bookButton}
+                onPress={() => handleBookReservation(item)}
+              >
+                <LinearGradient
+                  colors={['#C89A5B', '#B8864A']}
+                  style={styles.bookButtonGradient}
+                >
+                  <Text style={styles.bookButtonText}>Book Now</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </BlurView>
       </Animated.View>
     );
   };
@@ -210,8 +251,8 @@ export default function HomeScreen() {
         colors={['#0D0D0D', '#1A1A1A', '#0D0D0D']}
         style={styles.background}
       />
-      
-      <View style={styles.content}>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -228,7 +269,8 @@ export default function HomeScreen() {
           
           <View style={styles.logoContainer}>
             <BlurView intensity={30} tint="dark" style={styles.logoBlur}>
-              <Image source={require('../../assets/images/icon.png')}
+              <Image 
+                source={require('../../assets/images/icon.png')} 
                 style={styles.logoImage}
                 resizeMode="contain"
               />
@@ -290,7 +332,15 @@ export default function HomeScreen() {
             </View>
           </>
         )}
-      </View>
+
+        {/* Reservation Confirmation Modal */}
+        <ReservationConfirmationModal
+          isVisible={isConfirmationModalVisible}
+          reservation={selectedReservationToConfirm}
+          onClose={() => setIsConfirmationModalVisible(false)}
+          onConfirm={handleConfirmBooking}
+        />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -306,8 +356,9 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 120,
   },
   header: {
     paddingHorizontal: 20,
@@ -425,7 +476,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: 'PlayfairDisplay-Bold',
     color: '#C89A5B',
-    marginTop: 10,
+    marginTop: 20,
     marginBottom: 10,
   },
   emptySubtitle: {
@@ -435,6 +486,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 30,
     lineHeight: 24,
+  },
+  emptyStateLogo: {
+    width: 48,
+    height: 48,
+    tintColor: 'rgba(200, 154, 91, 0.5)',
   },
   createButton: {
     borderRadius: 16,
@@ -473,7 +529,7 @@ const styles = StyleSheet.create({
   },
   reservationCard: {
     width: CARD_WIDTH,
-    minHeight: 280,
+    minHeight: 380,
     marginHorizontal: CARD_SPACING / 2,
     borderRadius: 24,
     overflow: 'hidden',
@@ -497,43 +553,51 @@ const styles = StyleSheet.create({
   cardContent: {
     flex: 1,
     padding: 20,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
   cardHeader: {
-    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   cardType: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: 'PlayfairDisplay-Bold',
     color: 'white',
-    marginBottom: 12,
+    flex: 1,
+    marginRight: 12,
   },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
+    borderColor: 'transparent',
+    alignSelf: 'flex-start',
   },
   statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
   },
   statusText: {
     fontSize: 12,
     fontFamily: 'Inter-SemiBold',
   },
   cardDetails: {
-    marginTop: 10,
-    gap: 12,
+    flex: 1,
+    justifyContent: 'space-around',
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    paddingVertical: 8,
   },
   detailText: {
     fontSize: 14,
@@ -541,12 +605,12 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
   },
   messageContainer: {
-    marginTop: 15,
     padding: 12,
     backgroundColor: 'rgba(200, 154, 91, 0.1)',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(200, 154, 91, 0.2)',
+    marginVertical: 12,
   },
   messageLabel: {
     fontSize: 12,
@@ -555,10 +619,50 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   messageText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Inter-Regular',
     color: 'rgba(255, 255, 255, 0.8)',
     fontStyle: 'italic',
+  },
+  rejectionContainer: {
+    padding: 12,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    marginVertical: 12,
+  },
+  rejectionLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    color: '#EF4444',
+    marginBottom: 4,
+  },
+  rejectionText: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontStyle: 'italic',
+  },
+  bookButtonContainer: {
+    marginTop: 12,
+  },
+  bookButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#C89A5B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  bookButtonGradient: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  bookButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: 'white',
   },
   newCard: {
     borderStyle: 'dashed',
@@ -579,13 +683,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(200, 154, 91, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   newCardText: {
     fontSize: 18,
     fontFamily: 'PlayfairDisplay-Bold',
     color: '#C89A5B',
-    marginBottom: 5,
+    marginBottom: 12,
   },
   newCardSubtext: {
     fontSize: 14,
@@ -596,14 +700,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 20,
-    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(200, 154, 91, 0.3)',
+    marginRight: 6,
   },
   activeIndicator: {
     backgroundColor: '#C89A5B',

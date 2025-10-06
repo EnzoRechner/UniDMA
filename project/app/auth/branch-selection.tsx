@@ -56,6 +56,8 @@ export default function BranchSelectionScreen() {
         displayName,
         email,
         preferredBranch: selectedBranch,
+        role: 'user', // or the appropriate default role
+        preferredSeating: '', // or a sensible default value
       });
 
       router.replace('/(tabs)');

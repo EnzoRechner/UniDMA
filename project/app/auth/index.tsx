@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import { auth } from '@/config/firebase';
+import { getUserProfile } from '@/utils/firestore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, User, Lock, Eye, EyeOff, Scroll } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -103,8 +105,21 @@ export default function AuthScreen() {
           params: { email: email.trim(), displayName: nagName.trim() }
         });
       } else {
-        await signIn(email.trim(), password);
-        // User will be automatically redirected based on their profile status
+        // signIn returns the user profile (AuthContext.signIn loads and returns it)
+        const profile = await signIn(email.trim(), password);
+
+        // If the profile indicates an admin, send them to the admin reservations area
+        if (profile?.role === 'admin') {
+          router.replace({ pathname: '/(admin)/reservations', params: { skipIndex: 'true' } });
+        } else if (profile) {
+          // Regular users -> tabs
+          router.replace({ pathname: '/(tabs)', params: { skipIndex: 'true' } });
+        } else {
+          // If no profile, keep user in auth flow so the app/index redirect doesn't run with a missing profile
+          // Send them back to auth (branch selection or sign-in) instead of landing on the user's index
+          Alert.alert('Profile Missing', 'We could not find your user profile. Please complete setup or contact support.');
+          router.replace('/auth');
+        }
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Authentication failed');
@@ -239,8 +254,8 @@ export default function AuthScreen() {
                 {isSignUp && (
                   <View style={styles.passwordRequirements}>
                     <Text style={styles.requirementsTitle}>Password must contain:</Text>
-                    <Text style={[styles.requirementItem, password.length >= 8 && styles.requirementMet]}>
-                      • At least 8 characters
+                    <Text style={[styles.requirementItem, password.length >= 6 && styles.requirementMet]}>
+                      • At least 6 characters
                     </Text>
                     <Text style={[styles.requirementItem, /[A-Z]/.test(password) && styles.requirementMet]}>
                       • One uppercase letter

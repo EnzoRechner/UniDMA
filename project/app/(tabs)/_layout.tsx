@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home } from 'lucide-react-native';
+import { Home, User } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { StyleSheet } from 'react-native';
 
@@ -55,6 +55,26 @@ export default function TabLayout() {
           title: 'Home',
           tabBarIcon: ({ size, color }) => (
             <Home size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="bookings"
+        options={{
+          title: 'Bookings',
+          tabBarIcon: ({ size, color }) => (
+            <User size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ size, color }) => (
+            <User size={size} color={color} />
           ),
         }}
       />

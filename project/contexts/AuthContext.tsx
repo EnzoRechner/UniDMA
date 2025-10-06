@@ -6,9 +6,11 @@ import { createUserProfile, getUserProfile, UserProfile } from '@/utils/firestor
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
+  isAdmin: boolean;
+  adminBranch: string | null;
   loading: boolean;
   signUp: (email: string, password: string, nagName: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<UserProfile | null>;
   updateUserProfile: (profileData: Omit<UserProfile, 'id' | 'createdAt'>) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -26,6 +28,8 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminBranch, setAdminBranch] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,12 +39,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         try {
           const profile = await getUserProfile(user.uid);
-          setUserProfile(profile);
+          if (profile) {
+            setUserProfile(profile);
+            // Check if user is admin and set admin state
+            if (profile.role === 'admin') {
+              setIsAdmin(true);
+              // Normalize stored adminBranch to a slug for consistent matching
+              const normalized = profile.adminBranch
+                ? profile.adminBranch.toLowerCase().trim().replace(/\s+/g, '-')
+                : null;
+              setAdminBranch(normalized || null);
+            } else {
+              setIsAdmin(false);
+              setAdminBranch(null);
+            }
+          } else {
+            setUserProfile(null);
+            setIsAdmin(false);
+            setAdminBranch(null);
+          }
         } catch (error) {
           console.error('Error fetching user profile:', error);
+          setIsAdmin(false);
+          setAdminBranch(null);
         }
       } else {
         setUserProfile(null);
+        setIsAdmin(false);
+        setAdminBranch(null);
       }
       
       setLoading(false);
@@ -68,7 +94,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      // Wait for profile to be loaded
+      const profile = await getUserProfile(result.user.uid);
+      if (profile) {
+        setUserProfile(profile);
+        if (profile.role === 'admin') {
+          setIsAdmin(true);
+          setAdminBranch(profile.adminBranch || null);
+        }
+      }
+      return profile;
     } catch (error: any) {
       console.error('Error signing in:', error);
       throw new Error(error.message || 'Failed to sign in. Please check your credentials.');
@@ -91,6 +127,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     userProfile,
+    isAdmin,
+    adminBranch,
     loading,
     signUp,
     signIn,
