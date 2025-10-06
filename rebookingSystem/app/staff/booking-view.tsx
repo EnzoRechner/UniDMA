@@ -1,11 +1,12 @@
 import { Check, X, MessageSquare } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, FlatList, ListRenderItemInfo } from 'react-native';
-import { Booking, User } from '../../lib/types';
-import { fetchStaffLatestBookings, updateStatus, fetchUserData } from '../firebase/auth-firestore';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, FlatList, ListRenderItemInfo } from 'react-native';
+import { Booking } from '../../lib/types';
+import { fetchStaffLatestBookings, updateStatus } from '../../dataconnect/firestoreCrud';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur'; 
+import { Timestamp } from 'firebase/firestore';
 
 const BookingView = () => {
     const router = useRouter();
@@ -121,6 +122,24 @@ const BookingView = () => {
             cardBaseStyle // This now carries the translucent background color
         ];
         
+        const dateObject = item.dateOfArrival instanceof Timestamp 
+            ? item.dateOfArrival.toDate() 
+            : item.dateOfArrival;
+
+        // Format the date using locale-aware methods
+        const formattedDate = dateObject.toLocaleDateString('en-GB', { 
+            day: 'numeric', 
+            month: 'long', 
+            year: 'numeric' 
+        });
+        
+        // Format the time using locale-aware methods
+        const formattedTime = dateObject.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true // '02:00 PM' format
+        });
+
         const customerDisplayEmail = item.custEmail ?? 'N/A';
         const customerDisplayName = item.custEmail?.split('@')[0] ?? 'Guest';
 
@@ -156,7 +175,9 @@ const BookingView = () => {
                                 {/* 2. Date/Time Row (Below Name/Seats) */}
                                 <View style={styles.infoRow}>
                                     <Text style={[styles.infoLabel, { color: infoAccentColor }]}>📅</Text>
-                                    <Text style={styles.infoValueSmall}>{item.date} @ {item.time}</Text>
+                                    <Text style={styles.infoValueSmall}>
+                                        {formattedDate} @ {formattedTime}
+                                    </Text>
                                 </View>
                             </View>
 
