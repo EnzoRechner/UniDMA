@@ -1,5 +1,5 @@
 // Shared types and interfaces for the application to ensure consistency and strong typing.
-
+import { Timestamp } from 'firebase/firestore'; 
 /**
  * Interface representing a user document in the 'users' Firestore collection.
  */
@@ -18,13 +18,12 @@ export interface Booking {
   id: string; // The Firestore document ID
   custEmail: string;
   userId: string;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm
+  dateOfArrival: Timestamp; // Date and time of the booking
   branch: string;
   seats: number;
   message: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed'; // Booking status
-  createdAt: number; // Unix timestamp
+  createdAt: Timestamp; // Unix timestamp
 }
 
 export interface Staff {
