@@ -1,16 +1,14 @@
-import { Check, X, MessageSquare } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, FlatList, ListRenderItemInfo } from 'react-native';
-import { Booking } from '../../lib/types';
-import { fetchStaffLatestBookings, updateStatus } from '../../dataconnect/firestoreCrud';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BlurView } from 'expo-blur'; 
+import { BlurView } from 'expo-blur';
 import { Timestamp } from 'firebase/firestore';
+import { Check, MessageSquare, X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, ListRenderItemInfo, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { fetchStaffLatestBookings, updateStatus } from '../../dataconnect/firestoreCrud';
+import { Booking } from '../../lib/types';
 
 const BookingView = () => {
-    const router = useRouter();
-
+    // --- State and Handlers (Logic kept the same) ---
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [cancelledBooking, setCancelledBookings] = useState<Booking[]>([]);
     const [confirmedBooking, setConfirmedBookings] = useState<Booking[]>([]); 
@@ -68,9 +66,9 @@ const BookingView = () => {
             setUserId(Id);
 
             await Promise.all([
-                getBookings(Id),
-                getCancelledBookings(Id),
-                getConfirmedBookings(Id)
+                getBookings(userId),
+                getCancelledBookings(userId),
+                getConfirmedBookings(userId)
             ]);
           } catch (error) {
             Alert.alert('Error', `Failed to load initial user data: ${error}.`);
