@@ -94,6 +94,7 @@ export default function HomeScreen() {
     try {
       await addReservation(user.uid, {
         name: reservation.name,
+        customerName: user.displayName || 'Unknown',
         date: reservation.date,
         time: reservation.time,
         guests: reservation.guests,

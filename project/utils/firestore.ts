@@ -5,7 +5,6 @@ export interface ReservationDetails {
   id?: string;
   name: string;
   customerName: string;
-  userId?: string;
   date: string;
   time: string;
   guests: number;
@@ -61,11 +60,9 @@ export const getReservations = async (userId: string): Promise<ReservationDetail
     const reservations: ReservationDetails[] = [];
     
     querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      console.log('getReservationsByBranch: doc', doc.id, data);
       reservations.push({
         id: doc.id,
-        ...data,
+        ...doc.data(),
       } as ReservationDetails);
     });
     
@@ -134,22 +131,7 @@ export const getReservationsByBranch = async (branch: string): Promise<Reservati
     });
 
     if (reservations.length > 0) {
-      // Augment any reservations missing customerName by fetching the user's profile
-      const augmented = await Promise.all(reservations.map(async (r) => {
-        if ((!r.customerName || r.customerName === '') && (r.userId)) {
-          try {
-            const profile = await getUserProfile(r.userId);
-            if (profile && profile.displayName) {
-              r.customerName = profile.displayName;
-            }
-          } catch (err) {
-            console.error('Error augmenting reservation with user profile:', err);
-          }
-        }
-        return r;
-      }));
-
-      return augmented.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+      return reservations.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
     }
 
     // Fallback: try matching display name (case-sensitive as stored)
@@ -160,28 +142,13 @@ export const getReservationsByBranch = async (branch: string): Promise<Reservati
 
     querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
-      const data = doc.data();
       reservations.push({
         id: doc.id,
-        ...data,
+        ...doc.data(),
       } as ReservationDetails);
     });
 
-    // Augment fallback results as well
-    const augmentedFallback = await Promise.all(reservations.map(async (r) => {
-      if ((!r.customerName || r.customerName === '') && (r.userId)) {
-        try {
-          const profile = await getUserProfile(r.userId);
-          if (profile && profile.displayName) {
-            r.customerName = profile.displayName;
-          }
-        } catch (err) {
-          console.error('Error augmenting reservation with user profile (fallback):', err);
-        }
-      }
-      return r;
-    }));
-    return augmentedFallback.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+    return reservations.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
   } catch (error) {
     console.error('Error getting reservations by branch:', error);
     throw error;

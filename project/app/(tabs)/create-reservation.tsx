@@ -121,10 +121,6 @@ export default function CreateReservationScreen() {
         seat: formData.seat,
         message: formData.message.trim(),
       };
-      console.log('Creating reservation payload:', payload);
-      await addReservation(user.uid, {
-        ...payload,
-      });
 
       Alert.alert('Success', 'Reservation template created successfully!', [
         { text: 'OK', onPress: () => router.back() }
