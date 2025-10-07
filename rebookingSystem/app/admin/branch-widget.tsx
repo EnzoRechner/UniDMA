@@ -1,16 +1,18 @@
 import React from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert, FlatList } from "react-native";
 
 // --- Sample Data ---
 const DATA = [
   { id: "1", title: "Apples", description: "Fresh and juicy red apples." },
   { id: "2", title: "Bananas", description: "Sweet ripe bananas." },
   { id: "3", title: "Oranges", description: "Citrus fruit full of vitamin C." },
-  { id: "4", title: "Grapes", description: "Grapes fruit full of vitamin C." },
+  { id: "4", title: "Grapes", description: "Fresh grapes for snacking." },
+  { id: "5", title: "Pineapple", description: "Tropical pineapple." },
+  { id: "6", title: "Strawberries", description: "Sweet and fresh strawberries." },
 ];
 
-// --- Tile Widget ---
-const BranchTile = ({ item }: { item: typeof DATA[0] }) => (
+// --- Tile Component ---
+const FruitTile = ({ item }: { item: typeof DATA[0] }) => (
   <Pressable
     style={({ pressed }) => [
       styles.tile,
@@ -24,14 +26,16 @@ const BranchTile = ({ item }: { item: typeof DATA[0] }) => (
 );
 
 // --- Main Screen ---
-export default function BranchListScreen() {
+export default function FruitTilesScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Branch Locations</Text>
+      <Text style={styles.header}>Fruit Tiles</Text>
       <FlatList
         data={DATA}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <BranchTile item={item} />}
+        renderItem={({ item }) => <FruitTile item={item} />}
+        numColumns={2}
+        columnWrapperStyle={styles.tileGrid}
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
       />
@@ -63,7 +67,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     paddingHorizontal: 16,
     marginBottom: 16,
-    width: "100%",
+    width: "48%",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",

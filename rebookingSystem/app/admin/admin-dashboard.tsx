@@ -1,10 +1,12 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Text, TouchableOpacity, View, StyleSheet } from 'react-native';
-
+import { Ionicons } from "@expo/vector-icons";
 import type { Router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RouteType = Parameters<Router['push']>[0];
+
 
 const Tile = ({ title, route }: { title: string; route: RouteType }) => {
   const router = useRouter();
@@ -29,10 +31,22 @@ const TileP = ({ title, route }: { title: string; route: RouteType }) => {
     </TouchableOpacity>
   );
 };
+
+
 const AdminDashboard = () => {
+  const router = useRouter();
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Die Nag Uil Admin Dashboard</Text>
+      <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={async () => {
+            await AsyncStorage.removeItem("userId");
+            router.replace("../login-related/login-page");
+          }}>
+          <Ionicons name="log-out-outline" size={20} color="#fff" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       <View style={styles.tileGrid}>
         <Tile  title="Manage Staff Accounts:" route="../staff/staff-dashboard" /> 
          <Tile title="Resturant Bookings:" route="../staff/booking-view" /> 
@@ -60,14 +74,13 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     color: "#fff",
     letterSpacing: 1.5,
-    
+    width: "80%" ,
   },
   tileText: {
     color: "#fff",
     fontSize: 24,
     fontWeight: "bold",
-    letterSpacing: 1.2,
-    
+    letterSpacing: 1.2,   
   },
    tileGrid: {
     flexDirection: "row",
@@ -107,7 +120,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     marginBottom: 16,  
     width: "100%",
-  }
+  },
+  logoutButton: {
+    position: "absolute",
+    top: 40, 
+    right: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.15)", 
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.5)", // Lighter top bevel/reflection
+    
+    // Glassy shadow for depth/gradient effect (subtle fade to black)
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 8, 
+  },
+    logoutText: {
+    color: "#fff",
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: "600",
+  },
  
 });
 
