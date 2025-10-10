@@ -21,7 +21,7 @@ export const addReservation = async (userId: string, reservationDetails: Omit<Re
     const docRef = await addDoc(collection(db, 'reservations'), {
       ...reservationDetails,
       userId,
-      status: '0',
+      status: 0,
       createdAt: Timestamp.now(),
     });
     return docRef.id;
@@ -89,7 +89,6 @@ export const getReservations = async (userId: string): Promise<ReservationDetail
     
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      console.log('getReservationsByBranch: doc', doc.id, data);
       reservations.push({
         id: doc.id,
         ...data,
@@ -312,7 +311,6 @@ export function onSnapshotStaffBookings(
                     id: doc.id,
                 }) as ReservationDetails);
 
-                console.log(`Fetched ${bookings.length} bookings for staff ID ${staffId} with status ${status}.`);
                 // 2. Deliver data to the callback
                 callback(bookings); // Keep the slice(0, 5) logic if you only want the top 5 
                 
