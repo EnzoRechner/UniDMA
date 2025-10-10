@@ -17,10 +17,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Settings, Plus, Clock, Users, MapPin, Calendar } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { router, useFocusEffect } from 'expo-router';
-import { getReservations, ReservationDetails } from '@/utils/firestore';
-import { addReservation } from '@/utils/firestore';
+import { getReservations, addReservation } from '@/dataconnect/firestoreBookings';
 import ReservationConfirmationModal from '@/components/ReservationConfirmationModal';
-
+import { Timestamp } from 'firebase/firestore';
+import { ReservationDetails } from '@/lib/types';
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.8;
 const CARD_SPACING = 20;
@@ -54,30 +54,50 @@ export default function HomeScreen() {
     }, [user])
   );
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: number) => {
     switch (status) {
-      case 'confirmed':
+      case 1:
         return '#10B981';
-      case 'pending':
+      case 0:
         return '#C89A5B';
-      case 'rejected':
+      case 2:
         return '#EF4444';
       default:
         return '#6B7280';
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: number) => {
     switch (status) {
-      case 'confirmed':
+      case 1:
         return 'Confirmed';
-      case 'pending':
+      case 0:
         return 'Awaiting Confirmation';
-      case 'rejected':
+      case 2:
         return 'Rejected';
       default:
         return 'Unknown';
     }
+  };
+
+  
+
+  const combineDateTimeStrings = (dateString: string, timeString: string): Date => {
+      // 1. Parse Date (DD-MM-YY)
+      const [dayStr, monthStr, yearStr] = dateString.split('-');
+      
+      const year = 2000 + parseInt(yearStr, 10);
+      const month = parseInt(monthStr, 10) - 1;
+      const day = parseInt(dayStr, 10);
+
+      // 2. Parse Time (HH:MM AM/PM)
+      const tempTimeDate = new Date(`1/1/2000 ${timeString}`);
+
+      const hours = tempTimeDate.getHours();
+      const minutes = tempTimeDate.getMinutes();
+
+      // 3. Combine into the final Date object
+      return new Date(year, month, day, hours, minutes, 0);
   };
 
   const handleBookReservation = (reservation: ReservationDetails) => {
@@ -91,13 +111,45 @@ export default function HomeScreen() {
       return;
     }
 
+    const dateObject = reservation.dateOfArrival instanceof Timestamp 
+              ? reservation.dateOfArrival.toDate() 
+              : reservation.dateOfArrival;
+              
+    // Format the date using locale-aware methods
+    reservation.date = dateObject.toLocaleDateString('en-GB', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+    });
+          
+    // Format the time using locale-aware methods
+    reservation.time = dateObject.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: true // '02:00 PM' format
+    });
+
+    if (!reservation.date || !reservation.time) {
+        Alert.alert('Error', 'Missing date or time information for reservation.');
+        console.error('Reservation object missing date/time:', reservation);
+        return; 
+    }
+
+    console.log('Formatted date:', reservation.date);
+    console.log('Formatted time:', reservation.time);
+
+    // const combinedDate = combineDateTimeStrings(reservation.date, reservation.time);
+
+    // Convert to Firestore Timestamp
+    const dateOfArrival = Timestamp.fromDate(dateObject);
+
     try {
       await addReservation(user.uid, {
-        name: reservation.name,
-        date: reservation.date,
-        time: reservation.time,
+        bookingName: reservation.bookingName.trim(),
+        nagName: reservation.nagName.trim(),
+        dateOfArrival : dateOfArrival,
         guests: reservation.guests,
-        branch: reservation.branch,
+        branch: reservation.branch.toLowerCase(),
         seat: reservation.seat,
         message: reservation.message || '',
       });
@@ -149,7 +201,7 @@ export default function HomeScreen() {
         <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
           <View style={styles.cardContent}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardType}>{item.name}</Text>
+              <Text style={styles.cardType}>{item.bookingName}</Text>
               <View style={[styles.statusPill, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
                 <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
                 <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>

@@ -1,11 +1,9 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, updateDoc, where, onSnapshot, getDoc, Timestamp } from 'firebase/firestore';
 // Removed User import as it's not strictly required by these functions, assuming it's imported where needed.
-import { Booking, Staff } from '../lib/types'; 
 import { db } from '../config/initialiseFirebase';
-import { Alert } from 'react-native';
 
 // Login: returns userId if found, null otherwise
-export async function login(email: string, password: string): Promise<{ userId: string | null, role: 'customer' | '1' | '2' | null }> {
+export async function login(email: string, password: string): Promise<{ userId: string | null, role: '0' | '1' | '2' | null }> {
   const checkCollection = async (colName: string) => {
     const q = query(
       collection(db, colName),
@@ -19,9 +17,10 @@ export async function login(email: string, password: string): Promise<{ userId: 
     return null;
   };
   const customerId = await checkCollection('customer');
-  if (customerId) return { userId: customerId, role: 'customer' };
+  if (customerId) return { userId: customerId, role: '0' };
   const staffId = await checkCollection('1');
   if (staffId) return { userId: staffId, role: '1' };
+  if (staffId) return { userId: staffId, role: '2' };
   return { userId: null, role: null };
 }
 
@@ -61,137 +60,8 @@ export async function deleteDocById(collectionName: string, docId: string) {
 
 // --- Booking-specific CRUD ---
 
-/**
- * Creates a new booking document in Firestore.
- * @param booking - The partial booking data.
- * @param userId - The ID of the customer making the booking.
- * @returns The newly created Booking object.
- */
-export async function createBooking(
-  booking: Omit<Booking, 'id' | 'status' | 'createdAt' | 'userId' | 'custEmail'>,
-  userId: string,
-  custEmail: string 
-): Promise<Booking> {
-  
-  const nowTimestamp = Timestamp.now();
 
-  const bookingData = {
-    ...booking,
-    userId: userId, 
-    custEmail: custEmail, 
-    status: 'pending' as const,
-    createdAt: nowTimestamp,
-  };
 
-  const colRef = collection(db, 'bookings');
-  const docRef = await addDoc(colRef, bookingData as unknown as Omit<Booking, 'id'>);
-  
-  return { id: docRef.id, ...bookingData } as Booking;
-}
 
-/**
- * Sets up a real-time listener for a user's bookings, ordered by creation date descending.
- * @param userId - The ID of the customer.
- * @param callback - Function to handle the updated list of bookings.
- * @returns A function to unsubscribe from the listener.
- */
-export function onSnapshotUserBookings(userId: string, callback: (bookings: Booking[]) => void) {
-  const q = query(
-    collection(db, 'bookings'),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
-  );
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const bookings = snapshot.docs.map(doc => ({
-      // Cast the data to the correct Booking type structure
-      ...doc.data() as Omit<Booking, 'id'>, 
-      id: doc.id,
-    }) as Booking);
-    callback(bookings);
-  }, (error) => {
-    console.error("Error listening to user bookings:", error);
-    // You might want to pass the error to the callback or handle it in the calling component
-    callback([]); 
-  });
 
-  return unsubscribe;
-}
-
-/**
- * Fetches the most recent bookings for a certain branch.
- * @param {string} staffId - The staff's ID.
- * @returns {Promise<Booking[]>} - A list of the latest bookings.
- */
-export async function fetchStaffLatestBookings(staffId: string, status: string): Promise<Booking[]> {
-  try {
-    const staffQuery = doc(db, 'users', staffId);
-    const staffDoc = await getDoc(staffQuery);
-
-    if (!staffDoc.exists()) {
-      return [];
-    }
-
-    const staffData = staffDoc.data() as Staff;
-    const staffBranch = staffData.branch;
-
-    if (!staffBranch) {
-      console.error("Staff document is missing 'branch'.");
-      return [];
-    }
-    
-    // 1. Get the current date and time as a Firestore Timestamp
-    const now = Timestamp.now(); 
-
-    // 2. Construct the query with the new time filter
-    const bookingsQuery = query(
-      collection(db, 'bookings'),
-      where('branch', '==', staffBranch), 
-      where('status', '==', status),
-      where('dateOfArrival', '>', now) 
-    );
-
-    const querySnapshot = await getDocs(bookingsQuery);
-
-    if (querySnapshot.empty) {
-      return [];
-    }
-    
-    // Map and transform data
-    const bookings = querySnapshot.docs.map(doc => ({
-      ...doc.data() as Omit<Booking, 'id'>,
-      id: doc.id,
-    }));
-
-    bookings.sort((a, b) => {
-      // Assert that 'createdAt' is a Firestore Timestamp object
-      const aTime = (a.createdAt as Timestamp).toDate().getTime();
-      const bTime = (b.createdAt as Timestamp).toDate().getTime();
-      
-      return bTime - aTime;
-  });
-
-    // Return the top 5
-    return bookings.slice(0, 5)
-  } catch (error) {
-    console.error("Error fetching latest bookings:", error);
-    return [];
-  }
-}
-
-/**
- * Update the status of a booking on the firebase side.
- * @param {string} id - The id of the booking.
- * @param {'confirmed' | 'cancelled'} status - The new status.
- * @returns {Promise<Booking[]>} - A list of the latest bookings.
- */
-export const updateStatus = async (id: string, status: 'confirmed' | 'cancelled') => {
-  try {
-    // Update Firestore
-    await updateDoc(doc(db, 'bookings', id), { status });
-      
-  } catch (error) {
-    Alert.alert('Error', 'Failed to update booking status.');
-    console.error('Firestore update error:', error);
-  }
-};

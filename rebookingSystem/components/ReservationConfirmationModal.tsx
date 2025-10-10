@@ -11,7 +11,7 @@ import {
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar, Clock, Users, MapPin, MessageSquare, X, CheckCircle } from 'lucide-react-native';
-import { ReservationDetails } from '@/utils/firestore';
+import { ReservationDetails } from '@/lib/types';
 
 interface ReservationConfirmationModalProps {
   isVisible: boolean;
@@ -72,7 +72,7 @@ export default function ReservationConfirmationModal({
 
               {/* Reservation Details */}
               <View style={styles.detailsContainer}>
-                <Text style={styles.reservationName}>{reservation.name}</Text>
+                <Text style={styles.reservationName}>{reservation.nagName}</Text>
                 
                 <View style={styles.detailsGrid}>
                   <View style={styles.detailItem}>

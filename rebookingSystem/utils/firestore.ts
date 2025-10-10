@@ -1,33 +1,6 @@
 import { collection, addDoc, getDocs, query, where, Timestamp, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-
-export interface ReservationDetails {
-  id?: string;
-  name: string;
-  customerName: string;
-  userId?: string;
-  date: string;
-  time: string;
-  guests: number;
-  branch: string;
-  branchId?: string;
-  seat: string;
-  message?: string;
-  status: 'pending' | 'confirmed' | 'rejected';
-  rejectionReason?: string;
-  createdAt: Timestamp;
-}
-
-export interface UserProfile {
-  role: 'user' | 'admin';
-  adminBranch?: string; // Only for admin users
-  id?: string;
-  displayName: string;
-  email: string;
-  preferredBranch: string;
-  preferredSeating: string;
-  createdAt: Timestamp;
-}
+import { ReservationDetails, UserProfile } from '@/lib/types';
 
 export const addReservation = async (userId: string, reservationDetails: Omit<ReservationDetails, 'id' | 'createdAt' | 'status'>) => {
   try {
@@ -53,7 +26,7 @@ export const addReservation = async (userId: string, reservationDetails: Omit<Re
 export const getReservations = async (userId: string): Promise<ReservationDetails[]> => {
   try {
     const q = query(
-      collection(db, 'reservations'),
+      collection(db, 'bookings'),
       where('userId', '==', userId)
     );
     
@@ -119,7 +92,7 @@ export const getReservationsByBranch = async (branch: string): Promise<Reservati
 
     // Try query by branchId
     let q = query(
-      collection(db, 'reservations'),
+      collection(db, 'bookings'),
       where('branchId', '==', slug)
     );
 
@@ -136,11 +109,11 @@ export const getReservationsByBranch = async (branch: string): Promise<Reservati
     if (reservations.length > 0) {
       // Augment any reservations missing customerName by fetching the user's profile
       const augmented = await Promise.all(reservations.map(async (r) => {
-        if ((!r.customerName || r.customerName === '') && (r.userId)) {
+        if ((!r.nagName || r.nagName === '') && (r.userId)) {
           try {
             const profile = await getUserProfile(r.userId);
             if (profile && profile.displayName) {
-              r.customerName = profile.displayName;
+              r.nagName = profile.displayName;
             }
           } catch (err) {
             console.error('Error augmenting reservation with user profile:', err);
@@ -154,7 +127,7 @@ export const getReservationsByBranch = async (branch: string): Promise<Reservati
 
     // Fallback: try matching display name (case-sensitive as stored)
     q = query(
-      collection(db, 'reservations'),
+      collection(db, 'bookings'),
       where('branch', '==', branch)
     );
 
@@ -169,11 +142,11 @@ export const getReservationsByBranch = async (branch: string): Promise<Reservati
 
     // Augment fallback results as well
     const augmentedFallback = await Promise.all(reservations.map(async (r) => {
-      if ((!r.customerName || r.customerName === '') && (r.userId)) {
+      if ((!r.nagName || r.nagName === '') && (r.userId)) {
         try {
           const profile = await getUserProfile(r.userId);
           if (profile && profile.displayName) {
-            r.customerName = profile.displayName;
+            r.nagName = profile.displayName;
           }
         } catch (err) {
           console.error('Error augmenting reservation with user profile (fallback):', err);
@@ -190,16 +163,17 @@ export const getReservationsByBranch = async (branch: string): Promise<Reservati
 
 export const updateReservationStatus = async (
   reservationId: string,
-  status: 'confirmed' | 'rejected',
+  status: 1 | 2,
   rejectionReason?: string
 ): Promise<void> => {
   try {
     const docRef = doc(db, 'reservations', reservationId);
+
     const updateData: Partial<ReservationDetails> = {
       status,
     };
 
-    if (status === 'rejected' && rejectionReason) {
+    if (status === 2 && rejectionReason) {
       updateData.rejectionReason = rejectionReason;
     }
 

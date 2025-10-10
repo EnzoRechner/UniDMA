@@ -2,90 +2,96 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { Timestamp } from 'firebase/firestore';
 import { Check, MessageSquare, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, Alert, FlatList, ListRenderItemInfo, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { fetchStaffLatestBookings, updateStatus } from '../../dataconnect/firestoreCrud';
-import { Booking } from '../../lib/types';
+//import { fetchStaffLatestBookings, updateStatus } from '../../dataconnect/firestoreCrud';
+import { onSnapshotStaffBookings, updateStatus } from '../../dataconnect/firestoreBookings';
+import { ReservationDetails } from '../../lib/types';
+import { router } from 'expo-router';
 
 const BookingView = () => {
     // --- State and Handlers (Logic kept the same) ---
-    const [bookings, setBookings] = useState<Booking[]>([]);
-    const [cancelledBooking, setCancelledBookings] = useState<Booking[]>([]);
-    const [confirmedBooking, setConfirmedBookings] = useState<Booking[]>([]); 
+    const [bookings, setBookings] = useState<ReservationDetails[]>([]);
+    const [cancelledBooking, setCancelledBookings] = useState<ReservationDetails[]>([]);
+    const [confirmedBooking, setConfirmedBookings] = useState<ReservationDetails[]>([]); 
     
     const [pendingLoading, setPendingLoading] = useState(true);
     const [confirmedLoading, setConfirmedLoading] = useState(true);
     const [cancelledLoading, setCancelledLoading] = useState(true);
     
     const [userId, setUserId] = useState<string | null>(null);
+    const unsubscribesRef = useRef<(() => void)[]>([]);
 
-    const getBookings = async (id: string) => {
-        setPendingLoading(true);
-        try {
-            const allBookings = await fetchStaffLatestBookings(id, "pending");
-            setBookings(allBookings);
-        } catch (error) {
-            console.error('Error fetching pending bookings:', error);
-        } finally {
+    // 1. PENDING Bookings Listener Setup
+    const setupPendingListener = (id: string) => {
+        // Callback function to handle incoming data stream
+        const callback = (newReservations: ReservationDetails[]) => {
+            setBookings(newReservations);
             setPendingLoading(false);
-        }
+        };
+        
+        // Start the listener and store the unsubscribe function
+        const unsubscribe = onSnapshotStaffBookings(id, 0, callback);
+        unsubscribesRef.current.push(unsubscribe);
     };
 
-    const getCancelledBookings = async (id: string) => {
-        setCancelledLoading(true);
-        try {
-            const allCancelled = await fetchStaffLatestBookings(id, "cancelled");
-            setCancelledBookings(allCancelled);
-        } catch (error) {
-            console.error('Error fetching cancelled bookings:', error);
-        } finally {
-            setCancelledLoading(false);
-        }
-    };
-
-    const getConfirmedBookings = async (id: string) => {
-        setConfirmedLoading(true);
-        try {
-            const allConfirmed = await fetchStaffLatestBookings(id, "confirmed");
-            setConfirmedBookings(allConfirmed);
-        } catch (error) {
-            console.error('Error fetching confirmed bookings:', error);
-        } finally {
+    // 2. CONFIRMED Bookings Listener Setup
+    const setupConfirmedListener = (id: string) => {
+        const callback = (newReservations: ReservationDetails[]) => {
+            setConfirmedBookings(newReservations);
             setConfirmedLoading(false);
-        }
+        };
+        
+        const unsubscribe = onSnapshotStaffBookings(id, 1, callback);
+        unsubscribesRef.current.push(unsubscribe);
     };
+
+    // 3. Rejected Bookings Listener Setup
+    const setupCancelledListener = (id: string) => {
+        const callback = (newReservations: ReservationDetails[]) => {
+            setCancelledBookings(newReservations);
+            setCancelledLoading(false);
+        };
+        
+        const unsubscribe = onSnapshotStaffBookings(id, 2, callback);
+        unsubscribesRef.current.push(unsubscribe);
+    };
+
+    
 
     useEffect(() => {
         const checkUserAndFetch = async () => {
-          try {
-            const Id = await AsyncStorage.getItem('userId');
-            if (!Id) {
-              router.replace('../login-related/login-page');
-              return;
+            // 1. Check User ID
+            const staffId = await AsyncStorage.getItem('userId');
+            if (!staffId) {
+                router.replace('../login-related/login-page');
+                return;
             }
-            setUserId(Id);
+            setUserId(staffId);
+            
+            // 2. Start all three listeners
+            setPendingLoading(true);
+            setConfirmedLoading(true);
+            setCancelledLoading(true);
 
-            await Promise.all([
-                getBookings(userId),
-                getCancelledBookings(userId),
-                getConfirmedBookings(userId)
-            ]);
-          } catch (error) {
-            Alert.alert('Error', `Failed to load initial user data: ${error}.`);
-          }
+            setupPendingListener(staffId);
+            setupCancelledListener(staffId);
+            setupConfirmedListener(staffId);
+            // Note: Since the listeners are non-blocking, we don't need Promise.all.
+            // The loading states are controlled by the callback functions now.
         };
         checkUserAndFetch();
+
+        // 3. Cleanup Function: Unsubscribe from all listeners
+        return () => {
+            console.log("Cleaning up all Firestore listeners...");
+            unsubscribesRef.current.forEach(unsubscribe => unsubscribe());
+        }
     }, []);
 
-    const handleStatusUpdate = async (id: string, status: 'confirmed' | 'cancelled') => {
+    const handleStatusUpdate = async (id: string, status: 1 | 2) => {
         try {
-            await updateStatus(id, status);
-            const currentUserId = await AsyncStorage.getItem('userId');
-            if (currentUserId) {
-                getBookings(currentUserId);
-                getCancelledBookings(currentUserId);
-                getConfirmedBookings(currentUserId);
-            }
+            await updateStatus(id, status); 
         } catch (error) {
             Alert.alert('Error', 'Failed to update booking status.');
             console.error('Update error:', error);
@@ -97,7 +103,7 @@ const BookingView = () => {
         console.log(`Initiating contact with: ${email}`);
     };
 
-    const renderCard = ({ item, isCancelled, isConfirmed }: { item: Booking, isCancelled: boolean, isConfirmed: boolean }) => {
+    const renderCard = ({ item, isCancelled, isConfirmed }: { item: ReservationDetails, isCancelled: boolean, isConfirmed: boolean }) => {
         
         // Define the status-specific color for the GLOW/shadow and text accent
         let glowColor = styles.pendingGlow.shadowColor;
@@ -138,8 +144,7 @@ const BookingView = () => {
             hour12: true // '02:00 PM' format
         });
 
-        const customerDisplayEmail = item.custEmail ?? 'N/A';
-        const customerDisplayName = item.custEmail?.split('@')[0] ?? 'Guest';
+        const nagName = item.nagName ?? 'Guest';
 
         return (
             // cardWrapper handles the GLOW effect
@@ -160,13 +165,13 @@ const BookingView = () => {
                                 <View style={styles.nameAndSeatsRow}>
                                     {/* Name */}
                                     <Text style={styles.cardTitle} numberOfLines={1}>
-                                        {customerDisplayName}
+                                        {nagName}
                                     </Text>
                                     
                                     {/* Seats container (Directly to the right of the name) */}
                                     <View style={[styles.seatsContainer, { borderColor: infoAccentColor }]}>
                                         <Text style={[styles.seatsLabel, { color: infoAccentColor }]}>🪑 </Text>
-                                        <Text style={[styles.seatsValue, { color: infoAccentColor }]}>{item.seats}</Text>
+                                        <Text style={[styles.seatsValue, { color: infoAccentColor }]}>{item.guests}</Text>
                                     </View>
                                 </View>
 
@@ -182,19 +187,31 @@ const BookingView = () => {
                             {/* RIGHT COLUMN: Action Buttons (Stacked Vertically) */}
                             <View style={styles.rightContent}>
                                 <View style={styles.actionButtonsContainer}> 
-                                    
+                                    {/*Check to see if the reservation is already confirmed and if status wants to be changed*/}
                                     {!isConfirmed && (
                                         <TouchableOpacity
-                                            onPress={() => handleStatusUpdate(item.id, 'confirmed')}
+                                            onPress={() => {
+                                                        if (item.id) {
+                                                            handleStatusUpdate(item.id, 1); // Using 'confirmed' for status code '1'
+                                                        } else {
+                                                            console.error("Cannot update status: Reservation ID is missing.");
+                                                        }
+                                                    }}
                                             style={[styles.actionButtonCircle, styles.confirmButtonCircle]}
                                         >
                                             <Check color="#fff" size={18} />
                                         </TouchableOpacity>
                                     )}
-                                    
+                                    {/*Check to see if the reservation is already cancelled and if status wants to be changed*/}
                                     {!isCancelled && (
                                         <TouchableOpacity
-                                            onPress={() => handleStatusUpdate(item.id, 'cancelled')}
+                                            onPress={() => {
+                                                        if (item.id) {
+                                                            handleStatusUpdate(item.id, 2); // Using 'cancelled' for status code '2'
+                                                        } else {
+                                                            console.error("Cannot update status: Reservation ID is missing.");
+                                                        }
+                                                    }}
                                             style={[styles.actionButtonCircle, styles.cancelButtonCircle]}
                                         >
                                             <X color="#fff" size={18} />
@@ -202,7 +219,7 @@ const BookingView = () => {
                                     )}
 
                                     <TouchableOpacity
-                                        onPress={() => handleContactCustomer(customerDisplayEmail)}
+                                        onPress={() => handleContactCustomer(nagName)}
                                         style={[styles.actionButtonCircle, styles.contactButtonCircle]}
                                     >
                                         <MessageSquare color="#fff" size={18} /> 
@@ -224,13 +241,13 @@ const BookingView = () => {
     };
     
     // RENDER WRAPPERS (KEPT)
-    const renderPendingItem = ({ item } : ListRenderItemInfo<Booking>) => 
+    const renderPendingItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
         renderCard({ item, isCancelled: false, isConfirmed: false });
 
-    const renderConfirmedItem = ({ item } : ListRenderItemInfo<Booking>) => 
+    const renderConfirmedItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
         renderCard({ item, isCancelled: false, isConfirmed: true });
 
-    const renderCancelledItem = ({ item } : ListRenderItemInfo<Booking>) => 
+    const renderCancelledItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
         renderCard({ item, isCancelled: true, isConfirmed: false });
     
     // EMPTY COMPONENTS (KEPT)
@@ -268,19 +285,6 @@ const BookingView = () => {
             <View style={[styles.listSubSection, styles.listSectionFlex]}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Pending ({bookings.length})</Text>
-                    
-                    <TouchableOpacity
-                        onPress={async () => {
-                            if (userId) {
-                                getBookings(userId);
-                                getConfirmedBookings(userId);
-                                getCancelledBookings(userId);
-                            }
-                        }}
-                        style={styles.refreshButton}
-                    >
-                        <Text style={styles.refreshButtonText}>Refresh</Text>
-                    </TouchableOpacity>
                 </View>
                 
                 {pendingLoading ? (
@@ -289,7 +293,7 @@ const BookingView = () => {
                     <FlatList
                         data={bookings}
                         renderItem={renderPendingItem}
-                        keyExtractor={(item) => item.id.toString()}
+                        keyExtractor={(item) => item.id!.toString()}
                         ListEmptyComponent={PendingEmpty}
                         // APPLYING YELLOW TINT TO FLATLIST BACKGROUND
                         style={[styles.listContentFlatListBase, styles.listContentFlatListYellow]}
@@ -310,7 +314,7 @@ const BookingView = () => {
                     <FlatList
                         data={confirmedBooking}
                         renderItem={renderConfirmedItem}
-                        keyExtractor={(item) => item.id.toString()}
+                        keyExtractor={(item) => item.id!.toString()}
                         ListEmptyComponent={ConfirmedEmpty}
                         // APPLYING GREEN TINT TO FLATLIST BACKGROUND
                         style={[styles.listContentFlatListBase, styles.listContentFlatListGreen]}
@@ -331,7 +335,7 @@ const BookingView = () => {
                     <FlatList
                         data={cancelledBooking}
                         renderItem={renderCancelledItem}
-                        keyExtractor={(item) => item.id.toString()}
+                        keyExtractor={(item) => item.id!.toString()}
                         ListEmptyComponent={CancelledEmpty}
                         // APPLYING RED TINT TO FLATLIST BACKGROUND
                         style={[styles.listContentFlatListBase, styles.listContentFlatListRed]}

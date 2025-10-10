@@ -23,21 +23,24 @@ import {
   Filter,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { getReservationsByBranch, ReservationDetails } from '@/utils/firestore';
+// import { ReservationDetails } from '@/dataconnect/firestoreBookings';
+import { getReservationsByBranch } from '@/utils/firestore';
 import { router } from 'expo-router';
 import AdminActionModal from '@/components/AdminActionModal';
+import { ReservationDetails } from '@/lib/types';
+import { STATUS_MAP } from '@/lib/typesConst';
 
-const statusFilters = ['All', 'Pending', 'Confirmed', 'Rejected'];
+const statusFilters = [5, 0, 1, 2, 3, 4]; // 5 = All, 0 = Pending, 1 = Confirmed, 2 = Rejected, 3 = Completed, 4 = Cancelled
 
 export default function AdminReservationsScreen() {
   const { user, isAdmin, adminBranch, logout } = useAuth();
   const [reservations, setReservations] = useState<ReservationDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [activeFilter, setActiveFilter] = useState(5);
   const [selectedReservation, setSelectedReservation] = useState<ReservationDetails | null>(null);
   const [actionModalVisible, setActionModalVisible] = useState(false);
-  const [actionType, setActionType] = useState<'approve' | 'reject'>('approve');
+  const [actionType, setActionType] = useState<1 | 2>(1); // 1 = approve, 2 = reject
 
   // Redirect non-admin users
   useEffect(() => {
@@ -45,6 +48,8 @@ export default function AdminReservationsScreen() {
       router.replace('/(tabs)');
     }
   }, [isAdmin, adminBranch, loading]);
+
+  const statusWord = STATUS_MAP[activeFilter] || 'selected filter';
 
   const fetchReservations = async () => {
     if (!adminBranch) return;
@@ -92,39 +97,39 @@ export default function AdminReservationsScreen() {
     );
   }
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: number) => {
     switch (status) {
-      case 'confirmed':
+      case 1: // confirmed
         return <CheckCircle size={16} color="#10B981" />;
-      case 'pending':
+      case 0: // pending
         return <AlertCircle size={16} color="#F59E0B" />;
-      case 'rejected':
+      case 2: // rejected
         return <XCircle size={16} color="#EF4444" />;
       default:
         return null;
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: number) => {
     switch (status) {
-      case 'confirmed':
+      case 1: // confirmed
         return '#10B981';
-      case 'pending':
+      case 0: // pending
         return '#F59E0B';
-      case 'rejected':
+      case 2: // rejected
         return '#EF4444';
       default:
         return '#6B7280';
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: number) => {
     switch (status) {
-      case 'confirmed':
+      case 1: // confirmed
         return 'Confirmed';
-      case 'pending':
+      case 0: // pending
         return 'Pending Review';
-      case 'rejected':
+      case 2: // rejected
         return 'Rejected';
       default:
         return 'Unknown';
@@ -132,11 +137,11 @@ export default function AdminReservationsScreen() {
   };
 
   const filteredReservations = reservations.filter(reservation => {
-    if (activeFilter === 'All') return true;
-    return reservation.status.toLowerCase() === activeFilter.toLowerCase();
+    if (activeFilter === 5) return true;
+    return reservation.status === activeFilter;
   });
 
-  const handleAction = (reservation: ReservationDetails, action: 'approve' | 'reject') => {
+  const handleAction = (reservation: ReservationDetails, action: 1 | 2) => {
     setSelectedReservation(reservation);
     setActionType(action);
     setActionModalVisible(true);
@@ -175,8 +180,8 @@ export default function AdminReservationsScreen() {
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
-              <Text style={styles.reservationName}>{item.name}</Text>
-              <Text style={styles.customerInfo}>Customer name: {item.customerName || item.name || 'Unknown'}</Text>
+              <Text style={styles.reservationName}>{item.bookingName}</Text>
+              <Text style={styles.customerInfo}>Customer name: {item.nagName || item.bookingName || 'Unknown'}</Text>
             </View>
             <View style={[styles.statusPill, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
               {getStatusIcon(item.status)}
@@ -212,18 +217,18 @@ export default function AdminReservationsScreen() {
             </View>
           )}
 
-          {item.status === 'rejected' && item.rejectionReason && (
+          {item.status === 2 && item.rejectionReason && (
             <View style={styles.rejectionContainer}>
               <Text style={styles.rejectionLabel}>Rejection Reason:</Text>
               <Text style={styles.rejectionText}>{item.rejectionReason}</Text>
             </View>
           )}
 
-          {item.status === 'pending' && (
+          {item.status === 0 && (
             <View style={styles.actionButtons}>
               <TouchableOpacity 
                 style={styles.approveButton}
-                onPress={() => handleAction(item, 'approve')}
+                onPress={() => handleAction(item, 1)}
               >
                 <CheckCircle size={16} color="#10B981" />
                 <Text style={styles.approveButtonText}>Approve</Text>
@@ -231,7 +236,7 @@ export default function AdminReservationsScreen() {
               
               <TouchableOpacity 
                 style={styles.rejectButton}
-                onPress={() => handleAction(item, 'reject')}
+                onPress={() => handleAction(item, 2)}
               >
                 <XCircle size={16} color="#EF4444" />
                 <Text style={styles.rejectButtonText}>Reject</Text>
@@ -249,7 +254,7 @@ export default function AdminReservationsScreen() {
     </View>
   );
 
-  const renderFilterTab = (filter: string) => (
+  const renderFilterTab = (filter: number) => (
     <TouchableOpacity
       key={filter}
       style={[styles.filterTab, activeFilter === filter && styles.activeFilterTab]}
@@ -295,15 +300,15 @@ export default function AdminReservationsScreen() {
           
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{reservations.filter(r => r.status === 'pending').length}</Text>
+              <Text style={styles.statNumber}>{reservations.filter(r => r.status === 0).length}</Text>
               <Text style={styles.statLabel}>Pending</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{reservations.filter(r => r.status === 'confirmed').length}</Text>
+              <Text style={styles.statNumber}>{reservations.filter(r => r.status === 1).length}</Text>
               <Text style={styles.statLabel}>Confirmed</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{reservations.filter(r => r.status === 'rejected').length}</Text>
+              <Text style={styles.statNumber}>{reservations.filter(r => r.status === 2).length}</Text>
               <Text style={styles.statLabel}>Rejected</Text>
             </View>
           </View>
@@ -338,9 +343,10 @@ export default function AdminReservationsScreen() {
                 <Filter size={48} color="rgba(200, 154, 91, 0.5)" />
                 <Text style={styles.emptyTitle}>No Reservations</Text>
                 <Text style={styles.emptySubtitle}>
-                  {activeFilter === 'All' 
+                  {
+                  activeFilter === 5 
                     ? 'No reservations found for this branch'
-                    : `No ${activeFilter.toLowerCase()} reservations found`
+                    : `No ${statusWord} reservations found`
                   }
                 </Text>
               </BlurView>
