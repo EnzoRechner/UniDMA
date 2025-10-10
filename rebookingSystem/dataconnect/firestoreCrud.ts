@@ -1,9 +1,8 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, updateDoc, where, onSnapshot, getDoc, Timestamp } from 'firebase/firestore';
-// Removed User import as it's not strictly required by these functions, assuming it's imported where needed.
 import { db } from '../config/initialiseFirebase';
 
 // Login: returns userId if found, null otherwise
-export async function login(email: string, password: string): Promise<{ userId: string | null, role: '0' | '1' | '2' | null }> {
+export async function login(email: string, password: string): Promise<{ userId: string | null, role: 0 | 1 | 2 | null }> {
   const checkCollection = async (colName: string) => {
     const q = query(
       collection(db, colName),
@@ -17,10 +16,10 @@ export async function login(email: string, password: string): Promise<{ userId: 
     return null;
   };
   const customerId = await checkCollection('customer');
-  if (customerId) return { userId: customerId, role: '0' };
+  if (customerId) return { userId: customerId, role: 0 };
   const staffId = await checkCollection('1');
-  if (staffId) return { userId: staffId, role: '1' };
-  if (staffId) return { userId: staffId, role: '2' };
+  if (staffId) return { userId: staffId, role: 1 };
+  if (staffId) return { userId: staffId, role: 2 };
   return { userId: null, role: null };
 }
 

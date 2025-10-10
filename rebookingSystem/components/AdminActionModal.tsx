@@ -12,7 +12,7 @@ import {
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CheckCircle, XCircle, X, MessageSquare } from 'lucide-react-native';
-import { updateReservationStatus } from '@/utils/firestore';
+import { updateReservationStatus } from '@/dataconnect/firestoreBookings';
 import { ReservationDetails } from '@/lib/types';
 
 interface AdminActionModalProps {

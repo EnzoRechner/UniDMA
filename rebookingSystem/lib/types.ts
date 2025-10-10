@@ -3,12 +3,16 @@ import { Timestamp } from 'firebase/firestore';
 /**
  * Interface representing a user document in the 'users' Firestore collection.
  */
-export interface User {
-  email: string;
-  password: string; // Note: Storing plain passwords is not secure. This is for demonstration.
-  nagName: string;
-  DOB: string;
-  role: number;
+export interface UserProfile {
+  id?: string; // The Firestore document ID
+  role: 0 | 1 | 2 | 3; // 0: customer, 1: staff, 2: admin, 3: super admin
+  nagName: string; // Name of the user
+  DOB?: string; // Date of Birth but only needed in loyalty program
+  email: string; // Unique email identifier
+  branch: string; // Branch assigned (for staff/admin) or most frequented (for customers) (don't need to keep it seperated)
+  restaurant?: string; // Restaurant associated with the Admin 
+  preferredSeating?: string; // e.g., "indoor", "outdoor", "window", etc.
+  createdAt: Timestamp; // Account creation timestamp
 }
 
 /**
@@ -29,18 +33,10 @@ export interface ReservationDetails {
   bookingName: string; // Name of the booking
   restaurant?: string; // Restaurant associated with the reservation
   rejectionReason?: string; // Reason for rejection, if applicable
-  seat: string; // The location of the seat number
+  seat: string; // The location of the seat area
 }
 
-export interface Staff {
-  id: string; // The Firestore document ID
-  email: string;
-  password?: string;
-  name: string;
-  role: number; // e.g., 1 for regular staff, 2 for admin, 3 for manager
-  branch: string;
-  restaurant: string;
-}
+
 
 export interface Branch {
   id: string; // The Firestore document ID
@@ -52,15 +48,6 @@ export interface Branch {
   open?: string; // e.g., "09:00"
 }
 
-export interface UserProfile {
-  role: 'user' | 'admin';
-  adminBranch?: string; // Only for admin users
-  id?: string;
-  displayName: string;
-  email: string;
-  preferredBranch: string;
-  preferredSeating: string;
-  createdAt: Timestamp;
-}
+
 
 export default {};

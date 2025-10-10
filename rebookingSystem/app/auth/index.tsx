@@ -13,10 +13,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { auth } from '@/config/firebase';
-import { getUserProfile } from '@/utils/firestore';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mail, User, Lock, Eye, EyeOff, Scroll } from 'lucide-react-native';
+import { Mail, User, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 

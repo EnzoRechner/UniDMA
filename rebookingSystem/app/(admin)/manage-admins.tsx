@@ -23,13 +23,14 @@ import {
   Crown
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllUsers, updateUserRole, UserProfile } from '@/utils/firestore';
+import { getAllUsers, updateUserRole } from '@/dataconnect/firestoreUsers';
 import { router } from 'expo-router';
+import { UserProfile } from '@/lib/types';
 
 const branches = ['Paarl', 'Oude Westhof', 'Somerset West'];
 
 export default function ManageAdminsScreen() {
-  const { user, userProfile } = useAuth();
+  const { userProfile } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,7 +78,7 @@ export default function ManageAdminsScreen() {
       const query = searchQuery.toLowerCase();
       const filtered = users.filter(
         u => u.email.toLowerCase().includes(query) ||
-             u.displayName.toLowerCase().includes(query)
+             u.nagName.toLowerCase().includes(query)
       );
       setFilteredUsers(filtered);
     }
@@ -96,8 +97,8 @@ export default function ManageAdminsScreen() {
     }
 
     try {
-      await updateUserRole(selectedUser.id!, 'admin', selectedBranch);
-      Alert.alert('Success', `${selectedUser.displayName} is now an admin for ${selectedBranch}`);
+      await updateUserRole(selectedUser.id!, 2, selectedBranch);
+      Alert.alert('Success', `${selectedUser.nagName} is now an admin for ${selectedBranch}`);
       setShowBranchModal(false);
       setSelectedUser(null);
       setSelectedBranch('');
@@ -110,7 +111,7 @@ export default function ManageAdminsScreen() {
   const handleRemoveAdmin = (selectedUser: UserProfile) => {
     Alert.alert(
       'Remove Admin',
-      `Remove admin privileges from ${selectedUser.displayName}?`,
+      `Remove admin privileges from ${selectedUser.nagName}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -118,8 +119,8 @@ export default function ManageAdminsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await updateUserRole(selectedUser.id!, 'user');
-              Alert.alert('Success', `${selectedUser.displayName} is now a regular user`);
+              await updateUserRole(selectedUser.id!, 0);
+              Alert.alert('Success', `${selectedUser.nagName} is now a regular user`);
               await fetchUsers();
             } catch (error) {
               Alert.alert('Error', 'Failed to remove admin role');
@@ -136,26 +137,26 @@ export default function ManageAdminsScreen() {
         <View style={styles.cardContent}>
           <View style={styles.userHeader}>
             <View style={styles.userIcon}>
-              {userItem.role === 'admin' ? (
+              {userItem.role === 2 ? (
                 <Shield size={20} color="#C89A5B" />
               ) : (
                 <User size={20} color="rgba(255, 255, 255, 0.6)" />
               )}
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{userItem.displayName}</Text>
+              <Text style={styles.userName}>{userItem.nagName}</Text>
               <Text style={styles.userEmail}>{userItem.email}</Text>
-              {userItem.role === 'admin' && userItem.adminBranch && (
+              {userItem.role === 2 && userItem.branch && (
                 <View style={styles.branchBadge}>
                   <MapPin size={12} color="#C89A5B" />
-                  <Text style={styles.branchText}>{formatBranchDisplay(userItem.adminBranch)}</Text>
+                  <Text style={styles.branchText}>{formatBranchDisplay(userItem.branch)}</Text>
                 </View>
               )}
             </View>
           </View>
 
           <View style={styles.actionButtons}>
-            {userItem.role === 'admin' ? (
+            {userItem.role === 2 ? (
               <TouchableOpacity
                 style={styles.removeButton}
                 onPress={() => handleRemoveAdmin(userItem)}
@@ -198,7 +199,7 @@ export default function ManageAdminsScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Select Branch</Text>
             <Text style={styles.modalSubtitle}>
-              Choose which branch {selectedUser?.displayName} will manage
+              Choose which branch {selectedUser?.nagName} will manage
             </Text>
 
             <View style={styles.branchOptions}>
@@ -297,11 +298,11 @@ export default function ManageAdminsScreen() {
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{users.filter(u => u.role === 'admin').length}</Text>
+            <Text style={styles.statNumber}>{users.filter(u => u.role === 2).length}</Text>
             <Text style={styles.statLabel}>Admins</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{users.filter(u => u.role === 'user').length}</Text>
+            <Text style={styles.statNumber}>{users.filter(u => u.role === 0).length}</Text>
             <Text style={styles.statLabel}>Users</Text>
           </View>
           <View style={styles.statCard}>

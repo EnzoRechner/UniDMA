@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -80,26 +80,6 @@ export default function HomeScreen() {
     }
   };
 
-  
-
-  const combineDateTimeStrings = (dateString: string, timeString: string): Date => {
-      // 1. Parse Date (DD-MM-YY)
-      const [dayStr, monthStr, yearStr] = dateString.split('-');
-      
-      const year = 2000 + parseInt(yearStr, 10);
-      const month = parseInt(monthStr, 10) - 1;
-      const day = parseInt(dayStr, 10);
-
-      // 2. Parse Time (HH:MM AM/PM)
-      const tempTimeDate = new Date(`1/1/2000 ${timeString}`);
-
-      const hours = tempTimeDate.getHours();
-      const minutes = tempTimeDate.getMinutes();
-
-      // 3. Combine into the final Date object
-      return new Date(year, month, day, hours, minutes, 0);
-  };
-
   const handleBookReservation = (reservation: ReservationDetails) => {
     setSelectedReservationToConfirm(reservation);
     setIsConfirmationModalVisible(true);
@@ -134,9 +114,6 @@ export default function HomeScreen() {
         console.error('Reservation object missing date/time:', reservation);
         return; 
     }
-
-    console.log('Formatted date:', reservation.date);
-    console.log('Formatted time:', reservation.time);
 
     // const combinedDate = combineDateTimeStrings(reservation.date, reservation.time);
 

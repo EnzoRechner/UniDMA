@@ -51,9 +51,9 @@ export default function CreateReservationScreen() {
 
   // Set default branch based on user preference
   useEffect(() => {
-    if (userProfile?.preferredBranch) {
+    if (userProfile?.branch) {
       const preferredBranchName = branches.find(branch => 
-        branch.toLowerCase().replace(/\s+/g, '-') === userProfile.preferredBranch
+        branch.toLowerCase().replace(/\s+/g, '-') === userProfile.branch
       );
       if (preferredBranchName) {
         setFormData(prev => ({ ...prev, branch: preferredBranchName }));
@@ -129,7 +129,7 @@ export default function CreateReservationScreen() {
 
       const payload = {
         bookingName: formData.name.trim(),
-        nagName: userProfile?.displayName || user.displayName || 'Unknown',
+        nagName: userProfile?.nagName || user.displayName || 'Unknown',
         dateOfArrival: dateOfArrival,
         guests: parseInt(formData.guests) || 2,
         branch: formData.branch,

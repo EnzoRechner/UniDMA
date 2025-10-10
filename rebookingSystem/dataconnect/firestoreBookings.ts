@@ -1,8 +1,9 @@
 import { addDoc, collection, doc, getDocs, orderBy, query, updateDoc, where, onSnapshot, getDoc, Timestamp } from 'firebase/firestore';
 // Removed User import as it's not strictly required by these functions, assuming it's imported where needed.
-import { Staff, ReservationDetails } from '../lib/types'; 
+import { UserProfile, ReservationDetails } from '../lib/types'; 
 import { db } from '../config/initialiseFirebase';
 import { Alert } from 'react-native';
+import { getUserProfile } from './firestoreUsers'
 
 /**
  * Creates a new Reservation document in Firestore.
@@ -103,6 +104,85 @@ export const getReservations = async (userId: string): Promise<ReservationDetail
   }
 };
 
+export const getReservationsByBranch = async (branch: string): Promise<ReservationDetails[]> => {
+  try {
+    // Normalize to a slug (branchId) and try querying by that first. This
+    // handles cases where adminBranch is stored as a slug (e.g. 'paarl') while
+    // older reservations stored the display name ('Paarl'). If the slug-query
+    // returns no results, fall back to querying by the display name for
+    // backward compatibility.
+    const slug = branch.toLowerCase().trim().replace(/\s+/g, '-');
+
+    // Try query by branchId
+    let q = query(
+      collection(db, 'bookings'),
+      where('branchId', '==', slug)
+    );
+
+    let querySnapshot = await getDocs(q);
+    const reservations: ReservationDetails[] = [];
+
+    querySnapshot.forEach((doc) => {
+      reservations.push({
+        id: doc.id,
+        ...doc.data(),
+      } as ReservationDetails);
+    });
+
+    if (reservations.length > 0) {
+      // Augment any reservations missing customerName by fetching the user's profile
+      const augmented = await Promise.all(reservations.map(async (r) => {
+        if ((!r.nagName || r.nagName === '') && (r.userId)) {
+          try {
+            const profile = await getUserProfile(r.userId);
+            if (profile && profile.nagName) {
+              r.nagName = profile.nagName;
+            }
+          } catch (err) {
+            console.error('Error augmenting reservation with user profile:', err);
+          }
+        }
+        return r;
+      }));
+
+      return augmented.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+    }
+
+    // Fallback: try matching display name (case-sensitive as stored)
+    q = query(
+      collection(db, 'bookings'),
+      where('branch', '==', branch)
+    );
+
+    querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      reservations.push({
+        id: doc.id,
+        ...data,
+      } as ReservationDetails);
+    });
+
+    // Augment fallback results as well
+    const augmentedFallback = await Promise.all(reservations.map(async (r) => {
+      if ((!r.nagName || r.nagName === '') && (r.userId)) {
+        try {
+          const profile = await getUserProfile(r.userId);
+          if (profile && profile.nagName) {
+            r.nagName = profile.nagName;
+          }
+        } catch (err) {
+          console.error('Error augmenting reservation with user profile (fallback):', err);
+        }
+      }
+      return r;
+    }));
+    return augmentedFallback.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  } catch (error) {
+    console.error('Error getting reservations by branch:', error);
+    throw error;
+  }
+};
 
 /**
  * Creates a new booking document in Firestore.
@@ -186,7 +266,7 @@ export function onSnapshotStaffBookings(
                 return;
             }
 
-            const staffData = staffDoc.data() as Staff;
+            const staffData = staffDoc.data() as UserProfile;
             const staffBranch = staffData.branch;
             const staffRestaurant = staffData.restaurant;
             const staffRole = staffData.role;

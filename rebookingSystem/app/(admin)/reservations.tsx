@@ -10,10 +10,10 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CheckCircle, XCircle, AlertCircle } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
+  CheckCircle, XCircle, AlertCircle,
   Calendar, 
   Clock, 
   Users, 
@@ -24,7 +24,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 // import { ReservationDetails } from '@/dataconnect/firestoreBookings';
-import { getReservationsByBranch } from '@/utils/firestore';
+import { getReservationsByBranch } from '@/dataconnect/firestoreBookings';
 import { router } from 'expo-router';
 import AdminActionModal from '@/components/AdminActionModal';
 import { ReservationDetails } from '@/lib/types';
@@ -33,7 +33,7 @@ import { STATUS_MAP } from '@/lib/typesConst';
 const statusFilters = [5, 0, 1, 2, 3, 4]; // 5 = All, 0 = Pending, 1 = Confirmed, 2 = Rejected, 3 = Completed, 4 = Cancelled
 
 export default function AdminReservationsScreen() {
-  const { user, isAdmin, adminBranch, logout } = useAuth();
+  const { isAdmin, adminBranch, logout } = useAuth();
   const [reservations, setReservations] = useState<ReservationDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

@@ -4,7 +4,6 @@ import { Timestamp } from 'firebase/firestore';
 import { Check, MessageSquare, X } from 'lucide-react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, Alert, FlatList, ListRenderItemInfo, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-//import { fetchStaffLatestBookings, updateStatus } from '../../dataconnect/firestoreCrud';
 import { onSnapshotStaffBookings, updateStatus } from '../../dataconnect/firestoreBookings';
 import { ReservationDetails } from '../../lib/types';
 import { router } from 'expo-router';
@@ -56,8 +55,6 @@ const BookingView = () => {
         const unsubscribe = onSnapshotStaffBookings(id, 2, callback);
         unsubscribesRef.current.push(unsubscribe);
     };
-
-    
 
     useEffect(() => {
         const checkUserAndFetch = async () => {

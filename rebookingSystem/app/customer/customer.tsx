@@ -8,7 +8,7 @@ import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, Text, Vie
 import { fetchUserData } from '../firebase/auth-firestore';
 import { getReservationsRealtime } from '@/dataconnect/firestoreBookings';
 import BookingWidget from './booking-widget';
-import { ReservationDetails, User } from '@/lib/types';
+import { ReservationDetails, UserProfile } from '@/lib/types';
 import { Ionicons } from "@expo/vector-icons";
 import { Timestamp } from 'firebase/firestore';
 
@@ -29,7 +29,7 @@ const CustomerPage: React.FC = () => {
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
   
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [latestBookings, setLatestBookings] = useState<ReservationDetails[]>([]); // This holds the list of real, sorted bookings
   const [loading, setLoading] = useState<boolean>(true);
   const [userId, setUserId] = useState<string | null>(null);
