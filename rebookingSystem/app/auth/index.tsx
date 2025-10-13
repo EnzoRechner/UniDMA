@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, User, Lock, Eye, EyeOff } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/app/services/auth-service1';
 import { router } from 'expo-router';
 
 export default function AuthScreen() {

@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MapPin, CheckCircle } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/app/services/auth-service1';
 import { router, useLocalSearchParams } from 'expo-router';
 
 const branches = [
