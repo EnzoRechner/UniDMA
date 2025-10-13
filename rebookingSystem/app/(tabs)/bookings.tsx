@@ -12,10 +12,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Calendar, Clock, MapPin, Users } from 'lucide-react-native';
-import { CheckCircle, XCircle, AlertCircle } from 'lucide-react-native';
+import { Calendar, Clock, MapPin, Users, CheckCircle, XCircle, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { getReservations, ReservationDetails } from '@/utils/firestore';
+import { getReservations } from '@/dataconnect/firestoreBookings';
+import { ReservationDetails } from '@/lib/types';
+import { STATUS_MAP } from '@/lib/typesConst';
 
 const tabs = ['All', 'Upcoming', 'Completed', 'Rejected'];
 
@@ -50,26 +51,26 @@ export default function BookingsScreen() {
     fetchReservations();
   }, [user]);
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: number) => {
     switch (status) {
-      case 'confirmed':
+      case 1:
         return <CheckCircle size={16} color="#10B981" />;
-      case 'pending':
+      case 0:
         return <AlertCircle size={16} color="#F59E0B" />;
-      case 'rejected':
+      case 2:
         return <XCircle size={16} color="#EF4444" />;
       default:
         return null;
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: number) => {
     switch (status) {
-      case 'confirmed':
+      case 1:
         return '#10B981';
-      case 'pending':
+      case 0:
         return '#F59E0B';
-      case 'rejected':
+      case 2:
         return '#EF4444';
       default:
         return '#6B7280';
@@ -78,13 +79,13 @@ export default function BookingsScreen() {
 
   const filteredReservations = reservations.filter(reservation => {
     if (activeTab === 'All') return true;
-    if (activeTab === 'Upcoming') return ['confirmed', 'pending'].includes(reservation.status);
+    if (activeTab === 'Upcoming') return ['confirmed', 'pending'].includes(STATUS_MAP[reservation.status]);
     if (activeTab === 'Completed') {
-      const reservationDate = new Date(reservation.date.split('-').reverse().join('-'));
+      const reservationDate = reservation.dateOfArrival.toDate();
       const today = new Date();
-      return reservation.status === 'confirmed' && reservationDate < today;
+      return reservation.status === 1 && reservationDate < today;
     }
-    if (activeTab === 'Rejected') return reservation.status === 'rejected';
+    if (activeTab === 'Rejected') return reservation.status === 2;
     return true;
   });
 
@@ -93,11 +94,11 @@ export default function BookingsScreen() {
       <BlurView intensity={20} tint="light" style={styles.cardBlur}>
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
-            <Text style={styles.serviceName}>{item.name}</Text>
+            <Text style={styles.serviceName}>{item.nagName}</Text>
             <View style={styles.statusContainer}>
               {getStatusIcon(item.status)}
               <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                {STATUS_MAP[item.status].charAt(0).toUpperCase() + STATUS_MAP[item.status].slice(1)}
               </Text>
             </View>
           </View>
@@ -139,7 +140,7 @@ export default function BookingsScreen() {
               </View>
             )}
 
-            {item.status === 'rejected' && item.rejectionReason && (
+            {item.status === 2 && item.rejectionReason && (
               <View style={styles.rejectionInfo}>
                 <Text style={styles.rejectionLabel}>Rejection Reason:</Text>
                 <Text style={styles.rejectionText}>{item.rejectionReason}</Text>

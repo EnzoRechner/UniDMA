@@ -1,7 +1,6 @@
 import { collection, doc, getDoc, getDocs, query, setDoc, where, updateDoc } from 'firebase/firestore';
-import { db } from '../../config/initialiseFirebase';
-import { Booking, User, Staff } from '../../lib/types';
-import { Alert } from 'react-native';
+import { db } from '@/config/initialiseFirebase';
+import { UserProfile } from '@/lib/types';
 
 // Utility function to generate a random 6-digit ID
 function generateRandomId(): string {

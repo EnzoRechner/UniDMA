@@ -12,12 +12,13 @@ import {
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CheckCircle, XCircle, X, MessageSquare } from 'lucide-react-native';
-import { ReservationDetails, updateReservationStatus } from '@/utils/firestore';
+import { updateReservationStatus } from '@/dataconnect/firestoreBookings';
+import { ReservationDetails } from '@/lib/types';
 
 interface AdminActionModalProps {
   isVisible: boolean;
   reservation: ReservationDetails | null;
-  actionType: 'approve' | 'reject';
+  actionType: 1 | 2;
   onClose: () => void;
   onComplete: () => void;
 }
@@ -35,21 +36,21 @@ export default function AdminActionModal({
   const handleAction = async () => {
     if (!reservation?.id) return;
 
-    if (actionType === 'reject' && !rejectionReason.trim()) {
+    if (actionType === 2 && !rejectionReason.trim()) {
       Alert.alert('Error', 'Please provide a reason for rejection');
       return;
     }
 
     setLoading(true);
     try {
-      const newStatus = actionType === 'approve' ? 'confirmed' : 'rejected';
-      const reason = actionType === 'reject' ? rejectionReason.trim() : undefined;
+      const newStatus = actionType === 1 ? 1 : 2;
+      const reason = actionType === 2 ? rejectionReason.trim() : undefined;
       
       await updateReservationStatus(reservation.id, newStatus, reason);
       
       Alert.alert(
         'Success',
-        `Reservation has been ${actionType === 'approve' ? 'approved' : 'rejected'} successfully!`,
+        `Reservation has been ${actionType === 1 ? 'approved' : 'rejected'} successfully!`,
         [{ text: 'OK', onPress: () => {
           setRejectionReason('');
           onComplete();
@@ -85,9 +86,9 @@ export default function AdminActionModal({
               <View style={styles.modalHeader}>
                 <View style={[
                   styles.headerIcon,
-                  { backgroundColor: actionType === 'approve' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }
+                  { backgroundColor: actionType === 1 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }
                 ]}>
-                  {actionType === 'approve' ? (
+                  {actionType === 1 ? (
                     <CheckCircle size={24} color="#10B981" />
                   ) : (
                     <XCircle size={24} color="#EF4444" />
@@ -100,10 +101,10 @@ export default function AdminActionModal({
 
               {/* Title */}
               <Text style={styles.modalTitle}>
-                {actionType === 'approve' ? 'Approve Reservation' : 'Reject Reservation'}
+                {actionType === 1 ? 'Approve Reservation' : 'Reject Reservation'}
               </Text>
               <Text style={styles.modalSubtitle}>
-                {actionType === 'approve' 
+                {actionType === 1 
                   ? 'Confirm this reservation for the customer'
                   : 'Provide a reason for rejecting this reservation'
                 }
@@ -111,7 +112,7 @@ export default function AdminActionModal({
 
               {/* Reservation Summary */}
               <View style={styles.reservationSummary}>
-                <Text style={styles.summaryTitle}>{reservation.name}</Text>
+                <Text style={styles.summaryTitle}>{reservation.bookingName}</Text>
                 <Text style={styles.summaryDetails}>
                   {reservation.date} at {reservation.time} • {reservation.guests} guests
                 </Text>
@@ -119,7 +120,7 @@ export default function AdminActionModal({
               </View>
 
               {/* Rejection Reason Input (only for reject action) */}
-              {actionType === 'reject' && (
+              {actionType === 2 && (
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Reason for Rejection</Text>
                   <BlurView intensity={15} tint="dark" style={styles.inputBlur}>
@@ -154,20 +155,20 @@ export default function AdminActionModal({
                   disabled={loading}
                 >
                   <LinearGradient
-                    colors={actionType === 'approve' ? ['#10B981', '#059669'] : ['#EF4444', '#DC2626']}
+                    colors={actionType === 1 ? ['#10B981', '#059669'] : ['#EF4444', '#DC2626']}
                     style={styles.actionButtonGradient}
                   >
                     {loading ? (
                       <ActivityIndicator size="small" color="white" />
                     ) : (
                       <>
-                        {actionType === 'approve' ? (
+                        {actionType === 1 ? (
                           <CheckCircle size={18} color="white" />
                         ) : (
                           <XCircle size={18} color="white" />
                         )}
                         <Text style={styles.actionButtonText}>
-                          {actionType === 'approve' ? 'Approve' : 'Reject'}
+                          {actionType === 1 ? 'Approve' : 'Reject'}
                         </Text>
                       </>
                     )}

@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { auth } from '@/config/firebase';
-import { createUserProfile, getUserProfile, UserProfile } from '@/utils/firestore';
+import { createUserProfile, getUserProfile } from '@/dataconnect/firestoreUsers';
+import { UserProfile } from '@/lib/types';
 
 interface AuthContextType {
   user: User | null;
@@ -42,11 +43,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (profile) {
             setUserProfile(profile);
             // Check if user is admin and set admin state
-            if (profile.role === 'admin') {
+            if (profile.role === 2) {
               setIsAdmin(true);
               // Normalize stored adminBranch to a slug for consistent matching
-              const normalized = profile.adminBranch
-                ? profile.adminBranch.toLowerCase().trim().replace(/\s+/g, '-')
+              const normalized = profile.branch
+                ? profile.branch.toLowerCase().trim().replace(/\s+/g, '-')
                 : null;
               setAdminBranch(normalized || null);
             } else {
@@ -99,9 +100,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const profile = await getUserProfile(result.user.uid);
       if (profile) {
         setUserProfile(profile);
-        if (profile.role === 'admin') {
+        if (profile.role === 2) {
           setIsAdmin(true);
-          setAdminBranch(profile.adminBranch || null);
+          setAdminBranch(profile.branch || null);
         }
       }
       return profile;

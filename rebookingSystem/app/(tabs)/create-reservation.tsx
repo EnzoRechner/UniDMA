@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,8 +17,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Calendar, Clock, Users, MessageSquare, Save } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
-import { addReservation } from '@/utils/firestore';
-import { useEffect } from 'react';
+import { addReservation } from '@/dataconnect/firestoreBookings';
+import { Timestamp } from 'firebase/firestore';
 
 const branches = [
   'Paarl',
@@ -51,9 +51,9 @@ export default function CreateReservationScreen() {
 
   // Set default branch based on user preference
   useEffect(() => {
-    if (userProfile?.preferredBranch) {
+    if (userProfile?.branch) {
       const preferredBranchName = branches.find(branch => 
-        branch.toLowerCase().replace(/\s+/g, '-') === userProfile.preferredBranch
+        branch.toLowerCase().replace(/\s+/g, '-') === userProfile.branch
       );
       if (preferredBranchName) {
         setFormData(prev => ({ ...prev, branch: preferredBranchName }));
@@ -111,11 +111,26 @@ export default function CreateReservationScreen() {
 
     setLoading(true);
     try {
+
+      // --- Combine Date and Time into a single Date object ---
+      const combinedDate  = new Date(
+          // Get Year, Month, Day from the selected Date object
+          selectedDateObj.getFullYear(),
+          selectedDateObj.getMonth(),
+          selectedDateObj.getDate(),
+          // Get Hours, Minutes, Seconds from the selected Time object
+          selectedTimeObj.getHours(),
+          selectedTimeObj.getMinutes(),
+          selectedTimeObj.getSeconds()
+      );
+
+      // Convert to Firestore Timestamp
+      const dateOfArrival = Timestamp.fromDate(combinedDate);
+
       const payload = {
-        name: formData.name.trim(),
-        customerName: userProfile?.displayName || user.displayName || 'Unknown',
-        date: formData.date.trim(),
-        time: formData.time.trim(),
+        bookingName: formData.name.trim(),
+        nagName: userProfile?.nagName || user.displayName || 'Unknown',
+        dateOfArrival: dateOfArrival,
         guests: parseInt(formData.guests) || 2,
         branch: formData.branch,
         seat: formData.seat,

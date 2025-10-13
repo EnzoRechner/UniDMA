@@ -13,15 +13,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { auth } from '@/config/firebase';
-import { getUserProfile } from '@/utils/firestore';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mail, User, Lock, Eye, EyeOff, Scroll } from 'lucide-react-native';
+import { Mail, User, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 
 export default function AuthScreen() {
-  const [isSignUp, setIsSignUp] = useState(true);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nagName, setNagName] = useState('');
@@ -107,11 +105,13 @@ export default function AuthScreen() {
       } else {
         // signIn returns the user profile (AuthContext.signIn loads and returns it)
         const profile = await signIn(email.trim(), password);
-
+        
         // If the profile indicates an admin, send them to the admin reservations area
-        if (profile?.role === 'admin') {
+        if (profile?.role === 2) {
           router.replace({ pathname: '/(admin)/reservations', params: { skipIndex: 'true' } });
-        } else if (profile) {
+        } else if (profile?.role === 1) { 
+          router.replace({ pathname: '/staff/staff-dashboard', params: { skipIndex: 'true' } });
+        } else if (profile) { 
           // Regular users -> tabs
           router.replace({ pathname: '/(tabs)', params: { skipIndex: 'true' } });
         } else {

@@ -6,10 +6,11 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, Text, View, TouchableOpacity  } from 'react-native';
 // Import only the required functions
 import { fetchUserData } from '../firebase/auth-firestore';
-import { onSnapshotUserBookings } from '../../dataconnect/firestoreCrud';
+import { getReservationsRealtime } from '@/dataconnect/firestoreBookings';
 import BookingWidget from './booking-widget';
-import { Booking, User } from '../../lib/types';
+import { ReservationDetails, UserProfile } from '@/lib/types';
 import { Ionicons } from "@expo/vector-icons";
+import { Timestamp } from 'firebase/firestore';
 
 const { width: windowWidth } = Dimensions.get('window');
 
@@ -28,12 +29,12 @@ const CustomerPage: React.FC = () => {
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
   
-  const [user, setUser] = useState<User | null>(null);
-  const [latestBookings, setLatestBookings] = useState<Booking[]>([]); // This holds the list of real, sorted bookings
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [latestBookings, setLatestBookings] = useState<ReservationDetails[]>([]); // This holds the list of real, sorted bookings
   const [loading, setLoading] = useState<boolean>(true);
   const [userId, setUserId] = useState<string | null>(null);
   
-  const [bookings, setBookings] = useState<Booking[]>([]); // This now holds [...REAL, NEW, BLANK]
+  const [bookings, setBookings] = useState<ReservationDetails[]>([]); // This now holds [...REAL, NEW, BLANK]
   const [activeIndex, setActiveIndex] = useState(0); // Start on the most recent booking index
   
   const NEW_BOOKING_ID = 'new';
@@ -43,23 +44,23 @@ const CustomerPage: React.FC = () => {
    * Structures the widgets list: [Oldest Booking, ..., Newest Booking, New Booking, Placeholder]
    * @param sortedBookings The list of actual bookings, already sorted oldest to newest.
    */
-  const structureWidgets = useCallback((sortedBookings: Booking[]) => {
+  const structureWidgets = useCallback((sortedBookings: ReservationDetails[]) => {
     // New structure: [...REAL (Oldest to Newest), NEW, BLANK]
-    const newBookingWidget: Booking = { 
-        id: NEW_BOOKING_ID, date: '', time: '', branch: '', seats: 0, 
+    const newBookingWidget: ReservationDetails = { 
+        id: NEW_BOOKING_ID, date: '', time: '', branch: '', seat: '', dateOfArrival: Timestamp.now(), guests: 2, nagName: '', bookingName: '',
         message: '', 
-        status: 'pending' as Booking['status'], 
-        createdAt: 0, userId: userId || '' 
-    } as Booking;
+        status: 0 as ReservationDetails['status'], 
+        createdAt: Timestamp.now(), userId: userId || '' 
+    } as ReservationDetails;
     
     // We still keep the blank placeholder in the state list to simplify index calculations 
     // but we will filter it out before rendering.
-    const blankPlaceholderWidget: Booking = { 
-        id: BLANK_PLACEHOLDER_ID, date: '', time: '', branch: '', seats: 0, 
+    const blankPlaceholderWidget: ReservationDetails = { 
+        id: NEW_BOOKING_ID, date: '', time: '', branch: '', seat: '', dateOfArrival: Timestamp.now(), guests: 2, nagName: '', bookingName: '',
         message: '', 
-        status: 'pending' as Booking['status'], 
-        createdAt: 0, userId: userId || '' 
-    } as Booking;
+        status: 0 as ReservationDetails['status'], 
+        createdAt: Timestamp.now(), userId: userId || '' 
+    } as ReservationDetails;
 
     return [
       // Index 0 onwards: The actual bookings (Oldest to Newest/Most Recent)
@@ -102,7 +103,7 @@ const CustomerPage: React.FC = () => {
 
     setLoading(true);
 
-    const unsubscribe = onSnapshotUserBookings(userId, (fetchedBookings: any) => {
+    const unsubscribe = getReservationsRealtime(userId, (fetchedBookings: any) => {
       
       // 1. Sort bookings from OLDEST to MOST RECENT (Ascending createdAt)
       const sortedBookings = fetchedBookings.sort((a: any, b: any) => a.createdAt - b.createdAt);

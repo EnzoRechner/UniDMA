@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MapPin, Wine, CheckCircle } from 'lucide-react-native';
+import { MapPin, CheckCircle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -34,7 +34,7 @@ const branches = [
 ];
 
 export default function BranchSelectionScreen() {
-  const { email, displayName } = useLocalSearchParams<{ email: string; displayName: string }>();
+  const { email, nagName } = useLocalSearchParams<{ email: string; nagName: string }>();
   const { updateUserProfile } = useAuth();
   const [selectedBranch, setSelectedBranch] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -45,7 +45,7 @@ export default function BranchSelectionScreen() {
       return;
     }
 
-    if (!email || !displayName) {
+    if (!email || !nagName) {
       Alert.alert('Error', 'Missing user information');
       return;
     }
@@ -53,10 +53,10 @@ export default function BranchSelectionScreen() {
     setLoading(true);
     try {
       await updateUserProfile({
-        displayName,
+        nagName,
         email,
-        preferredBranch: selectedBranch,
-        role: 'user', // or the appropriate default role
+        branch: selectedBranch,
+        role: 0, // or the appropriate default role
         preferredSeating: '', // or a sensible default value
       });
 

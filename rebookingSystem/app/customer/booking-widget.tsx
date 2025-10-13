@@ -4,13 +4,13 @@ import { Picker } from '@react-native-picker/picker';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 // NOTE: Assuming createBooking is correctly imported from the relative path based on your provided code structure
-import { createBooking } from '../../dataconnect/firestoreCrud'; 
+import { addReservation } from '../../dataconnect/firestoreBookings'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Booking } from '../../lib/types';
+import { ReservationDetails } from '@/lib/types';
 
 
 interface BookingWidgetProps {
-  booking?: Booking;
+  booking?: ReservationDetails;
   isActive: boolean;
   onConfirm: () => void; // Parent handles scroll and state via snapshot
   widgetWidth: number; 
@@ -38,7 +38,7 @@ const BookingWidget: React.FC<BookingWidgetProps> = ({ booking, isActive, onConf
   const [date, setDate] = useState<Date>(isNewBooking ? new Date() : (booking?.date ? new Date(booking.date) : new Date()));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [time, setTime] = useState<string>(isNewBooking ? '7:00 PM' : booking?.time || '7:00 PM');
-  const [seats, setSeats] = useState<number>(isNewBooking ? 2 : booking?.seats || 2);
+  const [seats, setSeats] = useState<number>(isNewBooking ? 2 : booking?.guests || 2);
   const [branch, setBranch] = useState<string>(isNewBooking ? 'branch1' : booking?.branch || 'branch1');
   const [message, setMessage] = useState<string>(isNewBooking ? '' : booking?.message || '');
   const [loading, setLoading] = useState(false);
@@ -46,11 +46,11 @@ const BookingWidget: React.FC<BookingWidgetProps> = ({ booking, isActive, onConf
   const [isSubmitting, setIsSubmitting] = useState(false); 
   
   // Display Status Text logic using custom colors
-  const getStatusStyle = (status: Booking['status']) => {
+  const getStatusStyle = (status: ReservationDetails['status']) => {
     switch (status) {
-      case 'confirmed': return { text: 'Confirmed', color: CUSTOM_COLORS.confirmed };
-      case 'pending': return { text: 'Pending Confirmation', color: CUSTOM_COLORS.pending }; // Updated text for clarity
-      case 'cancelled': return { text: 'Cancelled', color: CUSTOM_COLORS.cancelled };
+      case 1: return { text: 'Confirmed', color: CUSTOM_COLORS.confirmed };
+      case 0: return { text: 'Pending Confirmation', color: CUSTOM_COLORS.pending }; // Updated text for clarity
+      case 2: return { text: 'Cancelled', color: CUSTOM_COLORS.cancelled };
       default: return { text: 'Book', color: CUSTOM_COLORS.pending };
     }
   };
@@ -78,17 +78,17 @@ const BookingWidget: React.FC<BookingWidgetProps> = ({ booking, isActive, onConf
     setIsSubmitting(true); // Start the button transition immediately (Green -> Yellow)
     
     try {
-      const bookingData: Omit<Booking, 'id' | 'status' | 'createdAt' | 'userId' | 'custEmail'> = {
+      const bookingData: Omit<ReservationDetails, 'id' | 'status' | 'createdAt' | 'userId' | 'custEmail'> = {
         date: date.toISOString().split('T')[0], // YYYY-MM-DD
         time,
         branch,
-        seats,
+        guests,
         message,
       };
       
       // The createBooking function must be updated in 'firestoreCrud.ts' to handle userId, 
       // but the call here looks correct based on the previous context.
-      await createBooking(bookingData, userId);
+      await addReservation(bookingData, userId);
       
       // Reset the form for the next booking
       setDate(new Date());
@@ -119,7 +119,7 @@ const BookingWidget: React.FC<BookingWidgetProps> = ({ booking, isActive, onConf
   const widgetOpacity = isActive ? 1 : 0.8;
   const widgetScale = isActive ? 1 : 0.95;
   const zIndex = isActive ? 10 : 1;
-  const displayDate = isNewBooking ? date.toLocaleDateString() : new Date(booking!.date).toLocaleDateString();
+  const displayDate = isNewBooking ? date.toLocaleDateString() : new Date((booking!.date)).toLocaleDateString();
 
   // Button colors
   // Animate from default green to pending yellow on submission
@@ -214,7 +214,7 @@ const BookingWidget: React.FC<BookingWidgetProps> = ({ booking, isActive, onConf
                 </TouchableOpacity>
               </>
             ) : (
-              <Text style={styles.seatText}>{booking?.seats}</Text>
+              <Text style={styles.seatText}>{booking?.guests}</Text>
             )}
           </View>
         </View>
