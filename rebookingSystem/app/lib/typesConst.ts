@@ -6,7 +6,7 @@ export const STATUS_MAP: { [key: number]: string } = {
   2: 'rejected',
   3: 'cancelled',
   4: 'completed',
-  5: 'all', // ?? not sure what the all is for
+  5: 'all', // loyalty program status
 };
 
 // This is the mapping of status strings to numerical codes for easier comparison and storage.

@@ -5,7 +5,7 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, Text, View, TouchableOpacity  } from 'react-native';
 // Import only the required functions
-import { fetchUserData } from '../auth/auth-firestore';
+import { fetchUserData } from '../services/auth-firestore';
 import { getReservationsRealtime } from '@/app/services/firestoreBookings';
 import BookingWidget from './main-booking-widget';
 import { ReservationDetails, UserProfile } from '../lib/types';
