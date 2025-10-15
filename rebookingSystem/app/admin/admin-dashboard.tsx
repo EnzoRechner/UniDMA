@@ -36,7 +36,7 @@ const AdminDashboard = () => {
       <View style={styles.tileGrid}>
         <Tile  title="Manage Staff Accounts:" route="../staff/staff-dashboard" /> 
          <Tile title="Resturant Bookings:" route="../staff/booking-view" /> 
-         <Tile title="Branch Settings:" route="../admin/branch-locations" />        
+         <Tile title="Branch Settings:" route="../admin/branch-settings" />        
         <Tile title="Application Settings:" route="../admin/app-settings" /> 
         {/*<Tile title="Customer Management" route="../customer/customer" />*/}
       </View>

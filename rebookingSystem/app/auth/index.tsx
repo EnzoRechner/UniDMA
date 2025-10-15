@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, User, Lock, Eye, EyeOff, Scroll } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
+import { Link } from 'expo-router';
 
 export default function AuthScreen() {
   const [isSignUp, setIsSignUp] = useState(true);
@@ -155,6 +156,9 @@ export default function AuthScreen() {
             </View>
             <Text style={styles.title}>Die Nag Uil</Text>
             <Text style={styles.subtitle}>Kroeg • Eetsaal</Text>
+
+            <Link href='./admin/admin-dashboard' style={{color: 'white'}}>Admin Page</Link> {/* Remove link to admin dash*/}
+
           </View>
 
           {/* Auth Form */}

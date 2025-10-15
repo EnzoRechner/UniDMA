@@ -1,8 +1,12 @@
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, } from 'react-native';
 import BookingView from './booking-view';
+import { useRouter } from 'expo-router';
 
 const StaffDashboard = () => {
+  const router = useRouter();
   return (
     <View style={styles.fullScreenBackground}> 
         <View style={styles.container}> 
