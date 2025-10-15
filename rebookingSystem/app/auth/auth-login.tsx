@@ -40,7 +40,7 @@ const LoginScreen = () => {
       if (userProfile.role === 2 || userProfile.role === 3) { // Admin or Super Admin
         router.replace('/admin/admin-dashboard-page');
       } else if (userProfile.role === 1) { // Staff
-        router.replace('/staff/staff-dashboard'); // Update if route name is different
+        router.replace('/staff/staff-booking-view'); // Update if route name is different
       } else { // Customer
         router.replace('/customer/customer-page');
       }
@@ -114,10 +114,10 @@ const LoginScreen = () => {
                 </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('/auth/signup')}>
+              <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('/auth/auth-signup')}>
                 <Text style={styles.toggleText}>Don&apos;t have an account? <Text style={{fontWeight: 'bold'}}>Sign Up</Text></Text>
               </TouchableOpacity>
-               <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('/auth/update-login')}>
+               <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('/auth/auth-update-login')}>
                 <Text style={styles.toggleText}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
