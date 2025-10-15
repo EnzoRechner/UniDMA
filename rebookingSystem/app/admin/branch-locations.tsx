@@ -16,7 +16,7 @@ const BranchTile = ({ item }: { item: typeof DATA[0] }) => (
       styles.tile,
       { opacity: pressed ? 0.7 : 1, transform: pressed ? [{ scale: 0.97 }] : [{ scale: 1 }] },
     ]}
-    onPress={() => Alert.alert("Pressed!", `You pressed: ${item.title}`)}
+    onPress={() => Alert.alert("Pressed!", `You pressed the: ${item.title}`)}
   >
     <Text style={styles.tileTitle}>{item.title}</Text>
     <Text style={styles.tileDescription}>{item.description}</Text>
