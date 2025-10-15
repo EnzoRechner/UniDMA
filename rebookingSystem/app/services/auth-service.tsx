@@ -54,6 +54,7 @@ export const signUp = async (
     email,
     password, // WARNING: Storing plain-text password
     branch,
+    restaurant: 0,
     role: ROLES.CUSTOMER, // Assign customer role
     createdAt: Timestamp.now(),
   };

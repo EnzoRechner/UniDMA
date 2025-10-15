@@ -18,7 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { signIn } from '../services/auth-service';
-
+import type { ReservationDetails } from '../lib/types';
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
