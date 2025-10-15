@@ -8,7 +8,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Lock } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-//import { updateUserPassword } from '../services/auth-service';
+import { updateUserPassword } from '../services/auth-service';
 
 const UpdateLoginScreen = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -31,7 +31,7 @@ const UpdateLoginScreen = () => {
     }
     setLoading(true);
     try {
-      //await updateUserPassword(newPassword);
+      await updateUserPassword(newPassword);
       Alert.alert('Success', 'Your password has been updated.', [
           { text: 'OK', onPress: () => router.back() }
       ]);

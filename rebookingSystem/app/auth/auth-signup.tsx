@@ -57,7 +57,7 @@ const SignupScreen = () => {
     try {
       await signUp(email.trim(), password, nagName.trim(), branch);
       Alert.alert('Success!', 'Your account has been created.', [
-        { text: 'OK', onPress: () => router.replace('../customer/customer-page') }
+        { text: 'OK', onPress: () => router.replace('/customer/customer-page') }
       ]);
     } catch (error: any) {
       Alert.alert('Sign Up Failed', error.message || 'An unknown error occurred.');
@@ -133,7 +133,7 @@ const SignupScreen = () => {
                 </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('../auth/login')}>
+              <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('/auth/auth-login')}>
                 <Text style={styles.toggleText}>Already have an account? <Text style={{fontWeight: 'bold'}}>Sign In</Text></Text>
               </TouchableOpacity>
             </View>
