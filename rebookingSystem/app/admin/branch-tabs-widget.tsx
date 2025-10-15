@@ -1,15 +1,17 @@
 import React from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, Alert } from "react-native";
-import BranchTilesScreen from "./branch-tabs-widget";
+import { View, Text, StyleSheet, Pressable, Alert, FlatList } from "react-native";
+
 // --- Sample Data ---
 const DATA = [
   { id: "1", title: "Apples", description: "Fresh and juicy red apples." },
   { id: "2", title: "Bananas", description: "Sweet ripe bananas." },
-  { id: "3", title: "Oranges", description: "Citrus fruit full of vitamin C." },
-  { id: "4", title: "Grapes", description: "Grapes fruit full of vitamin D." },
+  { id: "3", title: "Oranges", description: "Citrus fruit full of vitamin D." },
+  { id: "4", title: "Grapes", description: "Fresh grapes for snacking." },
+  { id: "5", title: "Pineapple", description: "Tropical pineapple." },
+  { id: "6", title: "Strawberries", description: "Sweet and fresh strawberries." },
 ];
 
-// --- Tile Widget ---
+// --- Tile Component ---
 const BranchTile = ({ item }: { item: typeof DATA[0] }) => (
   <Pressable
     style={({ pressed }) => [
@@ -21,16 +23,12 @@ const BranchTile = ({ item }: { item: typeof DATA[0] }) => (
     <Text style={styles.tileTitle}>{item.title}</Text>
     <Text style={styles.tileDescription}>{item.description}</Text>
   </Pressable>
-    
 );
 
 // --- Main Screen ---
-export default function BranchListScreen() {
+export default function BranchTilesScreen() {
   return (
-    
-    BranchTilesScreen()
-
-    /*<View style={styles.container}>
+    <View style={styles.container}>
       <Text style={styles.header}>Branch Locations</Text>
       <FlatList
         data={DATA}
@@ -39,7 +37,7 @@ export default function BranchListScreen() {
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
       />
-    </View>*/
+    </View>
   );
 }
 

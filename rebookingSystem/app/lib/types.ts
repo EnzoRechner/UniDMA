@@ -43,4 +43,12 @@ export interface ReservationDetails {
   nagName: string;
   bookingName: string;
 }
+export interface BranchDetails {  
+  id: BranchId;
+  Coord: GeolocationCoordinates; 
+  address: string;
+  name: string;
+  open: boolean;
+  restaurant: string;
 
+}

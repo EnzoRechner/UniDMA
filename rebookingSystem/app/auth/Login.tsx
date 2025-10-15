@@ -18,7 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { signIn } from '../services/auth-service';
-
+import type { ReservationDetails } from '../lib/types';
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,11 +38,11 @@ const LoginScreen = () => {
 
       // Role-based routing
       if (userProfile.role === 2 || userProfile.role === 3) { // Admin or Super Admin
-        router.replace('/admin/admin-dashboard-page');
+        router.replace('../admin/admin-dashboard-page');
       } else if (userProfile.role === 1) { // Staff
-        router.replace('/staff/staff-dashboard'); // Update if route name is different
+        router.replace('../staff/staff-dashboard'); // Update if route name is different
       } else { // Customer
-        router.replace('/customer/customer-page');
+        router.replace('../customer/customer-page');
       }
     } catch (error: any) {
       Alert.alert('Login Failed', error.message || 'An unknown error occurred.');
@@ -114,10 +114,10 @@ const LoginScreen = () => {
                 </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('/auth/signup')}>
+              <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('./auth/signup')}>
                 <Text style={styles.toggleText}>Don&apos;t have an account? <Text style={{fontWeight: 'bold'}}>Sign Up</Text></Text>
               </TouchableOpacity>
-               <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('/auth/update-login')}>
+               <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('./auth/update-login')}>
                 <Text style={styles.toggleText}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
