@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const Tile = ({ title, icon, route }: { title: string; icon: React.ReactNode; route: string }) => {
   const router = useRouter();
   return (
-    <TouchableOpacity style={styles.tile} onPress={() => router.push(route)}>
+    <TouchableOpacity style={styles.tile} onPress={() => router.push(route as any)}>
       <View style={styles.iconContainer}>{icon}</View>
       <Text style={styles.tileText}>{title}</Text>
     </TouchableOpacity>
@@ -35,23 +35,23 @@ const AdminDashboard = () => {
         <View style={styles.tileGrid}>
           <Tile
             title="Branch Locations"
-            icon={<Building size={32} color="#C89A5B" />}
-            route="/admin/branch-locations"
+            icon={<Building size={46} color="#C89A5B" />}
+            route="../admin/branch-locations"
           />
           <Tile
             title="App Settings"
-            icon={<Settings size={32} color="#C89A5B" />}
-            route="/admin/app-settings"
+            icon={<Settings size={46} color="#C89A5B" />}
+            route="../admin/app-settings"
           />
           <Tile
             title="Staff Accounts"
-            icon={<Users size={32} color="#C89A5B" />}
-            route="/staff/staff-dashboard" // Assuming this is the correct route
+            icon={<Users size={46} color="#C89A5B" />}
+            route="../staff/staff-dashboard" // Assuming this is the correct route
           />
            <Tile
             title="View Bookings"
-            icon={<Calendar size={32} color="#C89A5B" />}
-            route="/staff/staff-booking-view" // Assuming this is the correct route
+            icon={<Calendar size={46} color="#C89A5B" />}
+            route="../staff/staff-booking-view" // Assuming this is the correct route
           />
         </View>
       </ScrollView>
@@ -79,13 +79,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
+    fontSize: 40,
     fontFamily: 'PlayfairDisplay-Bold', // Make sure this font is loaded in your project
     color: '#C89A5B',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: 'rgba(255, 255, 255, 0.8)',
     fontFamily: 'Inter-Regular', // Make sure this font is loaded
   },
@@ -98,12 +98,12 @@ const styles = StyleSheet.create({
     width: '48%',
     aspectRatio: 1, // Makes the tile a square
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 15,
+    borderWidth: 2,
     borderColor: 'rgba(200, 154, 91, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: '4%',
+    marginBottom: '5%',
     shadowColor: '#C89A5B',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,

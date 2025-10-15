@@ -67,4 +67,12 @@ export interface Branch {
   capacity?: number;
   open?: string; // e.g., "09:00"
 }
+export interface BranchDetails {  
+  id: BranchId;
+  Coord: GeolocationCoordinates; 
+  address: string;
+  name: string;
+  open: boolean;
+  restaurant: string;
 
+}
