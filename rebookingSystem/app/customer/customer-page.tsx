@@ -43,7 +43,7 @@ const CustomerPage = () => {
       try {
         const userId = await AsyncStorage.getItem('userId');
         if (!userId) {
-          router.replace('/auth/login');
+          router.replace('/auth/auth-login');
           return;
         }
         // Fetch user data from 'rebooking-accounts'
@@ -60,7 +60,7 @@ const CustomerPage = () => {
       } catch (error: any) {
         Alert.alert('Error', error.message);
         await AsyncStorage.removeItem('userId');
-        router.replace('/auth/login');
+        router.replace('/auth/auth-login');
       }
     };
     const unsubscribePromise = loadData();
@@ -76,7 +76,7 @@ const CustomerPage = () => {
   
   const handleLogout = async () => {
       await AsyncStorage.removeItem('userId');
-      router.replace('/auth/login');
+      router.replace('/auth/auth-login');
   }
 
   const onScroll = (event: any) => {
