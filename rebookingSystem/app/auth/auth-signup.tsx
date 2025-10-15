@@ -133,7 +133,7 @@ const SignupScreen = () => {
                 </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('/auth/login')}>
+              <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('/auth/auth-login')}>
                 <Text style={styles.toggleText}>Already have an account? <Text style={{fontWeight: 'bold'}}>Sign In</Text></Text>
               </TouchableOpacity>
             </View>
