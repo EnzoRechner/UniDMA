@@ -1,93 +1,110 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  doc,
-  setDoc,
-  getDoc,
-  Timestamp,
-  collection,
-  query,
-  where,
-  getDocs,
-} from 'firebase/firestore';
-import { db } from './firebase-initilisation';
-import { UserProfile, RoleId, BranchId } from '../lib/types';
-import { ROLES } from '../lib/types';
+import { collection, addDoc, getDocs, query, where, Timestamp, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, signOut as fbSignOut } from 'firebase/auth';
+import { auth, db } from './firebase-initilisation';
+import { UserProfile, BranchId, ROLES } from '../lib/types';
 
 /**
  * Generates a unique random 6-digit string to be used as a document ID.
  */
-const generateUniqueUserId = async (): Promise<string> => {
-  let isUnique = false;
-  let userId = '';
-  while (!isUnique) {
-    userId = Math.floor(100000 + Math.random() * 900000).toString();
-    const userDocRef = doc(db, 'rebooking-accounts', userId);
-    const docSnap = await getDoc(userDocRef);
-    if (!docSnap.exists()) {
-      isUnique = true;
+export const generateUniqueCustomerID = async (): Promise<string> => {
+  const MAX_RETRIES = 50;
+  let attempts = 0;
+
+  while (attempts < MAX_RETRIES) {
+    const randomNumber = Math.floor(Math.random() * 1000000);
+    const customerID = randomNumber.toString().padStart(6, '0');
+
+    try {
+      const q = query(collection(db, 'rebooking-accounts'), where('customerID', '==', customerID));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        return customerID;
+      }
+
+      attempts++;
+    } catch (error) {
+      console.error('Error checking customer ID uniqueness:', error);
+      throw new Error('Failed to generate unique customer ID. Please try again.');
     }
   }
-  return userId;
+
+  throw new Error('Unable to generate unique customer ID after maximum attempts. Please try again.');
 };
 
 /**
- * Signs up a new user by creating a document in the 'rebooking-accounts' collection.
+ * Sign up a new user using Firebase Authentication and create a corresponding
+ * profile document in 'rebooking-accounts' with a unique 6-digit userId.
+ * Returns the 6-digit customerID for navigation/usage.
  */
 export const signUp = async (
   email: string,
   password: string,
   nagName: string,
   branch: BranchId
-): Promise<UserProfile> => {
-  // Check if email already exists
-  const emailQuery = query(collection(db, 'rebooking-accounts'), where('email', '==', email));
-  const emailQuerySnapshot = await getDocs(emailQuery);
-  if (!emailQuerySnapshot.empty) {
-    throw new Error('An account with this email already exists.');
+): Promise<string> => {
+  // Create Firebase Auth user (enforces unique email)
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+  // Update display name for convenience
+  try {
+    await updateProfile(cred.user, { displayName: nagName });
+  } catch {
+    // Non-fatal if updateProfile fails; continue
   }
 
-  const newUserId = await generateUniqueUserId();
+  // Generate unique 6-digit customerID
+  const newUserId = await generateUniqueCustomerID();
 
-  const userProfile: UserProfile = {
+  // Build Firestore profile (do NOT store plain-text password)
+  const baseProfile: UserProfile = {
     userId: newUserId,
     nagName,
     email,
-    password, // WARNING: Storing plain-text password
     branch,
     restaurant: 0,
-    role: ROLES.CUSTOMER, // Assign customer role
+    role: ROLES.CUSTOMER,
     createdAt: Timestamp.now(),
   };
 
-  // Create the document with the 6-digit ID
-  await setDoc(doc(db, 'rebooking-accounts', newUserId), userProfile);
-  
-  // Save the new 6-digit user ID to storage to log them in
+  // Persist profile; include firebaseUid as extra field for lookup
+  const profileDocRef = doc(db, 'rebooking-accounts', newUserId);
+  await setDoc(profileDocRef, { ...baseProfile, firebaseUid: cred.user.uid } as any);
+
+  // Persist the 6-digit ID locally (existing app logic expects this)
   await AsyncStorage.setItem('userId', newUserId);
-  
-  return userProfile;
+
+  return newUserId;
 };
 
 /**
- * Signs in a user by manually checking their email and password.
+ * Sign in with Firebase Auth and return the associated Firestore profile.
+ * Also stores the 6-digit userId to AsyncStorage for existing flows.
  */
 export const signIn = async (email: string, password: string): Promise<UserProfile> => {
-  const q = query(collection(db, "rebooking-accounts"), where("email", "==", email));
-  const querySnapshot = await getDocs(q);
+  // Authenticate with Firebase
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  const uid = cred.user.uid;
 
-  if (querySnapshot.empty) {
-    throw new Error("Invalid email or password.");
+  // First, try to find profile by firebaseUid
+  let q = query(collection(db, 'rebooking-accounts'), where('firebaseUid', '==', uid));
+  let snapshot = await getDocs(q);
+
+  // Fallback: legacy lookup by email (if profile was created before adding firebaseUid)
+  if (snapshot.empty) {
+    q = query(collection(db, 'rebooking-accounts'), where('email', '==', email));
+    snapshot = await getDocs(q);
   }
 
-  const userDoc = querySnapshot.docs[0];
+  if (snapshot.empty) {
+    throw new Error('User profile not found. Please complete setup or contact support.');
+  }
+
+  const userDoc = snapshot.docs[0];
+  const userId = userDoc.id;
   const userData = userDoc.data() as UserProfile;
 
-  if (userData.password !== password) {
-    throw new Error("Invalid email or password.");
-  }
-  
-  // Save the document ID (the 6-digit userId) to storage
-  const userId = userDoc.id;
   await AsyncStorage.setItem('userId', userId);
 
   return { ...userData, userId };
@@ -103,6 +120,14 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     return docSnap.data() as UserProfile;
   }
   return null;
+};
+
+/**
+ * Sign out the current user and clear local cached userId.
+ */
+export const signOut = async (): Promise<void> => {
+  await fbSignOut(auth);
+  await AsyncStorage.removeItem('userId');
 };
 
 // Default export to prevent Expo Router warnings
