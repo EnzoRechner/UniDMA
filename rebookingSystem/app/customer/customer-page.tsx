@@ -38,39 +38,44 @@ const CustomerPage = () => {
   }, []);
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const userId = await AsyncStorage.getItem('userId');
-        if (!userId) {
-          router.replace('/auth/auth-login');
-          return;
-        }
-        // Fetch user data from 'rebooking-accounts'
-        const userData = await fetchUserData(userId);
-        if (!userData) throw new Error('Could not find user profile.');
-        setUser(userData);
+  // This will hold the unsubscribe function for the realtime listener
+  let unsubscribe = () => {};
 
-        // Setup real-time listener for 'nagbookings'
-        const unsubscribe = getReservationsRealtime(userId, (fetchedBookings) => {
-          setupWidgets(fetchedBookings);
-          setLoading(false);
-        });
-        return () => unsubscribe();
-      } catch (error: any) {
-        Alert.alert('Error', error.message);
-        await AsyncStorage.removeItem('userId');
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      if (!userId) {
         router.replace('/auth/auth-login');
+        return; // Stop execution if no user ID
       }
-    };
-    const unsubscribePromise = loadData();
-    
+
+      const userData = await fetchUserData(userId);
+      if (!userData) {
+        throw new Error('Could not find your user profile.');
+      }
+      setUser(userData);
+
+      // Set up the realtime listener and assign its cleanup function to our variable
+      unsubscribe = getReservationsRealtime(userId, (fetchedBookings) => {
+        setupWidgets(fetchedBookings);
+        setLoading(false); // Stop loading only after the first batch of data arrives
+      });
+
+    } catch (error: any) {
+      setLoading(false); // Ensure loading is stopped on error
+      Alert.alert('Error', error.message || 'An unexpected error occurred.');
+      await AsyncStorage.removeItem('userId');
+      router.replace('/auth/auth-login');
+    }
+  };
+
+    loadData();
+
+  // The return function from useEffect is the cleanup function
     return () => {
-        unsubscribePromise.then(unsubscribe => {
-            if (unsubscribe) {
-                unsubscribe();
-            }
-        });
+      console.log("Cleaning up Firestore listener...");
+      unsubscribe(); // This will now correctly call the function to stop the listener
     };
   }, [router, setupWidgets]);
   
