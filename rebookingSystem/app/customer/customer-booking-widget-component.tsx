@@ -15,7 +15,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { Timestamp } from 'firebase/firestore';
 import { addReservation } from '../services/customer-service';
-import { ReservationDetails, UserProfile, BranchId, BRANCHES } from '../lib/types';
+import { ReservationDetails, UserProfile } from '../lib/types';
+import { BranchId, BRANCHES } from '../lib/typesConst';
 
 interface BookingWidgetProps {
   booking?: ReservationDetails;

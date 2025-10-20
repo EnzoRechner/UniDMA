@@ -20,7 +20,8 @@ export function onSnapshotStaffBookings(
 
     const setupListener = async () => {
         try {
-            const staffData = await getUserProfile(staffId)
+            // Note: getUserProfile might return a Promise<StaffData | null>
+            const staffData = await getUserProfile(staffId); 
 
             if (staffData == null) {
                 console.error(`Staff document with ID ${staffId} not found.`);
@@ -28,25 +29,26 @@ export function onSnapshotStaffBookings(
                 return;
             }
 
+            // Type assertions/checks are needed here for a real implementation
             const staffBranch = staffData.branch;
             const staffRestaurant = staffData.restaurant;
             const staffRole = staffData.role;
 
-            if (!staffBranch || !staffRestaurant) {
+            if (staffBranch === null || staffBranch === undefined || staffRestaurant === null || staffRestaurant === undefined) {
                 console.error("Staff document is missing branch or restaurant data.");
                 callback([]);
                 return;
             }
             
             const now = Timestamp.now(); 
-            const bookingsCollectionRef = collection(db, 'reservations');
+            const bookingsCollectionRef = collection(db, 'nagbookings');
             
-            // --- Query Logic Fix ---
+            // --- Query Logic ---
             let queryConstraints = [
                 where('status', '==', status), 
                 where('dateOfArrival', '>', now) 
             ];
-            
+
             // Role-based filtering:
             if (staffRole === 2) { // Admin: Filter by Restaurant
                 queryConstraints.push(where('restaurant', '==', staffRestaurant));
@@ -61,7 +63,7 @@ export function onSnapshotStaffBookings(
             const bookingsQuery = query(
                 bookingsCollectionRef,
                 ...queryConstraints,
-                orderBy('createdAt', 'desc') // Order by creation date descending
+                orderBy('dateOfArrival', 'asc') // Changed to asc for chronological order
             );
             // -------------------------
 
@@ -72,9 +74,9 @@ export function onSnapshotStaffBookings(
                     ...doc.data() as Omit<ReservationDetails, 'id'>,
                     id: doc.id,
                 }) as ReservationDetails);
-
+                
                 // 2. Deliver data to the callback
-                callback(bookings); // Keep the slice(0, 5) logic if you only want the top 5 
+                callback(bookings);
                 
             }, (error) => {
                 console.error("Error listening to staff bookings:", error);
@@ -102,7 +104,7 @@ export function onSnapshotStaffBookings(
  */
 export const updateReservationStatus = async (
   reservationId: string,
-  status: 1 | 2,
+  status: 1 | 2, // 1 = confirmed, 2 = rejected
   rejectionReason?: string
 ): Promise<void> => {
   try {

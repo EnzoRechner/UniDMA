@@ -1,57 +1,92 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { Timestamp } from 'firebase/firestore';
-import { Check, MessageSquare, X } from 'lucide-react-native';
-import React, { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, Alert, FlatList, ListRenderItemInfo, Text, TouchableOpacity, View, StyleSheet, Pressable } from 'react-native';
+import { Check, MessageSquare, X, ChevronLeft } from 'lucide-react-native';
+import React from 'react';
+import { ActivityIndicator, Alert, FlatList, ListRenderItemInfo, Text, View, StyleSheet, Pressable, StatusBar, TouchableOpacity } from 'react-native';
 import { updateReservationStatus } from '../services/staff-service';
 import { ReservationDetails } from '../lib/types';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams, Stack } from 'expo-router'; // Import Stack for header customization
 import { useStaffBookings } from '../services/useStaffBookings'; 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
-// 1. Initialize QueryClient
+// Reusable Custom Header Component for consistency
+const CustomBackHeader = ({ title }: { title: string }) => (
+    <View style={styles.header}>
+        <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()} // This is the key action to go back
+        >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>{title}</Text>
+    </View>
+);
+
+
+// 1. Initialize QueryClient (or use a global one if defined)
 const queryClient = new QueryClient();
 
+// Define the type for the status received from navigation params
+type BookingStatus = 0 | 1 | 2;
+
 // The main component should be wrapped with the QueryClientProvider
-const BookingView = () => (
+const StaffAllBookingView = () => (
     <QueryClientProvider client={queryClient}>
-        <BookingViewContent />
+        <AllBookingViewContent />
     </QueryClientProvider>
 );
 
-// New component to hold the actual logic, enabling hook usage
-const BookingViewContent = () => {
-    // --- State and Handlers ---
-    const [userId, setUserId] = useState<string | null>(null);
+const AllBookingViewContent = () => {
+    const [staffId, setStaffId] = React.useState<string | null>(null);
+    const [isIdLoading, setIsIdLoading] = React.useState(true);
 
-    // --- React Query Hooks for Data ---
-    // status: 0 (Pending)
-    const { data: bookings = [], isLoading: pendingLoading, refetch: refetchPending } = useStaffBookings(userId, 0);
-    
-    // status: 1 (Confirmed)
-    const { data: confirmedBooking = [], isLoading: confirmedLoading, refetch: refetchConfirmed } = useStaffBookings(userId, 1);
-    
-    // status: 2 (Cancelled/Rejected)
-    const { data: cancelledBooking = [], isLoading: cancelledLoading, refetch: refetchCancelled } = useStaffBookings(userId, 2);
-
-    useEffect(() => {
-        const checkUserAndFetch = async () => {
-            // 1. Check User ID
-            const staffId = await AsyncStorage.getItem('userId');
-            if (!staffId) {
-                router.replace('../login-related/login-page');
-                return;
+    React.useEffect(() => {
+        const fetchStaffId = async () => {
+            try {
+                const id = await AsyncStorage.getItem('userId');
+                setStaffId(id);
+            } catch (error) {
+                console.error("Failed to load staffId from storage:", error);
+                setStaffId('0'); // Fallback ID
+            } finally {
+                setIsIdLoading(false);
             }
-            setUserId(staffId);
         };
-        checkUserAndFetch();
-        
+        fetchStaffId();
     }, []);
 
-    const handleStatusUpdate = async (id: string, status: 1 | 2, reason: string) => {
+    // Get the filterStatus from navigation parameters
+    const params = useLocalSearchParams();
+    const filterStatus = parseInt(params.filterStatus as string, 10) as BookingStatus;
+    
+    const statusTitles: { [key in BookingStatus]: string } = {
+        0: 'Pending Bookings',
+        1: 'Confirmed Bookings',
+        2: 'Cancelled/Rejected',
+    };
+
+    // --- React Query Hook for Data ---
+    const { 
+        data: allBookings = [], 
+        isLoading: isBookingsLoading, 
+        refetch 
+    } = useStaffBookings(staffId || '0', filterStatus, { 
+        enabled: !isIdLoading && !!staffId 
+    });
+
+    // Determine card style based on filterStatus
+    const isConfirmed = filterStatus === 1;
+    const isCancelled = filterStatus === 2;
+
+    // --- Handlers ---
+    const handleStatusUpdate = async (id: string, newStatus: 1 | 2, reason: string) => {
         try {
-            await updateReservationStatus(id, status, reason); 
+            await updateReservationStatus(id, newStatus, reason); 
+            Alert.alert('Success', 'Booking status updated.');
+            // React Query will automatically update the list via the onSnapshot listener in useStaffBookings
         } catch (error) {
             Alert.alert('Error', 'Failed to update booking status.');
             console.error('Update error:', error);
@@ -62,8 +97,10 @@ const BookingViewContent = () => {
         Alert.alert("Contact Customer", `Start a chat or email with: ${email}`);
         console.log(`Initiating contact with: ${email}`);
     };
-    const renderCard = ({ item, isCancelled, isConfirmed }: { item: ReservationDetails, isCancelled: boolean, isConfirmed: boolean }) => {
-        
+
+    // --- Render Logic (adapted from BookingViewContent) ---
+    const renderCard = ({ item }: { item: ReservationDetails }) => {
+        // Styles are now determined by the filterStatus, not the item's current status
         let glowColor = staff_booking_styles.pendingGlow.shadowColor;
         let infoAccentColor = '#fcd34d'; // Yellow
         let cardBaseStyle = staff_booking_styles.pendingCard;
@@ -72,8 +109,7 @@ const BookingViewContent = () => {
             glowColor = staff_booking_styles.confirmGlow.shadowColor;
             infoAccentColor = '#34d399'; // Green
             cardBaseStyle = staff_booking_styles.confirmCard;
-        }
-        if (isCancelled) {
+        } else if (isCancelled) {
             glowColor = staff_booking_styles.cancelledGlow.shadowColor;
             infoAccentColor = '#fb7185'; // Red
             cardBaseStyle = staff_booking_styles.cancelledCard;
@@ -136,15 +172,10 @@ const BookingViewContent = () => {
 
                             <View style={staff_booking_styles.rightContent}>
                                 <View style={staff_booking_styles.actionButtonsContainer}> 
-                                    {!isConfirmed && (
+                                    {/* Show Confirmation only for Pending view */}
+                                    {!isConfirmed && !isCancelled && (
                                         <Pressable
-                                            onPress={() => {
-                                                if (item.id) {
-                                                    handleStatusUpdate(item.id, 1, ""); // Confirm
-                                                } else {
-                                                    console.error("Cannot update status: Reservation ID is missing.");
-                                                }
-                                            }}
+                                            onPress={() => item.id && handleStatusUpdate(item.id, 1, "")}
                                             style={({ pressed }) => [
                                                 staff_booking_styles.actionButtonCircle, 
                                                 staff_booking_styles.confirmButtonCircle,
@@ -154,15 +185,10 @@ const BookingViewContent = () => {
                                             <Check color="#fff" size={18} />
                                         </Pressable>
                                     )}
+                                    {/* Show Cancellation/Rejection for Pending/Confirmed view */}
                                     {!isCancelled && (
                                         <Pressable
-                                            onPress={() => {
-                                                if (item.id) {
-                                                    handleStatusUpdate(item.id, 2, ""); // Cancel
-                                                } else {
-                                                    console.error("Cannot update status: Reservation ID is missing.");
-                                                }
-                                            }}
+                                            onPress={() => item.id && handleStatusUpdate(item.id, 2, "")}
                                             style={({ pressed }) => [
                                                 staff_booking_styles.actionButtonCircle, 
                                                 staff_booking_styles.cancelButtonCircle,
@@ -199,133 +225,154 @@ const BookingViewContent = () => {
         );
     };
     
-    const handleViewAll = (status: number) => {
-        console.log(`Navigating to View All ${status}`);
-        router.push({
-            pathname: './staff-all-booking', 
-            params: { filterStatus: status },
-        });
-    };
+    const renderItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
+        renderCard({ item });
 
-    const renderPendingItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
-        renderCard({ item, isCancelled: false, isConfirmed: false });
-
-    const renderConfirmedItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
-        renderCard({ item, isCancelled: false, isConfirmed: true });
-
-    const renderCancelledItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
-        renderCard({ item, isCancelled: true, isConfirmed: false });
-    
-    // EMPTY COMPONENTS
-    const PendingEmpty = () => (
+    const EmptyComponent = () => (
         <View style={staff_booking_styles.emptyList}>
-            <Text style={staff_booking_styles.emptyTextPrimary}>🎉 All Caught Up!</Text>
-            <Text style={staff_booking_styles.emptyTextSecondary}>No pending reservations to review.</Text>
-        </View>
-    );
-    const ConfirmedEmpty = () => (
-        <View style={staff_booking_styles.emptyList}>
-            <Text style={staff_booking_styles.emptyTextPrimary}>Ready to Go</Text>
-            <Text style={staff_booking_styles.emptyTextSecondary}>No confirmed bookings currently.</Text>
-        </View>
-    );
-    const CancelledEmpty = () => (
-        <View style={staff_booking_styles.emptyList}>
-            <Text style={staff_booking_styles.emptyTextPrimary}>Clear History</Text>
-            <Text style={staff_booking_styles.emptyTextSecondary}>No cancelled bookings recorded.</Text>
+            <Text style={staff_booking_styles.emptyTextPrimary}>
+                {isConfirmed ? 'No Confirmed Bookings' : isCancelled ? 'No Cancelled Bookings' : 'No Pending Bookings'}
+            </Text>
+            <Text style={staff_booking_styles.emptyTextSecondary}>
+                Check back later for updates.
+            </Text>
         </View>
     );
 
-    const SectionLoading = ({ text }: { text: string }) => (
+    const LoadingComponent = () => (
         <View style={staff_booking_styles.sectionLoadingContainer}>
             <ActivityIndicator size="large" color="#a1a1aa" />
-            <Text style={staff_booking_styles.sectionLoadingText}>{text}</Text>
+            <Text style={staff_booking_styles.sectionLoadingText}>Loading all {statusTitles[filterStatus].toLowerCase()}...</Text>
         </View>
     );
+
+    // Determine the base FlatList style tint
+    const listTintStyle = isConfirmed 
+        ? staff_booking_styles.listContentFlatListGreen
+        : isCancelled 
+        ? staff_booking_styles.listContentFlatListRed 
+        : staff_booking_styles.listContentFlatListYellow;
+
 
     // MAIN RENDER BLOCK 
     return (
-        <View style={staff_booking_styles.mainContainer}>  
-            {/* 1. Pending Bookings Section - YELLOW Tint */}
-            <View style={[staff_booking_styles.listSubSection, staff_booking_styles.listSectionFlex]}>
-                <View style={[staff_booking_styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-                <Text style={staff_booking_styles.headerTitle}>Pending ({bookings.length})</Text>
-                
-                <Pressable
-                    style={({ pressed }) => [staff_booking_styles.viewAllButton, pressed && staff_booking_styles.viewAllButtonPressed]}
-                    onPress={() => handleViewAll(0)} // pending
-                >
-                    <Text style={staff_booking_styles.viewAllButtonText}>View All</Text>
-                </Pressable>
-            </View>
-                
-                {pendingLoading ? (
-                    <SectionLoading text="Loading pending bookings..." />
-                ) : (
-                    <FlatList
-                        data={bookings}
-                        renderItem={renderPendingItem}
-                        keyExtractor={(item) => item.id!.toString()}
-                        ListEmptyComponent={PendingEmpty}
-                        style={[staff_booking_styles.listContentFlatListBase, staff_booking_styles.listContentFlatListYellow]}
-                    />
-                )}
-            </View>
+        <View style={[staff_booking_styles.mainContainer, listTintStyle]}> 
+            <CustomBackHeader title={statusTitles[filterStatus].toLowerCase()} />
+            {/* Custom Header Setup for a single view */}
+            <Stack.Screen 
+                options={{
+                    headerTitle: `${statusTitles[filterStatus]} (${allBookings.length})`,
+                    headerTitleStyle: { color: '#fff', fontWeight: 'bold' },
+                    headerStyle: { backgroundColor: '#09090b' },
+                    headerLeft: () => (
+                        <Pressable onPress={() => router.back()} style={{ marginLeft: 10 }}>
+                            <ChevronLeft color="#fff" size={24} />
+                        </Pressable>
+                    ),
+                }}
+            />
             
-            {/* 2. Confirmed Bookings Section - GREEN Tint */}
-            <View style={[staff_booking_styles.listSubSection, staff_booking_styles.listSectionFlex]}>
-                <View style={[staff_booking_styles.header, staff_booking_styles.sectionHeader]}>
-                    <Text style={staff_booking_styles.headerTitle}>Confirmed ({confirmedBooking.length})</Text>
-                    <Pressable
-                        style={({ pressed }) => [staff_booking_styles.viewAllButton, pressed && staff_booking_styles.viewAllButtonPressed]}
-                        onPress={() => handleViewAll(1)} // confirmed
-                    >
-                        <Text style={staff_booking_styles.viewAllButtonText}>View All</Text>
-                    </Pressable>
-                </View>
-                
-                {confirmedLoading ? (
-                    <SectionLoading text="Loading confirmed bookings..." />
-                ) : (
-                    <FlatList
-                        data={confirmedBooking}
-                        renderItem={renderConfirmedItem}
-                        keyExtractor={(item) => item.id!.toString()}
-                        ListEmptyComponent={ConfirmedEmpty}
-                        style={[staff_booking_styles.listContentFlatListBase, staff_booking_styles.listContentFlatListGreen]}
-                    />
-                )}
-            </View>
-
-            {/* 3. Cancelled Bookings Section - RED Tint */}
-            <View style={[staff_booking_styles.listSubSection, staff_booking_styles.listSectionFlex]}>
-                <View style={[staff_booking_styles.header, staff_booking_styles.sectionHeader]}>
-                    <Text style={staff_booking_styles.headerTitle}>Cancelled ({cancelledBooking.length})</Text>
-                    <Pressable
-                        style={({ pressed }) => [staff_booking_styles.viewAllButton, pressed && staff_booking_styles.viewAllButtonPressed]}
-                        onPress={() => handleViewAll(2)} // rejected
-                    >
-                        <Text style={staff_booking_styles.viewAllButtonText}>View All</Text>
-                    </Pressable>
-                </View>
-                
-                {cancelledLoading ? (
-                    <SectionLoading text="Loading cancelled bookings..." />
-                ) : (
-                    <FlatList
-                        data={cancelledBooking}
-                        renderItem={renderCancelledItem}
-                        keyExtractor={(item) => item.id!.toString()}
-                        ListEmptyComponent={CancelledEmpty}
-                        style={[staff_booking_styles.listContentFlatListBase, staff_booking_styles.listContentFlatListRed]}
-                    />
-                )}
-            </View>
+            {isBookingsLoading ? (
+                <LoadingComponent />
+            ) : (
+                <FlatList
+                    data={allBookings}
+                    renderItem={renderItem}
+                    keyExtractor={(item) => item.id!.toString()}
+                    ListEmptyComponent={EmptyComponent}
+                    contentContainerStyle={staff_all_booking_styles.listContentContainer}
+                    onRefresh={refetch}
+                    refreshing={isBookingsLoading}
+                />
+            )}
         </View>
     );
 };
 
-// ... (staff_booking_styles is unchanged) ...
+const styles = StyleSheet.create({
+  fullScreenBackground: {
+    flex: 1,
+    backgroundColor: '#09090b',
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  // --- CUSTOM HEADER STYLES (Adapted from Dashboard) ---
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 40, // Increased padding to match the dashboard's internal header
+    marginBottom: 20,
+    backgroundColor: '#09090b', // Ensure background is consistent
+  },
+  title: {
+    color: '#fff',
+    fontSize: 24, // Slightly smaller title for sub-screen
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingRight: 20,
+    // Note: justifyContent is not used here to keep the title in the center, 
+    // the header itself uses 'space-between'
+  },
+  backButtonText: {
+    color: '#fff',
+    marginLeft: 4,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // --- CONTENT STYLES ---
+  contentText: {
+    color: '#ccc',
+    fontSize: 18,
+    marginBottom: 8,
+  },
+  subtitle: {
+    color: '#888',
+    fontSize: 14,
+    marginBottom: 20,
+  },
+  placeholderBox: {
+    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  placeholderText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+});
+
+// Re-use most styles from staff-booking-view, but define a new container style for the FlatList
+const staff_all_booking_styles = StyleSheet.create({
+    listContentContainer: {
+        padding: 16, // Padding around the content
+        minHeight: '100%', // Ensure it takes up full height when list is short
+    },
+    // Overriding mainContainer to allow listTintStyle to apply directly as the main view
+    mainContainer: {
+        flex: 1, 
+        backgroundColor: '#09090b', // Default dark background
+    },
+    // We no longer need these section-specific styles as it's one main list
+    listSubSection: { borderTopWidth: 0 },
+    listSectionFlex: { flex: 1, minHeight: 0 },
+    header: { display: 'none' }, // Hide the old header now that Stack.Screen manages it
+});
+
 const staff_booking_styles = StyleSheet.create({
     mainContainer: {
         flex: 1, 
@@ -598,4 +645,4 @@ const staff_booking_styles = StyleSheet.create({
     },
 });
 
-export default BookingView;
+export default StaffAllBookingView;
