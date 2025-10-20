@@ -1,29 +1,7 @@
 import { Timestamp } from 'firebase/firestore';
-
-// Using a const assertion for strongly-typed branch IDs
-export const BRANCHES = {
-  PAARL: 0,
-  BELLVILLE: 1,
-  SOMERSET_WEST: 2,
-} as const;
-
-export const RESTAURANT = {
-  DIENAGUIL: 0
-} as const;
-
-// Using a const assertion for strongly-typed role IDs
-export const ROLES = {
-  CUSTOMER: 0,
-  STAFF: 1,
-  ADMIN: 2,
-  SUPER_ADMIN: 3,
-} as const;
-
-// Create a type from the const values
-export type BranchId = typeof BRANCHES[keyof typeof BRANCHES];
-export type RoleId = typeof ROLES[keyof typeof ROLES];
-export type RestaurantId = typeof RESTAURANT[keyof typeof RESTAURANT];
-
+import { JSX } from 'react';
+import { StyleProp, ViewStyle } from 'react-native';
+import { RoleId, BranchId, RestaurantId } from './typesConst';
 /**
  * Interface representing a user document in the 'users' Firestore collection.
  */
@@ -76,4 +54,23 @@ export interface BranchDetails {
   open: boolean;
   restaurant: string;
 
+}
+
+// --- GLOBAL CACHE DEFINITION (Context, Hook, and Provider) ---
+export interface StaffBookingState {
+  // Authentication & User Status
+  isAuthReady: boolean;
+  userId: string | null;
+  userRole: number | null; // Represents the RoleId (e.g., 1 for STAFF, 2 for ADMIN)
+
+  // Data Loading Status
+  pendingLoading: boolean;
+  confirmedLoading: boolean;
+  cancelledLoading: boolean;
+  
+  // Core Data Sets (Filtered by status)
+  allBookings: ReservationDetails[];
+  pendingBookings: ReservationDetails[];
+  confirmedBookings: ReservationDetails[];
+  cancelledBookings: ReservationDetails[];
 }
