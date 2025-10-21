@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BookingView from './staff-booking-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';

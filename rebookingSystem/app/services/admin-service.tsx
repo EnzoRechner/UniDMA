@@ -44,3 +44,5 @@ export async function fetchBranches(): Promise<BranchDetails[]> {
     throw error;
   }
 }
+
+export default {};
