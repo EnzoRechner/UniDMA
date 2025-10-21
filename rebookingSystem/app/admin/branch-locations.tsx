@@ -1,35 +1,14 @@
 import React from "react";
 import { View, Text, StyleSheet, FlatList, Pressable, Alert } from "react-native";
 import BranchTilesScreen from "./branch-tabs-widget";
-// --- Sample Data ---
-const DATA = [
-  { id: "1", title: "Apples", description: "Fresh and juicy red apples." },
-  { id: "2", title: "Bananas", description: "Sweet ripe bananas." },
-  { id: "3", title: "Oranges", description: "Citrus fruit full of vitamin C." },
-  { id: "4", title: "Grapes", description: "Grapes fruit full of vitamin D." },
-];
 
-// --- Tile Widget ---
-const BranchTile = ({ item }: { item: typeof DATA[0] }) => (
-  <Pressable
-    style={({ pressed }) => [
-      styles.tile,
-      { opacity: pressed ? 0.7 : 1, transform: pressed ? [{ scale: 0.97 }] : [{ scale: 1 }] },
-    ]}
-    onPress={() => Alert.alert("Pressed!", `You pressed the: ${item.title}`)}
-  >
-    <Text style={styles.tileTitle}>{item.title}</Text>
-    <Text style={styles.tileDescription}>{item.description}</Text>
-  </Pressable>
-    
-);
 
 // --- Main Screen ---
 export default function BranchListScreen() {
   return (
     
     BranchTilesScreen()
-
+    
     /*<View style={styles.container}>
       <Text style={styles.header}>Branch Locations</Text>
       <FlatList

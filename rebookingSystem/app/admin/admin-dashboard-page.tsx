@@ -36,7 +36,7 @@ const AdminDashboard = () => {
           <Tile
             title="Branch Locations"
             icon={<Building size={46} color="#C89A5B" />}
-            route="../admin/branch-locations"
+            route="../admin/branch-local-test"
           />
           <Tile
             title="App Settings"
