@@ -10,7 +10,13 @@ import {
   collection,
 } from 'firebase/firestore';
 import { db } from './firebase-initilisation';
-import { ReservationDetails, UserProfile } from '../lib/types';
+import { ReservationDetails, UserProfile, BranchId, BRANCHES } from '../lib/types';
+// Local mapping from BranchId to human-readable name for notifications
+const branchNameMap: Record<BranchId, string> = {
+  [BRANCHES.PAARL]: 'Paarl',
+  [BRANCHES.BELLVILLE]: 'Bellville',
+  [BRANCHES.SOMERSET_WEST]: 'Somerset West',
+};
 
 /**
  * Generates a unique random 6-digit string ID for a new booking.
@@ -67,6 +73,29 @@ export const addReservation = async (
       status: 0, // Default to 'pending'
       createdAt: Timestamp.now(),
     });
+    // Fire-and-forget staff notification about a new booking
+    try {
+      const NotificationService = (await import('./notifications')).default;
+      const numericBranchId = reservationData.branch as BranchId;
+      const branchName = branchNameMap[numericBranchId] ?? String(reservationData.branch);
+
+      await NotificationService.sendNewBookingNotificationToStaff(
+        branchName,
+        newBookingId,
+        {
+          customerName: reservationData.bookingName || reservationData.message || 'Customer',
+          customerId: reservationData.userId || 'unknown',
+          date: reservationData.date || (reservationData as any).dateOfArrival?.toDate?.().toISOString()?.slice(0,10) || '',
+          time: reservationData.time || '',
+          guests: reservationData.guests,
+          message: reservationData.message,
+        },
+        numericBranchId
+      );
+    } catch (notifError) {
+      console.error('Error sending staff notification:', notifError);
+    }
+
     return newBookingId;
   } catch (error) {
     console.error('Error adding reservation:', error);

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, addDoc, getDocs, query, where, Timestamp, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, Timestamp, doc, setDoc, getDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, signOut as fbSignOut } from 'firebase/auth';
 import { auth, db } from './firebase-initilisation';
 import { UserProfile, BranchId, ROLES } from '../lib/types';
@@ -74,6 +74,14 @@ export const signUp = async (
 
   // Persist the 6-digit ID locally (existing app logic expects this)
   await AsyncStorage.setItem('userId', newUserId);
+
+  // Try to register device for push notifications (best-effort)
+  try {
+    const NotificationService = (await import('./notifications')).default;
+    await NotificationService.registerForPushNotifications(newUserId);
+  } catch (err) {
+    console.log('Failed to register for push notifications:', err);
+  }
 
   return newUserId;
 };
