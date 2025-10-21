@@ -124,3 +124,5 @@ export const updateReservationStatus = async (
     throw error;
   }
 };
+
+export default {};

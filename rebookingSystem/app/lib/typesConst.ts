@@ -96,3 +96,5 @@ export function getRolesName(id: number): string | undefined {
 export function getStatusName(id: number): string | undefined {
     return STATUS_NAMES_BY_ID[id];
 }
+
+export default {};

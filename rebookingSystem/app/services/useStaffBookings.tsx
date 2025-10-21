@@ -68,3 +68,5 @@ export const BOOKING_QUERY_KEYS = {
     CONFIRMED: getBookingQueryKey(1),
     CANCELLED: getBookingQueryKey(2),
 };
+
+export default {};

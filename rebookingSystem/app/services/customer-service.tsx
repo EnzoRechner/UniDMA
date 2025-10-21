@@ -8,6 +8,7 @@ import {
   where,
   Timestamp,
   collection,
+  updateDoc, // Import updateDoc
 } from 'firebase/firestore';
 import { db } from './firebase-initilisation';
 import { ReservationDetails, UserProfile } from '../lib/types';
@@ -94,7 +95,9 @@ export const getReservationsRealtime = (
     q,
     (snapshot) => {
       const reservations = snapshot.docs.map(doc => doc.data() as ReservationDetails);
-      callback(reservations);
+      // Filter out already cancelled bookings from the main view
+      const activeReservations = reservations.filter(r => r.status !== 4);
+      callback(activeReservations);
     },
     (error) => {
       console.error("Error listening to reservations:", error);
@@ -105,10 +108,20 @@ export const getReservationsRealtime = (
   return unsubscribe;
 };
 
-
-
-
-
+/**
+ * Marks a reservation as cancelled in the 'nagbookings' collection.
+ * @param {string} bookingId - The ID of the booking to cancel.
+ * @returns {Promise<void>}
+ */
+export const cancelReservation = async (bookingId: string): Promise<void> => {
+    try {
+        const bookingDocRef = doc(db, 'nagbookings', bookingId);
+        // Status 4 is 'cancelled'
+        await updateDoc(bookingDocRef, { status: 4 });
+    } catch (error) {
+        console.error("Error cancelling reservation:", error);
+        throw error;
+    }
+};
 
 export default {};
-

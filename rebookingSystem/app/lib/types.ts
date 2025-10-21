@@ -74,3 +74,5 @@ export interface StaffBookingState {
   confirmedBookings: ReservationDetails[];
   cancelledBookings: ReservationDetails[];
 }
+
+export default {};

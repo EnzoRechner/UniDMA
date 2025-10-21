@@ -10,7 +10,8 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from '../services/firebase-initilisation';
-import { ReservationDetails, UserProfile, BranchId } from '../lib/types';
+import { ReservationDetails, UserProfile } from '../lib/types';
+import { BranchId } from '../lib/typesConst';
 
 /**
  * Fetches a staff/admin user's profile from the 'rebooking-accounts' collection.
