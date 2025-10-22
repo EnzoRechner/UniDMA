@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, addDoc, getDocs, query, where, Timestamp, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, Timestamp, doc, setDoc, getDoc, updateDoc, documentId, deleteDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, signOut as fbSignOut } from 'firebase/auth';
 import { auth, db } from './firebase-initilisation';
 import { UserProfile } from '../lib/types';
@@ -70,13 +70,13 @@ export const signUp = async (
   };
 
   // Persist profile; include firebaseUid as extra field for lookup
-  const profileDocRef = doc(db, 'rebooking-accounts', newUserId);
-  await setDoc(profileDocRef, { ...baseProfile, firebaseUid: cred.user.uid } as any);
+  const profileDocRef = doc(db, 'rebooking-accounts', cred.user.uid);
+  await setDoc(profileDocRef, { ...baseProfile } as any);
 
   // Persist the 6-digit ID locally (existing app logic expects this)
-  await AsyncStorage.setItem('userId', newUserId);
+  await AsyncStorage.setItem('userId', cred.user.uid);
 
-  return newUserId;
+  return cred.user.uid;
 };
 
 /**
@@ -88,24 +88,57 @@ export const signIn = async (email: string, password: string): Promise<UserProfi
   const cred = await signInWithEmailAndPassword(auth, email, password);
   const uid = cred.user.uid;
 
-  // First, try to find profile by firebaseUid
-  let q = query(collection(db, 'rebooking-accounts'), where('firebaseUid', '==', uid));
+  let userDoc: any = null;
+  let userId: string;
+  let userData: UserProfile;
+
+  // 1. Try to find profile by UID (document ID)
+  let q = query(collection(db, 'rebooking-accounts'), where(documentId(), '==', uid));
   let snapshot = await getDocs(q);
 
-  // Fallback: legacy lookup by email (if profile was created before adding firebaseUid)
-  if (snapshot.empty) {
+  if (!snapshot.empty) {
+    // Found by UID - All good.
+    userDoc = snapshot.docs[0];
+    userId = userDoc.id;
+    userData = userDoc.data() as UserProfile;
+
+  } else {
+    // Lookup by email
     q = query(collection(db, 'rebooking-accounts'), where('email', '==', email));
     snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      // Found by Email - Migrate the document ID to the UID.
+      const oldDoc = snapshot.docs[0];
+      const docIdToMigrate = oldDoc.id;
+      const dataToMigrate = oldDoc.data() as any;
+
+      if ('firebaseUid' in dataToMigrate) {
+          const cleanData = { ...dataToMigrate };
+          delete (cleanData as any).firebaseUid;
+          userData = cleanData;
+      } else {
+          userData = dataToMigrate;
+      }
+
+      const newDocRef = doc(db, 'rebooking-accounts', uid);
+      await setDoc(newDocRef, dataToMigrate);
+
+      // Delete the OLD document found by email
+      const oldDocRef = doc(db, 'rebooking-accounts', docIdToMigrate);
+      await deleteDoc(oldDocRef);
+      
+      // Update variables to reflect the new document
+      userId = uid; // The new ID is the Firebase UID
+      userData = dataToMigrate; // The data remains the same
+
+    } else {
+      // Case 3: Not found by UID or Email
+      throw new Error('User profile not found. Please complete setup or contact support.');
+    }
   }
 
-  if (snapshot.empty) {
-    throw new Error('User profile not found. Please complete setup or contact support.');
-  }
-
-  const userDoc = snapshot.docs[0];
-  const userId = userDoc.id;
-  const userData = userDoc.data() as UserProfile;
-
+  // Final actions after successful lookup/migration
   await AsyncStorage.setItem('userId', userId);
 
   return { ...userData, userId };

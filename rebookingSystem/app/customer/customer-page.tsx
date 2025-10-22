@@ -61,6 +61,7 @@ const CustomerPage: FC = () => {
         }
         const userData = await fetchUserData(userId);
         if (!userData) throw new Error('Could not find user profile.');
+        userData.userId = userId;
         setUser(userData);
 
         unsubscribe = getReservationsRealtime(userId, (fetchedBookings) => {
