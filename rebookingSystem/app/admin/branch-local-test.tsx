@@ -1,7 +1,7 @@
 // branch-local-test.tsx
 import React, {useState,useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions,Alert, } from "react-native";
-import BranchWidget from "../admin/admin-branchs-page"; // ✅ updated import path
+import BranchWidget from "./admin-branches-page"; 
 import { useRouter } from 'expo-router';
 import { fetchUserData} from '../services/customer-service';
 import { UserProfile } from '../lib/types';

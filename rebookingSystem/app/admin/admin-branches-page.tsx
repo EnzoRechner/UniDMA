@@ -13,12 +13,13 @@ import {
   Modal,
   Switch,
 } from "react-native";
-import { collection, getDocs, updateDoc, doc, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, onSnapshot, where, query } from "firebase/firestore";
 import { db } from "../services/firebase-initilisation";
 import { BlurView } from "expo-blur";
 import { addBranch } from "../services/admin-service";
 import {UserProfile} from "../lib/types";
 import { updateBranch } from "../services/admin-service";
+import { BranchId } from '../lib/typesConst';
 // --- Firestore Type ---
 
 
@@ -58,6 +59,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
   // ---------------------------
   const handleAddBranch = async () => {
   if (
+
     !userProfile?.userId||
     !branchName ||
     !branchAddress ||
@@ -76,9 +78,9 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
     // Fetch existing branches to determine next branch number
     const snapshot = await getDocs(collection(db, "Branch"));
     const branchNumber = snapshot.size + 1; // e.g., 1, 2, 3
-    const branchCode = branchNumber.toString(); // numeric branch code
+    const branchCode = branchNumber; // numeric branch code
 
-    const newBranch: Omit<BranchDetails, "id"> & { branchCode: string } = {
+    const newBranch: Omit<BranchDetails, "id"> & { branchCode: number } = {
       Coord: branchCoord, // now using actual coordinates
       address: branchAddress,
       capacity: branchCapacity,
@@ -110,11 +112,12 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
   }
 };
 
-  
+//This updates the branch list in real-time 
+// when changes occur in Firestore they get displayed immediately
+
   useEffect(() => {
     const branchRef = collection(db, "Branch");
-
-    // real-time listener
+    //real-time listener
     const unsubscribe = onSnapshot(branchRef, (snapshot) => {
       const branchList: BranchDetails[] = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -125,7 +128,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
       setLoading(false);
     });
 
-    // cleanup when component unmounts
     return () => unsubscribe();
   }, []);
 
@@ -133,7 +135,15 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
   
   const loadBranches = async () => {
     try {
-      const snapshot = await getDocs(collection(db, "Branch"));
+      let snapshot: any = null;
+      if (userProfile?.role == 2) {
+        const q = query(collection(db, "Branch"),
+         where("branchCode", "==", userProfile.branch.toString()));
+        snapshot = await getDocs(q);
+      } else {
+        snapshot = await getDocs(collection(db, "Branch"));
+      }
+
       const branchList = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -192,7 +202,8 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
     >
       <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
         <FlatList
-          data={branches}
+          data={branches}         
+
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <Pressable
@@ -232,7 +243,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
           <TouchableOpacity
               style={styles.button}
               onPress={() => {
-                // Reset fields before adding a new branch
+                // empty fields before displaying modal
                 setBranchName("");
                 setBranchAddress("");
                 setBranchCapacity(0);

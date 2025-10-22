@@ -41,7 +41,7 @@ const AdminDashboard = () => {
           <Tile
             title="App Settings"
             icon={<Settings size={46} color="#C89A5B" />}
-            route="../admin/app-settings"
+            route="../admin/admin-settings"
           />
           <Tile
             title="Staff Accounts"
