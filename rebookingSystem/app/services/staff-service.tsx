@@ -50,9 +50,9 @@ export function onSnapshotStaffBookings(
             ];
 
             // Role-based filtering:
-            if (staffRole === 2) { // Admin: Filter by Restaurant
+            if (staffRole === 3) { // Super Admin: Filter by Restaurant
                 queryConstraints.push(where('restaurant', '==', staffRestaurant));
-            } else if (staffRole === 1) { // Staff: Filter by Branch
+            } else if (staffRole === 1 || staffRole === 2) { // Admin/Staff: Filter by Branch
                 queryConstraints.push(where('branch', '==', staffBranch));
             } else {
                 console.warn(`User ${staffId} has invalid role: ${staffRole}. No bookings fetched.`);
