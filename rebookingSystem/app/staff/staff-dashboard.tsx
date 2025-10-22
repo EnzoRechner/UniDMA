@@ -15,8 +15,8 @@ const StaffDashboard = () => {
             <TouchableOpacity
               style={styles.logoutButton}
               onPress={async () => {
-                await AsyncStorage.removeItem("userId");
-                router.replace("../login-related/login-page");
+                await AsyncStorage.removeItem('userId');
+                router.replace('/auth/auth-login');
               }}>
               <Ionicons name="log-out-outline" size={20} color="#fff" />
               <Text style={styles.logoutText}>Logout</Text>
