@@ -21,7 +21,7 @@ export interface UserProfile {
  */
 export interface ReservationDetails {
   id?: string; // The Firestore document ID
-  branch: BranchId; // Branch where the reservation is made (numeric id)
+  branch: number; // Branch where the reservation is made
   createdAt: Timestamp; // Unix timestamp
   dateOfArrival: Timestamp; // Date of arrival in 'YYYY-MM-DD' format
   date?: string; // Date of arrival in 'YYYY-MM-DD' format
