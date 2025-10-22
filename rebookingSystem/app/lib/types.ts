@@ -46,7 +46,7 @@ export interface Branch {
   open?: string; // e.g., "09:00"
 }
 export interface BranchDetails {  
-  id: string; // The Firestore document ID
+  id: number; // The Firestore document ID
   //Bid: BranchId;
   Coord: GeolocationCoordinates; 
   address: string;

@@ -13,17 +13,17 @@ import {
   Modal,
   Switch,
 } from "react-native";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, onSnapshot } from "firebase/firestore";
 import { db } from "../services/firebase-initilisation";
 import { BlurView } from "expo-blur";
 import { addBranch } from "../services/admin-service";
 import {UserProfile} from "../lib/types";
-
+import { updateBranch } from "../services/admin-service";
 // --- Firestore Type ---
 
 
 export interface BranchDetails {
-  id: string;
+  id: number;
   Coord: GeolocationCoordinates;
   address: string;
   capacity: number;
@@ -42,7 +42,9 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
   const [branches, setBranches] = useState<BranchDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPopup, setShowPopup] = useState(false);
-
+  const [selectedBranch, setSelectedBranch] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  
   // Branch form fields
   const [branchCoord, setBranchCoord] = useState<GeolocationCoordinates | null>(null);
   const [branchAddress, setBranchAddress] = useState("");
@@ -108,6 +110,25 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
   }
 };
 
+  
+  useEffect(() => {
+    const branchRef = collection(db, "Branch");
+
+    // real-time listener
+    const unsubscribe = onSnapshot(branchRef, (snapshot) => {
+      const branchList: BranchDetails[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as BranchDetails[];
+
+      setBranches(branchList);
+      setLoading(false);
+    });
+
+    // cleanup when component unmounts
+    return () => unsubscribe();
+  }, []);
+
   // loadBranches function
   
   const loadBranches = async () => {
@@ -129,6 +150,30 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
   useEffect(() => {
     loadBranches();
   }, []);
+
+  const handleUpdateBranch = async () => {
+    if (!selectedBranch) return;
+
+  try {
+    const ref = doc(db, "Branch", selectedBranch.id);
+    await updateDoc(ref, {
+      name: branchName,
+      address: branchAddress,
+      capacity: branchCapacity,
+      restaurant: branchRestaurant,
+      open: branchOpen,
+      Coord: branchCoord,
+    });
+
+    console.log("Branch updated successfully");
+    setShowPopup(false);
+    setSelectedBranch(null);
+  } catch (error) {
+    console.error("Error updating branch:", error);
+  }
+};
+
+
 
   if (loading) {
     return (
@@ -158,7 +203,18 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
                   transform: pressed ? [{ scale: 0.97 }] : [{ scale: 1 }],
                 },
               ]}
-              onPress={() => Alert.alert("Branch Selected", item.name)}
+              //onPress={() => Alert.alert("Branch Selected", item.name)}
+              onPress={() => {
+                setSelectedBranch(item);
+                setBranchName(item.name);
+                setBranchAddress(item.address);
+                setBranchCapacity(item.capacity);
+                setBranchRestaurant(item.restaurant);
+                setBranchOpen(item.open);
+                setBranchCoord(item.Coord || null);
+                setIsEditing(true);
+                setShowPopup(true);
+              }}
             >
               <Text style={styles.tileTitle}>{item.name}</Text>
               <Text style={styles.tileDescription}>{item.address}</Text>
@@ -174,10 +230,21 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
         {/* Add Branch Button */}
         <View>
           <TouchableOpacity
-            style={styles.button}
-            onPress={() => setShowPopup(true)}
-          >
-            <Text style={styles.tileTitle}>Add Branch</Text>
+              style={styles.button}
+              onPress={() => {
+                // Reset fields before adding a new branch
+                setBranchName("");
+                setBranchAddress("");
+                setBranchCapacity(0);
+                setBranchRestaurant("");
+                setBranchOpen(false);
+                setBranchCoord(null);
+                setSelectedBranch(null);
+                setIsEditing(false);
+                setShowPopup(true);
+              }}
+            >
+              <Text style={styles.tileTitle}>Add Branch</Text>
           </TouchableOpacity>
         </View>
 
@@ -190,7 +257,9 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
       >
         <BlurView intensity={50} tint="dark" style={styles.modalOverlay}>
           <BlurView intensity={80} tint="dark" style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Add New Branch</Text>
+            <Text style={styles.modalTitle}>
+              {isEditing ? "Edit Branch" : "Add New Branch"}
+            </Text>
 
             <TextInput
               style={styles.input}
@@ -280,7 +349,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
       <View style={styles.modalButtons}>
         <TouchableOpacity
           style={[styles.modalButton, { backgroundColor: "#C89A5B" }]}
-          onPress={handleAddBranch}
+          onPress={isEditing ? handleUpdateBranch : handleAddBranch}
         >
           <Text style={styles.modalButtonText}>Confirm</Text>
         </TouchableOpacity>

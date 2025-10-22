@@ -6,6 +6,9 @@ import { useRouter } from 'expo-router';
 import { fetchUserData} from '../services/customer-service';
 import { UserProfile } from '../lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { collection, onSnapshot } from "firebase/firestore";
+
+
 
 const { width: windowWidth } = Dimensions.get('window');
 const WIDGET_WIDTH = windowWidth * 0.9;

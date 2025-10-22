@@ -10,7 +10,7 @@ import { Mail, User, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { signUp } from '../services/auth-service';
 import { Picker } from '@react-native-picker/picker';
-import { BranchId, BRANCHES } from '../lib/types';
+import { BranchId, BRANCHES } from '../lib/typesConst';
 
 const SignupScreen = () => {
   const [email, setEmail] = useState('');

@@ -52,5 +52,17 @@ export const addBranch = async (
   }
 };
     
+export const updateBranch = async (
+  branchId: number,
+  updatedData: Partial<BranchDetails>
+): Promise<void> => {
+  try {
+    const branchRef = doc(db, 'Branch', branchId.toString());
+    await setDoc(branchRef, updatedData, { merge: true });
+  } catch (error) {
+    console.error("Error updating branch:", error);
+    throw error;
+  }
+};
 
 export default {};

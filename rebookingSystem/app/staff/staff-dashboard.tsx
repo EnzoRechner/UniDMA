@@ -6,21 +6,22 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 const StaffDashboard = () => {
+
+const handleLogout = async () => {
+      await AsyncStorage.removeItem('userId');
+      router.replace('/auth/auth-login');
+  }
+
   return (
     <View style={styles.fullScreenBackground}> 
         <View style={styles.container}> 
           {/* Header with title and logout button */}
           <View style={styles.header}>
             <Text style={styles.title}>Bookings</Text>
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={async () => {
-                await AsyncStorage.removeItem("userId");
-                router.replace("../login-related/login-page");
-              }}>
-              <Ionicons name="log-out-outline" size={20} color="#fff" />
-              <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
+            
+              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}><Ionicons name="log-out-outline" size={20} color="#fff" />
+              <Text style={styles.logoutText}>Logout</Text></TouchableOpacity>            
+            
           </View>
           <BookingView />
         </View>
