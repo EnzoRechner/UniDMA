@@ -8,7 +8,8 @@ import {
   where,
   Timestamp,
   collection,
-  updateDoc, // Import updateDoc
+  updateDoc,
+  getDocs, // Import updateDoc
 } from 'firebase/firestore';
 import { db } from './firebase-initilisation';
 import { ReservationDetails, UserProfile } from '../lib/types';
@@ -59,12 +60,19 @@ export const addReservation = async (
   reservationData: Omit<ReservationDetails, 'id' | 'createdAt' | 'status'>
 ): Promise<string> => {
   try {
+    const restaurant = await getBranchDetails(reservationData.branch);
+
+    if (!restaurant) {
+      throw new Error("Invalid branch code or missing restaurant details.");
+    }  
+
     const newBookingId = await generateUniqueBookingId();
     const docRef = doc(db, 'nagbookings', newBookingId);
 
     await setDoc(docRef, {
       ...reservationData,
       id: newBookingId,
+      restaurant: restaurant,
       status: 0, // Default to 'pending'
       createdAt: Timestamp.now(),
     });
@@ -74,6 +82,32 @@ export const addReservation = async (
     throw error;
   }
 };
+
+export const getBranchDetails = async (branchId: number) : Promise<string | null> => {
+  try {
+    // Get the collection
+    const branchCollectionRef = collection(db, 'Branch');
+
+    const q = query(
+        branchCollectionRef, 
+        where('branchCode', '==', branchId)
+    );
+
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+        // No branch found with that branchCode
+        return null;
+    }
+
+    const branchDoc = querySnapshot.docs[0];       
+
+    // Return the restaurant name
+    return branchDoc.data().restaurant 
+  } catch (error) {
+      console.error("Error fetching branch data by branchCode:", error);
+      throw error;
+  }
+}
 
 /**
  * Sets up a real-time listener for a customer's reservations from 'nagbookings'.
