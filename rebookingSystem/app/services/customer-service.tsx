@@ -72,7 +72,7 @@ export const addReservation = async (
     await setDoc(docRef, {
       ...reservationData,
       id: newBookingId,
-      restaurant: restaurant.toString(),
+      restaurant: restaurant,
       status: 0, // Default to 'pending'
       createdAt: Timestamp.now(),
     });
