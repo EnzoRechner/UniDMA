@@ -143,7 +143,7 @@ const LoginScreen = () => {
                   Don&apos;t have an account? <Text style={{ fontWeight: 'bold' }}>Sign Up</Text>
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('../auth/update-login')}>
+              <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('../auth/auth-update-login')}>
                 <Text style={styles.toggleText}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>

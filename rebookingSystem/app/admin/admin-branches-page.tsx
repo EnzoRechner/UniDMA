@@ -1,5 +1,5 @@
 // admin-branchs-page.tsx
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -13,13 +13,16 @@ import {
   Modal,
   Switch,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { collection, getDocs, updateDoc, doc, onSnapshot, where, query } from "firebase/firestore";
 import { db } from "../services/firebase-initilisation";
 import { BlurView } from "expo-blur";
 import { addBranch } from "../services/admin-service";
 import {UserProfile} from "../lib/types";
+import { fetchUserData} from '../services/customer-service';
+import {BRANCHES} from "../lib/typesConst";
 import { updateBranch } from "../services/admin-service";
-import { BranchId } from '../lib/typesConst';
+import { BranchId,RESTAURANT } from '../lib/typesConst';
 // --- Firestore Type ---
 
 
@@ -30,7 +33,7 @@ export interface BranchDetails {
   capacity: number;
   name: string;
   open: boolean;
-  restaurant: string;
+  restaurant: number;
 }
 
 interface BranchWidgetProps {
@@ -45,22 +48,47 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
   const [showPopup, setShowPopup] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [userBranch, setUserBranch] = useState<BranchId | null>(null);
   // Branch form fields
   const [branchCoord, setBranchCoord] = useState<GeolocationCoordinates | null>(null);
   const [branchAddress, setBranchAddress] = useState("");
   const [branchCapacity, setBranchCapacity] = useState(0);
   const [branchName, setBranchName] = useState("");
   const [branchOpen, setBranchOpen] = useState(false);
-  const [branchRestaurant, setBranchRestaurant] = useState("");
+  const [branchRestaurant, setBranchRestaurant] = useState(0);
 
   // ---------------------------
   // Updated handleAddBranch
   // ---------------------------
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const userId = await AsyncStorage.getItem('userId');
+        if (!userId) {
+          
+          return;
+        }
+        // Fetch user data from 'rebooking-accounts'
+        const userData = await fetchUserData(userId);
+        if (!userData) throw new Error('Could not find user profile.');
+        setUser(userData);
+      } catch (error: any) {
+        Alert.alert('Error', error.message);       
+      }
+    };
+    
+    loadData();
+  }, []);
+
+
+
+
   const handleAddBranch = async () => {
   if (
-
-    !userProfile?.userId||
+    !userProfile?.branch||
     !branchName ||
     !branchAddress ||
     !branchRestaurant ||
@@ -98,7 +126,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
     setBranchAddress("");
     setBranchCapacity(0);
     setBranchName("");
-    setBranchRestaurant("");
+    setBranchRestaurant(0);
     setBranchCoord(null);
     setBranchOpen(false);
 
@@ -132,14 +160,15 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
   }, []);
 
   // loadBranches function
-  
+  //Currently filter is accting weird if you open branch locations it will filter 
+  // but if you go back and open again it shows all branches
   const loadBranches = async () => {
     try {
       let snapshot: any = null;
-      if (userProfile?.role == 2) {
+      if (user?.role === 2) {
         const q = query(collection(db, "Branch"),
-         where("branchCode", "==", userProfile.branch.toString()));
-        snapshot = await getDocs(q);
+         where("branchCode", "==", user?.branch));
+         snapshot = await getDocs(q);
       } else {
         snapshot = await getDocs(collection(db, "Branch"));
       }
@@ -184,7 +213,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
 };
 
 
-
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
@@ -225,6 +253,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
                 setBranchCoord(item.Coord || null);
                 setIsEditing(true);
                 setShowPopup(true);
+
               }}
             >
               <Text style={styles.tileTitle}>{item.name}</Text>
@@ -232,6 +261,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
               <Text style={styles.tileStatus}>
                 Status: {item.open ? "🟢 Open" : "🔴 Closed"}
               </Text>
+              
             </Pressable>
           )}
           contentContainerStyle={{ padding: 16 }}
@@ -251,8 +281,16 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
                 setBranchOpen(false);
                 setBranchCoord(null);
                 setSelectedBranch(null);
-                setIsEditing(false);
-                setShowPopup(true);
+                if (user?.branch == 2){
+                  setIsEditing(false);
+                  setShowPopup(true);
+                }
+                else{
+                  setIsEditing(true);
+                  setShowPopup(false);
+                  alert("You do not have permission to add branches");
+                }
+                setUser(user);
               }}
             >
               <Text style={styles.tileTitle}>Add Branch</Text>

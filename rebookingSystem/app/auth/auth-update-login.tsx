@@ -8,38 +8,27 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Lock } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { updateUserPassword } from '../services/auth-service';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../services/firebase-initilisation';
 
 const UpdateLoginScreen = () => {
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [EmailAdd, setEmailAdd] = useState('');
+
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleUpdate = async () => {
-    if (!newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match.');
-      return;
-    }
-    if (newPassword.length < 6) {
-        Alert.alert('Error', 'New password must be at least 6 characters long.');
-        return;
-    }
-    setLoading(true);
-    try {
-      await updateUserPassword(newPassword);
-      Alert.alert('Success', 'Your password has been updated.', [
-          { text: 'OK', onPress: () => router.back() }
-      ]);
-    } catch (error: any) {
-      Alert.alert('Update Failed', error.message || 'Could not update password. You may need to sign in again.');
-    } finally {
-      setLoading(false);
-    }
+  const handlePassword = async () => {
+    await sendPasswordResetEmail(auth, EmailAdd)
+    .then(() => {
+      Alert.alert(
+        'Password Reset Email Sent 😲',
+        'A password reset email has been sent to your email address. Please check your inbox.'
+      );
+      router.replace('../auth/auth-login');
+    })
+    .catch((error) => console.log(error.message));{
+      //Alert.alert('Error', error.message);
+    };
   };
 
   return (
@@ -49,38 +38,24 @@ const UpdateLoginScreen = () => {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <BlurView intensity={120} tint="dark" style={styles.formContainer}>
             <View style={styles.form}>
-              <Text style={styles.formTitle}>Update Password</Text>
-              <Text style={styles.formSubtitle}>Enter and confirm your new password</Text>
+              <Text style={styles.formTitle}>Password Reset</Text>
+              <Text style={styles.formSubtitle}>Did you forget your password?</Text>
 
               <View style={styles.inputContainer}>
                 <BlurView intensity={120} tint="dark" style={styles.inputBlur}>
                   <Lock size={20} color="#C89A5B" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="New Password"
+                    placeholder="Enter your email address"
                     placeholderTextColor="#666666"
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                    secureTextEntry
+                    value={EmailAdd}
+                    onChangeText={(text) => setEmailAdd(text)}
                   />
                 </BlurView>
               </View>
 
-              <View style={styles.inputContainer}>
-                <BlurView intensity={120} tint="dark" style={styles.inputBlur}>
-                  <Lock size={20} color="#C89A5B" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Confirm New Password"
-                    placeholderTextColor="#666666"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry
-                  />
-                </BlurView>
-              </View>
 
-              <TouchableOpacity style={styles.authButton} onPress={handleUpdate} disabled={loading}>
+              <TouchableOpacity style={styles.authButton} onPress={handlePassword} disabled={loading}>
                 <LinearGradient colors={['#C89A5B', '#B8864A']} style={styles.authButtonGradient}>
                   {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.authButtonText}>Update Password</Text>}
                 </LinearGradient>

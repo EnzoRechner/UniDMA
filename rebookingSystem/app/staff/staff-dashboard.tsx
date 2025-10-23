@@ -18,10 +18,15 @@ const handleLogout = async () => {
           {/* Header with title and logout button */}
           <View style={styles.header}>
             <Text style={styles.title}>Bookings</Text>
-            
-              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}><Ionicons name="log-out-outline" size={20} color="#fff" />
-              <Text style={styles.logoutText}>Logout</Text></TouchableOpacity>            
-            
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={async () => {
+                await AsyncStorage.removeItem('userId');
+                router.replace('/auth/auth-login');
+              }}>
+              <Ionicons name="log-out-outline" size={20} color="#fff" />
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
           </View>
           <BookingView />
         </View>

@@ -42,6 +42,7 @@ const BranchListScreen = () =>{
         router.replace('/auth/auth-login');
       }
     };
+    
     loadData();
   }, []);
 
@@ -59,7 +60,8 @@ const BranchListScreen = () =>{
     <View style={styles.container}>
       <Text style={styles.header}>Branch Locations</Text>
       <View >
-        <Text style={styles.subtitle}>Good evening, {user.nagName} UserRole: {user.role}</Text>
+        <Text style={styles.subtitle}>Good evening, {user.nagName} UserRole: {user.role} </Text>  
+        {/* <Text style={styles.subtitle}>Branch ID: {user.branch} </Text> */}
         </View>
 
       {/* ✅ Render the Firestore widget */}

@@ -50,7 +50,7 @@ export function onSnapshotStaffBookings(
             ];
 
             // Role-based filtering:
-            if (staffRole === 3) { // Admin: Filter by Restaurant
+            if (staffRole === 3) { // Super Admin: Filter by Restaurant
                 queryConstraints.push(where('restaurant', '==', staffRestaurant));
             } else if (staffRole === 1 || staffRole === 2) { // Staff: Filter by Branch
                 queryConstraints.push(where('branch', '==', staffBranch));
