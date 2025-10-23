@@ -105,17 +105,18 @@ export function onSnapshotStaffBookings(
 export const updateReservationStatus = async (
   reservationId: string,
   status: 1 | 2, // 1 = confirmed, 2 = rejected
-  rejectionReason?: string
+  rejectionReasonIncoming?: string
 ): Promise<void> => {
   try {
     const docRef = doc(db, 'nagbookings', reservationId);
 
     const updateData: Partial<ReservationDetails> = {
       status,
+      rejectionReason: '', // Clear previous reason if any
     };
 
-    if (status === 2 && rejectionReason) {
-      updateData.rejectionReason = rejectionReason;
+    if (status === 2 && rejectionReasonIncoming) {
+      updateData.rejectionReason = rejectionReasonIncoming;
     }
 
     await updateDoc(docRef, updateData);
