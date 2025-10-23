@@ -1,124 +1,113 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Building, Settings, Users, Calendar } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// Tile Component for navigation
-const Tile = ({ title, icon, route }: { title: string; icon: React.ReactNode; route: string }) => {
+export default function AdminDashboard() {
   const router = useRouter();
   return (
-    <TouchableOpacity style={styles.tile} onPress={() => router.push(route as any)}>
-      <View style={styles.iconContainer}>{icon}</View>
-      <Text style={styles.tileText}>{title}</Text>
-    </TouchableOpacity>
-  );
-};
-
-const AdminDashboard = () => {
-  return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#0D0D0D', '#1A1A1A']} style={styles.background} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <LinearGradient colors={['#0D0D0D', '#1A1A1A', '#0D0D0D']} style={styles.background} />
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>Admin Dashboard</Text>
-          <Text style={styles.subtitle}>Die Nag Uil Management</Text>
+          <Text style={styles.pageTitle}>Admin Dashboard</Text>
+          <View style={styles.titleDivider} />
         </View>
 
-        <View style={styles.tileGrid}>
-          <Tile
-            title="Branch Locations"
-            icon={<Building size={46} color="#C89A5B" />}
-            route="../admin/branch-locations"
-          />
-          <Tile
-            title="App Settings"
-            icon={<Settings size={46} color="#C89A5B" />}
-            route="../admin/app-settings"
-          />
-          <Tile
-            title="Staff Accounts"
-            icon={<Users size={46} color="#C89A5B" />}
-            route="../staff/staff-dashboard" // Assuming this is the correct route
-          />
-           <Tile
-            title="View Bookings"
-            icon={<Calendar size={46} color="#C89A5B" />}
-            route="../staff/staff-booking-view" // Assuming this is the correct route
-          />
+        <View style={styles.cardsGrid}>
+          <View style={styles.gridRow}>
+            <Pressable
+              style={({ pressed }) => [styles.managementCard, styles.halfCard, pressed && styles.cardPressed]}
+              onPress={() => router.push('/admin/staff')}
+            >
+              <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
+                <Text style={styles.cardLabel}>Manage Staff{"\n"}Accounts</Text>
+              </BlurView>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.managementCard, styles.halfCard, pressed && styles.cardPressed]}
+              onPress={() => router.push('../staff/staff-dashboard')}
+            >
+              <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
+                <Text style={styles.cardLabel}>Restaurant{"\n"}Bookings</Text>
+              </BlurView>
+            </Pressable>
+          </View>
+
+          <View style={styles.gridRow}>
+            <Pressable
+              style={({ pressed }) => [styles.managementCard, styles.halfCard, pressed && styles.cardPressed]}
+              onPress={() => router.push('../admin/branch-local-test')}
+            >
+              <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
+                <Text style={styles.cardLabel}>Branch{"\n"}Locations</Text>
+              </BlurView>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.managementCard, styles.halfCard, pressed && styles.cardPressed]}
+              onPress={() => router.push('../admin/app-settings')}
+            >
+              <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
+                <Text style={styles.cardLabel}>Application{"\n"}Settings</Text>
+              </BlurView>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0D0D0D',
-  },
-  background: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: '100%',
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  header: {
-    marginBottom: 40,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 40,
-    fontFamily: 'PlayfairDisplay-Bold', // Make sure this font is loaded in your project
+  container: { flex: 1 },
+  background: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  content: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 24 },
+  pageTitle: {
+    fontSize: 32,
+    fontFamily: 'PlayfairDisplay-Bold',
     color: '#C89A5B',
-    marginBottom: 8,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(200, 154, 91, 0.4)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
-  subtitle: {
-    fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontFamily: 'Inter-Regular', // Make sure this font is loaded
-  },
-  tileGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  tile: {
-    width: '48%',
-    aspectRatio: 1, // Makes the tile a square
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: 'rgba(200, 154, 91, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: '5%',
+  titleDivider: {
+    height: 1,
+    backgroundColor: 'rgba(200, 154, 91, 0.3)',
+    marginTop: 12,
+    marginBottom: 16,
     shadowColor: '#C89A5B',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+  },
+  cardsGrid: { paddingHorizontal: 20, paddingBottom: 100 },
+  gridRow: { flexDirection: 'row', gap: 16, marginBottom: 16 },
+  managementCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(200, 154, 91, 0.5)',
+    shadowColor: '#C89A5B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  halfCard: { flex: 1, minHeight: 140 },
+  cardPressed: {
+    borderColor: 'rgba(200, 154, 91, 0.8)',
+    shadowOpacity: 0.4,
     shadowRadius: 12,
-    elevation: 8,
+    transform: [{ scale: 0.98 }],
   },
-  iconContainer: {
-    marginBottom: 12,
-  },
-  tileText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold', // Make sure this font is loaded
-    textAlign: 'center',
-  },
+  cardBlur: { flex: 1, padding: 20, justifyContent: 'flex-start', alignItems: 'flex-start' },
+  cardLabel: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white', lineHeight: 22, letterSpacing: 0.3 },
 });
 
-export default AdminDashboard;
+// single default export already defined above

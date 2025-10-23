@@ -6,6 +6,12 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 const StaffDashboard = () => {
+
+const handleLogout = async () => {
+      await AsyncStorage.removeItem('userId');
+      router.replace('/auth/auth-login');
+  }
+
   return (
     <View style={styles.fullScreenBackground}> 
         <View style={styles.container}> 

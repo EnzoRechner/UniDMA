@@ -16,6 +16,7 @@ export const STATUS_CODES = {
     rejected: 2,
     completed: 3,
     cancelled: 4, 
+    pause: 5,
 }
 
 function createReverseMap<T extends Record<string, number>>(obj: T): Record<number, keyof T> {
@@ -68,6 +69,26 @@ export type StatusId = typeof STATUS_CODES[keyof typeof STATUS_CODES];
  */
 export function getBranchName(id: number): string | undefined {
     return BRANCH_NAMES_BY_ID[id];
+}
+
+/**
+ * Convert a CONSTANT_CASE or UPPER_SNAKE string into a nicely formatted label.
+ * Examples: 'SOMERSET_WEST' -> 'Somerset West', 'PAARL' -> 'Paarl'
+ */
+export function prettifyConstantLabel(name: string): string {
+  return name
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Returns a pretty display name for a branch id (e.g., 0 -> 'Paarl', 2 -> 'Somerset West').
+ */
+export function getPrettyBranchName(id: number): string | undefined {
+  const raw = getBranchName(id);
+  if (!raw) return undefined;
+  return prettifyConstantLabel(raw);
 }
 
 /**

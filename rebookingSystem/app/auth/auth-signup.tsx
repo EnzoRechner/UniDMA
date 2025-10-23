@@ -78,7 +78,7 @@ const SignupScreen = () => {
   setLoading(true);
   try {
     const customerID = await signUp(email.trim(), password, nagName.trim(), branch);
-
+    
     // Use string form to avoid the red underline on pathname
     const nextUrl =
       `../customer/customer-page` +

@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '../services/firebase-initilisation';
-import { fetchBranches } from "../services/admin-service"; 
+import { fetchBranches, addBranch } from "../services/admin-service"; 
 
 // --- Firestore Type ---
 export interface BranchDetails {
@@ -26,6 +26,39 @@ export interface BranchDetails {
     open: boolean;
     restaurant: string;
 }
+
+/*
+const [branchCoord, setBranchCoord] = useState<GeolocationCoordinates | null>(null);
+const [branchAddress, setBranchAddress] = useState("");
+const [branchCapacity, setBranchCapacity] = useState(0);
+const [branchName, setBranchName] = useState("");
+const [branchOpen, setBranchOpen] = useState(false);
+const [branchRestaurant, setBranchRestaurant] = useState("");
+const [loading, setLoading] = useState(false);
+
+
+const handlebranch = async () => {
+  setLoading(true);
+  try {
+    const newBranch: Omit<BranchDetails, 'id'> = {
+    Coord: branchCoord!,
+    address: branchAddress,
+    capacity: branchCapacity,
+    name: branchName,
+    open: branchOpen,
+    restaurant: branchRestaurant,
+    };
+    await addBranch(newBranch);
+    Alert.alert("Success", "New branch added successfully!");
+  } catch (error) {
+    console.error("Error adding branch:", error);
+    Alert.alert("Error", "Failed to add new branch.");
+  } finally {
+    setLoading(false);
+  }
+};
+*/
+
 
 // --- Tile Component ---
 const BranchTile = ({ item }: { item: BranchDetails }) => (
@@ -48,7 +81,7 @@ const BranchTile = ({ item }: { item: BranchDetails }) => (
 export default function BranchTilesScreen() {
   const [branches, setBranches] = useState<BranchDetails[]>([]);
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     const loadBranches = async () => {
       try {
@@ -65,7 +98,7 @@ export default function BranchTilesScreen() {
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color="#000000" />
       </View>
     );
   }
@@ -81,6 +114,7 @@ export default function BranchTilesScreen() {
         showsVerticalScrollIndicator={false}
       />
     </View>
+
   );
 }
 
@@ -88,7 +122,7 @@ export default function BranchTilesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "rgba(20, 20, 20, 1)",
   },
   header: {
     fontSize: 36,
@@ -118,16 +152,16 @@ const styles = StyleSheet.create({
   tileTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1F2937",
+    color: "rgba(255, 255, 255, 1)",
   },
   tileDescription: {
-    color: "#6B7280",
+    color: "rgba(255, 255, 255, 1)",
     marginTop: 4,
   },
   tileStatus: {
     marginTop: 8,
     fontWeight: "600",
-    color: "#374151",
+    color: "#999999",
   },
   loaderContainer: {
     flex: 1,
