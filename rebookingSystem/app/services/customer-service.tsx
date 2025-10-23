@@ -75,7 +75,7 @@ export const addReservation = async (
 
     const restaurant = await getBranchDetails(reservationData.branch);
 
-    if (!restaurant) {
+    if (restaurant === null) {
       throw new Error("Invalid branch code or missing restaurant details.");
     }  
 
