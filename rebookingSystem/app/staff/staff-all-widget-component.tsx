@@ -1,8 +1,7 @@
-import { useState, useMemo, useEffect, type FC } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, Platform } from 'react-native';
+import { useState, useEffect, type FC } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Users, MessageSquare, Tag, Calendar, Building, Edit, Trash2, Clock } from 'lucide-react-native';
-import { Timestamp } from 'firebase/firestore';
+import { Users, MessageSquare, Calendar, Building, Clock } from 'lucide-react-native';
 import { ReservationDetails} from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
 import * as Haptics from 'expo-haptics';

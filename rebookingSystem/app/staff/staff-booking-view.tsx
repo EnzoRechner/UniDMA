@@ -2,17 +2,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { Timestamp } from 'firebase/firestore';
 import { Check, MessageSquare, X } from 'lucide-react-native';
-import React, { useEffect, useState, useCallback, useRef, useMemo, type FC } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { ActivityIndicator, Alert, FlatList, ListRenderItemInfo, Text, TouchableOpacity, View, StyleSheet, Pressable, Modal, Dimensions, SafeAreaView } from 'react-native';
 import { onSnapshotStaffBookings, updateReservationStatus } from '../services/staff-service';
 import { ReservationDetails, UserProfile } from '../lib/types';
 import { router } from 'expo-router';
-import MemoizedBookings from './staff-booking-memory';
 import { fetchUserData } from '../services/customer-service';
 
 // --- CONSTANTS ---
 const { width: windowWidth } = Dimensions.get('window');
-const WIDGET_WIDTH = windowWidth * 0.9;
 const WIDGET_SPACING = 20;
 
 const BookingView = () => {
