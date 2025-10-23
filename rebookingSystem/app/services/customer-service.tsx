@@ -83,7 +83,7 @@ export const addReservation = async (
   }
 };
 
-export const getBranchDetails = async (branchId: number) : Promise<string | null> => {
+export const getBranchDetails = async (branchId: number) : Promise<number | null> => {
   try {
     // Get the collection
     const branchCollectionRef = collection(db, 'Branch');
