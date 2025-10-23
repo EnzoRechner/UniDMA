@@ -22,7 +22,7 @@ import {UserProfile} from "../lib/types";
 import { fetchUserData} from '../services/customer-service';
 import {BRANCHES} from "../lib/typesConst";
 import { updateBranch } from "../services/admin-service";
-import { BranchId } from '../lib/typesConst';
+import { BranchId,RESTAURANT } from '../lib/typesConst';
 // --- Firestore Type ---
 
 
@@ -33,7 +33,7 @@ export interface BranchDetails {
   capacity: number;
   name: string;
   open: boolean;
-  restaurant: string;
+  restaurant: number;
 }
 
 interface BranchWidgetProps {
@@ -56,7 +56,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
   const [branchCapacity, setBranchCapacity] = useState(0);
   const [branchName, setBranchName] = useState("");
   const [branchOpen, setBranchOpen] = useState(false);
-  const [branchRestaurant, setBranchRestaurant] = useState("");
+  const [branchRestaurant, setBranchRestaurant] = useState(0);
 
   // ---------------------------
   // Updated handleAddBranch
@@ -88,7 +88,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
 
   const handleAddBranch = async () => {
   if (
-    
     !userProfile?.branch||
     !branchName ||
     !branchAddress ||
@@ -127,7 +126,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
     setBranchAddress("");
     setBranchCapacity(0);
     setBranchName("");
-    setBranchRestaurant("");
+    setBranchRestaurant(0);
     setBranchCoord(null);
     setBranchOpen(false);
 
@@ -166,7 +165,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
   const loadBranches = async () => {
     try {
       let snapshot: any = null;
-      if (user?.role == 2) {
+      if (user?.role === 2) {
         const q = query(collection(db, "Branch"),
          where("branchCode", "==", user?.branch));
          snapshot = await getDocs(q);
@@ -212,7 +211,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
     console.error("Error updating branch:", error);
   }
 };
-
 
 
   if (loading) {
