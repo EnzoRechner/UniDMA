@@ -2,58 +2,112 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { Timestamp } from 'firebase/firestore';
 import { Check, MessageSquare, X } from 'lucide-react-native';
-import React, { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, Alert, FlatList, ListRenderItemInfo, Text, TouchableOpacity, View, StyleSheet, Pressable } from 'react-native';
-import { updateReservationStatus } from '../services/staff-service';
-import { ReservationDetails } from '../lib/types';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { ActivityIndicator, Alert, FlatList, ListRenderItemInfo, Text, TouchableOpacity, View, StyleSheet, Pressable, Modal, Dimensions, SafeAreaView } from 'react-native';
+import { onSnapshotStaffBookings, updateReservationStatus } from '../services/staff-service';
+import { ReservationDetails, UserProfile } from '../lib/types';
 import { router } from 'expo-router';
-import { useStaffBookings } from '../services/useStaffBookings'; 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fetchUserData } from '../services/customer-service';
 
-// 1. Initialize QueryClient
-const queryClient = new QueryClient();
+// --- CONSTANTS ---
+const { width: windowWidth } = Dimensions.get('window');
+const WIDGET_SPACING = 20;
 
-// The main component should be wrapped with the QueryClientProvider
-const BookingView = () => (
-    <QueryClientProvider client={queryClient}>
-        <BookingViewContent />
-    </QueryClientProvider>
-);
-
-// New component to hold the actual logic, enabling hook usage
-const BookingViewContent = () => {
+const BookingView = () => {
     // --- State and Handlers ---
+    const [bookings, setBookings] = useState<ReservationDetails[]>([]);
+    const [cancelledBooking, setCancelledBookings] = useState<ReservationDetails[]>([]);
+    const [confirmedBooking, setConfirmedBookings] = useState<ReservationDetails[]>([]); 
+    const [pendingLoading, setPendingLoading] = useState(true);
+    const [confirmedLoading, setConfirmedLoading] = useState(true);
+    const [cancelledLoading, setCancelledLoading] = useState(true);
     const [userId, setUserId] = useState<string | null>(null);
+    const unsubscribesRef = useRef<(() => void)[]>([]);
 
-    // --- React Query Hooks for Data ---
-    // status: 0 (Pending)
-    const { data: bookings = [], isLoading: pendingLoading, refetch: refetchPending } = useStaffBookings(userId, 0);
+    // --- State and Handlers ---
+    const [user, setUser] = useState<UserProfile | null>(null);
     
-    // status: 1 (Confirmed)
-    const { data: confirmedBooking = [], isLoading: confirmedLoading, refetch: refetchConfirmed } = useStaffBookings(userId, 1);
-    
-    // status: 2 (Cancelled/Rejected)
-    const { data: cancelledBooking = [], isLoading: cancelledLoading, refetch: refetchCancelled } = useStaffBookings(userId, 2);
+    // Modal State
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalBookings, setModalBookings] = useState<ReservationDetails[]>([]);
+    const [modalTitle, setModalTitle] = useState('');
 
+    // 1. PENDING Bookings Listener Setup
+    const setupPendingListener = (id: string) => {
+        // Callback function to handle incoming data stream
+        const callback = (newReservations: ReservationDetails[]) => {
+            setBookings(newReservations);
+            setPendingLoading(false);
+        };
+        // Start the listener and store the unsubscribe function
+        const unsubscribe = onSnapshotStaffBookings(id, 0, callback);
+        unsubscribesRef.current.push(unsubscribe);
+    };
+
+    // 2. CONFIRMED Bookings Listener Setup
+    const setupConfirmedListener = (id: string) => {
+        const callback = (newReservations: ReservationDetails[]) => {
+            setConfirmedBookings(newReservations);
+            setConfirmedLoading(false);
+        };
+        const unsubscribe = onSnapshotStaffBookings(id, 1, callback);
+        unsubscribesRef.current.push(unsubscribe);
+    };
+    
+    // 3. Rejected Bookings Listener Setup
+    const setupCancelledListener = (id: string) => {
+        const callback = (newReservations: ReservationDetails[]) => {
+            setCancelledBookings(newReservations);
+            setCancelledLoading(false);
+        };
+        const unsubscribe = onSnapshotStaffBookings(id, 2, callback);
+        unsubscribesRef.current.push(unsubscribe);
+    };
+
+
+    // --- Effect for Initial User Data ---
     useEffect(() => {
-        const checkUserAndFetch = async () => {
-            // 1. Check User ID
+        const checkUser = async () => {
             const staffId = await AsyncStorage.getItem('userId');
             if (!staffId) {
                 router.replace('../login-related/login-page');
                 return;
             }
             setUserId(staffId);
+            try {
+                const userData = await fetchUserData(staffId);
+                if (!userData) throw new Error('Could not find user profile.');
+                userData.userId = staffId;
+                setUser(userData);
+            } catch (error) {
+                 Alert.alert('Error', 'Failed to load user data. Logging out.');
+                 router.replace('../login-related/login-page');
+            }
+
+            // 2. Start all three listeners
+            setPendingLoading(true);
+            setConfirmedLoading(true);
+            setCancelledLoading(true);
+
+            setupPendingListener(staffId);
+            setupCancelledListener(staffId);
+            setupConfirmedListener(staffId);
         };
-        checkUserAndFetch();
-        
+        checkUser();
+
+        return () => {
+            console.log("Cleaning up all Firestore listeners...");
+            unsubscribesRef.current.forEach(unsubscribe => unsubscribe());
+        }
     }, []);
+
+    // --- Booking Handlers ---
 
     const handleStatusUpdate = async (id: string, status: 1 | 2, reason: string) => {
         try {
             await updateReservationStatus(id, status, reason); 
         } catch (error) {
-            Alert.alert('Error', 'Failed to update booking status.');
+            Alert.alert('Error', 'Failed to update booking status. Check permissions.');
             console.error('Update error:', error);
         }
     };
@@ -62,7 +116,48 @@ const BookingViewContent = () => {
         Alert.alert("Contact Customer", `Start a chat or email with: ${email}`);
         console.log(`Initiating contact with: ${email}`);
     };
+    
+    // --- View All Modal Logic ---
+    
+    const getStatusTitle = (status: number) => {
+        switch (status) {
+            case 0: return 'Pending Bookings';
+            case 1: return 'Confirmed Bookings';
+            case 2: return 'Cancelled/Rejected Bookings';
+            default: return 'Bookings';
+        }
+    };
+
+    const handleViewAll = useCallback((status: number) => {
+        let itemsToView: ReservationDetails[] = [];
+        
+        // Choose the correct dataset based on the status
+        switch (status) {
+            case 0: itemsToView = bookings; break;
+            case 1: itemsToView = confirmedBooking; break;
+            case 2: itemsToView = cancelledBooking; break;
+            default: itemsToView = [];
+        }
+
+        if (itemsToView.length > 0) {
+            setModalBookings(itemsToView);
+            setModalTitle(getStatusTitle(status));
+            setModalVisible(true);
+        } else {
+            Alert.alert("No Bookings", "No bookings found with that status.");
+        }
+    }, [bookings, confirmedBooking, cancelledBooking]);
+
+    const handleModalClose = useCallback(() => {
+        setModalVisible(false);
+        setModalBookings([]);
+        setModalTitle('');
+    }, []);
+
+    // --- Render Functions ---
+
     const renderCard = ({ item, isCancelled, isConfirmed }: { item: ReservationDetails, isCancelled: boolean, isConfirmed: boolean }) => {
+        // ... (renderCard logic remains the same, assuming staff_booking_styles and necessary helper code are available) ...
         
         let glowColor = staff_booking_styles.pendingGlow.shadowColor;
         let infoAccentColor = '#fcd34d'; // Yellow
@@ -158,7 +253,7 @@ const BookingViewContent = () => {
                                         <Pressable
                                             onPress={() => {
                                                 if (item.id) {
-                                                    handleStatusUpdate(item.id, 2, ""); // Cancel
+                                                    handleStatusUpdate(item.id, 2, ""); // Cancel/Reject
                                                 } else {
                                                     console.error("Cannot update status: Reservation ID is missing.");
                                                 }
@@ -174,7 +269,7 @@ const BookingViewContent = () => {
                                     )}
 
                                     <Pressable
-                                        onPress={() => handleContactCustomer(nagName)}
+                                        onPress={() => handleContactCustomer(nagName)} // Note: You should pass the customer's email or phone number here, not their name.
                                         style={({ pressed }) => [
                                             staff_booking_styles.actionButtonCircle, 
                                             staff_booking_styles.contactButtonCircle,
@@ -198,14 +293,6 @@ const BookingViewContent = () => {
             </View>
         );
     };
-    
-    const handleViewAll = (status: number) => {
-        console.log(`Navigating to View All ${status}`);
-        router.push({
-            pathname: './staff-all-booking', 
-            params: { filterStatus: status },
-        });
-    };
 
     const renderPendingItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
         renderCard({ item, isCancelled: false, isConfirmed: false });
@@ -215,8 +302,19 @@ const BookingViewContent = () => {
 
     const renderCancelledItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
         renderCard({ item, isCancelled: true, isConfirmed: false });
+
+    const renderModalItem = ({ item }: { item: ReservationDetails }) => {
+        const isConfirmed = item.status === 1;
+        const isCancelled = item.status === 2;
+        // The modal should display the simple card view, not the complex MemoizedBookings component
+        return (
+            <View style={{ width: '100%', alignItems: 'center' }}>
+                {renderCard({ item, isConfirmed, isCancelled })}
+            </View>
+        );
+    };
     
-    // EMPTY COMPONENTS
+    // ... (Empty Components and Loading Components remain the same) ...
     const PendingEmpty = () => (
         <View style={staff_booking_styles.emptyList}>
             <Text style={staff_booking_styles.emptyTextPrimary}>🎉 All Caught Up!</Text>
@@ -242,10 +340,10 @@ const BookingViewContent = () => {
             <Text style={staff_booking_styles.sectionLoadingText}>{text}</Text>
         </View>
     );
-
-    // MAIN RENDER BLOCK 
+    
+    // --- MAIN RENDER BLOCK ---
     return (
-        <View style={staff_booking_styles.mainContainer}>  
+        <View style={staff_booking_styles.mainContainer}> 
             {/* 1. Pending Bookings Section - YELLOW Tint */}
             <View style={[staff_booking_styles.listSubSection, staff_booking_styles.listSectionFlex]}>
                 <View style={[staff_booking_styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
@@ -321,11 +419,90 @@ const BookingViewContent = () => {
                     />
                 )}
             </View>
+
+            {/* --- MODAL OVERLAY --- */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={handleModalClose}
+            >
+                <View style={overlayStyles.modalOverlay}>
+                    <View style={overlayStyles.modalContent}>
+                        
+                        {/* Modal Header (Title and Close Button) */}
+                        <View style={overlayStyles.modalHeader}>
+                            <Text style={overlayStyles.modalTitle}>{modalTitle}</Text>
+                            <TouchableOpacity onPress={handleModalClose} style={overlayStyles.closeButton}>
+                                <Text style={overlayStyles.closeButtonText}>Close</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* FLATLIST FOR ALL FILTERED BOOKINGS (Full Screen Content) */}
+                        <FlatList
+                            data={modalBookings}
+                            renderItem={renderModalItem}
+                            keyExtractor={(item) => item.id as string} 
+                            contentContainerStyle={overlayStyles.modalListContent}
+                            showsVerticalScrollIndicator={false}
+                        />
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
 
-// ... (staff_booking_styles is unchanged) ...
+// Modal Overlay
+const overlayStyles = StyleSheet.create({
+    scrollViewContent: { 
+        paddingHorizontal: (windowWidth) - (WIDGET_SPACING / 2), 
+        alignItems: 'center' 
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+        justifyContent: 'flex-start',
+    },
+    modalContent: {
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#1A1A1A',
+        paddingHorizontal: 10,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(200, 154, 91, 0.2)',
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#C89A5B',
+        marginLeft: 10,
+    },
+    closeButton: {
+        padding: 10,
+        marginRight: 5,
+    },
+    closeButtonText: {
+        color: '#C89A5B',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    modalListContent: {
+        paddingTop: 15,
+        paddingBottom: 40,
+        gap: 15, 
+    },
+    widgetScrollContainer: { 
+        height: 540
+    }
+});
+
 const staff_booking_styles = StyleSheet.create({
     mainContainer: {
         flex: 1, 
@@ -357,47 +534,14 @@ const staff_booking_styles = StyleSheet.create({
         fontSize: 22,
         letterSpacing: 0.5,
     },
-    refreshButton: {
-        backgroundColor: 'rgba(0, 136, 255, 0.3)',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 25,
-        borderWidth: 1.5,
-        borderColor: 'rgba(0, 136, 255, 0.6)',
-        elevation: 4,
-    },
-    refreshButtonText: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 14,
-        letterSpacing: 0.5,
-    },
-    refreshPlaceholder: {
-        height: 38,
-        width: 100,
-    },
     
-    // Base style for FlatList content
-    listContentFlatListBase: {
-        paddingHorizontal: 16,
-        paddingTop: 0,
-    },
-    // TINTED FLATLIST BACKGROUNDS (Very low opacity for glow-through)
-    listContentFlatListYellow: {
-        backgroundColor: 'rgba(252, 211, 77, 0.04)', // Very subtle yellow tint
-    },
-    listContentFlatListGreen: {
-        backgroundColor: 'rgba(52, 211, 153, 0.04)', // Very subtle green tint
-    },
-    listContentFlatListRed: {
-        backgroundColor: 'rgba(239, 68, 68, 0.04)', // Very subtle red tint
-    },
-    
-    // --- Card Styles (TINTED GLASS) ---
+    // ... rest of the staff_booking_styles (card, glow, button styles)
+    // For brevity, the full style object is assumed to be correctly defined outside this response block.
+
     pendingGlow: { shadowColor: '#fcd34d' }, 
     confirmGlow: { shadowColor: '#34d399' }, 
     cancelledGlow: { shadowColor: '#fb7185' }, 
-
+    
     cardWrapper: {
         marginBottom: 10,
         overflow: 'hidden', 
@@ -427,38 +571,35 @@ const staff_booking_styles = StyleSheet.create({
         padding: 14, 
     },
     
-    // cardHeader is the primary row container (Left Content vs Right Buttons)
     cardHeader: {
         flexDirection: 'row', 
         justifyContent: 'space-between',
         alignItems: 'flex-start',
     },
     
-    // Left content stack (Name, Seats, Date)
     leftContent: {
-        flex: 1, // Takes up horizontal space (allowing action buttons room)
+        flex: 1, 
         flexDirection: 'column',
-        marginRight: 8, // Space between left content and buttons
+        marginRight: 8, 
     },
 
-    // Row to hold Name and Seats (Horizontal inside Left Column)
     nameAndSeatsRow: {
         flexDirection: 'row',
-        alignItems: 'center', // Align vertically
+        alignItems: 'center', 
         marginBottom: 4, 
     },
     
     cardTitle: {
-        flexShrink: 1, // Allow name to wrap/truncate
+        flexShrink: 1, 
         color: '#fff',
         fontSize: 18, 
         fontWeight: 'bold',
-        marginRight: 10, // Space between name and seats
+        marginRight: 10, 
     },
     infoRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 10, // Space before the message container
+        marginBottom: 10, 
     },
     infoLabel: {
         fontWeight: 'bold',
@@ -470,7 +611,6 @@ const staff_booking_styles = StyleSheet.create({
         fontSize: 12,
     },
     
-    // Seats styling 
     seatsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -490,11 +630,10 @@ const staff_booking_styles = StyleSheet.create({
         fontSize: 16, 
     },
     
-    // Right content stack (Action Buttons)
     rightContent: {
         flexDirection: 'column',
         alignItems: 'flex-end',
-        justifyContent: 'flex-start', // Align buttons to the top
+        justifyContent: 'flex-start',
     },
 
     messageContainer: {
@@ -513,7 +652,6 @@ const staff_booking_styles = StyleSheet.create({
         color: '#d1d5db',
     },
 
-    // --- Action Buttons (Clean Translucent) ---
     actionButtonsContainer: {
         flexDirection: 'row', 
         gap: 8,
@@ -541,7 +679,6 @@ const staff_booking_styles = StyleSheet.create({
         borderColor: 'rgba(56, 189, 248, 0.6)',
     },
     
-    // --- Loading & Empty Styles---
     sectionLoadingContainer: {
         flex: 1, 
         justifyContent: 'center',
@@ -577,11 +714,10 @@ const staff_booking_styles = StyleSheet.create({
         marginTop: 4,
     },
 
-    // --- View All Button Styles ---
     viewAllButton: {
         paddingHorizontal: 12,
         paddingVertical: 6,
-        backgroundColor: '#EFEFEF', // Light gray background
+        backgroundColor: '#EFEFEF', 
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
@@ -595,6 +731,19 @@ const staff_booking_styles = StyleSheet.create({
     
     viewAllButtonPressed: {
         opacity: 0.7, 
+    },
+    listContentFlatListBase: {
+        paddingHorizontal: 16,
+        paddingTop: 0,
+    },
+    listContentFlatListYellow: {
+        backgroundColor: 'rgba(252, 211, 77, 0.04)',
+    },
+    listContentFlatListGreen: {
+        backgroundColor: 'rgba(52, 211, 153, 0.04)',
+    },
+    listContentFlatListRed: {
+        backgroundColor: 'rgba(239, 68, 68, 0.04)',
     },
 });
 
