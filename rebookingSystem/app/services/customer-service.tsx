@@ -11,6 +11,7 @@ import {
   updateDoc, // Import updateDoc
 } from 'firebase/firestore';
 import { db } from './firebase-initilisation';
+import { getBranchSettings } from '../../utils/firestore';
 import { ReservationDetails, UserProfile } from '../lib/types';
 
 /**
@@ -59,6 +60,18 @@ export const addReservation = async (
   reservationData: Omit<ReservationDetails, 'id' | 'createdAt' | 'status'>
 ): Promise<string> => {
   try {
+    // Enforce branch pause settings before creating the booking
+    const settings = await getBranchSettings((reservationData as any).branch);
+    if (settings?.pauseBookings) {
+      const pauseUntil = settings.pauseUntil?.toDate();
+      const arrival = (reservationData.dateOfArrival as Timestamp).toDate();
+      const allowedAfter = pauseUntil && arrival > pauseUntil;
+      if (!allowedAfter) {
+        const untilText = pauseUntil ? `${pauseUntil.toLocaleDateString()} ${pauseUntil.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'further notice';
+        throw new Error(`This branch has paused bookings until ${untilText}. Please choose a later date.`);
+      }
+    }
+
     const newBookingId = await generateUniqueBookingId();
     const docRef = doc(db, 'nagbookings', newBookingId);
 

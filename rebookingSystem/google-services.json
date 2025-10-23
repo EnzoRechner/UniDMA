@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "431792964393",
+    "project_id": "booking-application-46c29",
+    "storage_bucket": "booking-application-46c29.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:431792964393:android:82d1b8824f7f79f092ad38",
+        "android_client_info": {
+          "package_name": "com.rebookingSystem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvy_vpyHtt7rrGSCkMYX9jFmFc1cThJVc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

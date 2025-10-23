@@ -2,11 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 // Minimal placeholder component to satisfy Expo Router's default export requirement.
-// Replace with real settings UI as needed.
-export default function AdminSettingsComponent() {
+// Your real Branch Settings UI can be wired here or route to the existing branch widget.
+export default function BranchSettings() {
 	return (
 		<View style={styles.container}>
-			<Text style={styles.text}>Admin Settings Component</Text>
+			<Text style={styles.text}>Branch Settings</Text>
 		</View>
 	);
 }

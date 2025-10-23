@@ -20,6 +20,10 @@ service cloud.firestore {
     // Allow any authenticated user to read branch information
     match /Branch/{branchId} {
         allow read: if request.auth != null;
+        // TEMPORARY: allow only specific settings fields to be updated by authenticated users.
+        // This should be tightened later with role-based checks via custom claims or a uid-keyed user profile doc.
+        allow update: if request.auth != null
+          && request.resource.data.diff(resource.data).changedKeys().hasOnly(['pauseBookings', 'pauseReason', 'pauseUntil']);
     }
   }
 }

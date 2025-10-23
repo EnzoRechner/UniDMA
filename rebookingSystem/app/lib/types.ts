@@ -1,6 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
-import { JSX } from 'react';
-import { StyleProp, ViewStyle } from 'react-native';
+// Removed unused JSX and React Native style imports
 import { RoleId, BranchId, RestaurantId } from './typesConst';
 /**
  * Interface representing a user document in the 'users' Firestore collection.
@@ -28,7 +27,7 @@ export interface ReservationDetails {
   time?: string; // Time of arrival in 'HH:mm' format
   message?: string;
   guests: number; // Number of guests
-  status: 0 | 1 | 2 | 3 | 4; // Reservation status     (pending: 0, confirmed: 1, rejected: 2, completed: 3, cancelled: 4)
+  status: 0 | 1 | 2 | 3 | 4 | 5; // Reservation status (0: pending, 1: confirmed, 2: rejected, 3: completed, 4: cancelled, 5: paused)
   userId?: string; // The ID of the user who made the reservation
   bookingName: string; // Name of the booking
   restaurant?: string; // Restaurant associated with the reservation
@@ -54,6 +53,9 @@ export interface BranchDetails {
   name: string;
   open: boolean;
   restaurant: string;
+  pauseBookings: boolean;
+  pauseReason?: string;
+  pauseUntil?: Timestamp;
 
 }
 
