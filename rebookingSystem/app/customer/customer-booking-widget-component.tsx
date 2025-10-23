@@ -89,7 +89,7 @@ const BookingWidgetComponent: FC<{
     try {
       const newBookingData = {
         dateOfArrival: Timestamp.fromDate(date),
-        guests: seats, branch: branch.toString(), message,
+        guests: seats, branch: branch, message: message,
         userId: userProfile.userId, bookingName: bookingName, seat: "Any",
       };
       await addReservation(newBookingData as any);
@@ -111,7 +111,7 @@ const BookingWidgetComponent: FC<{
         await cancelReservation(bookingIdToUpdate);
         const newBookingData = {
             dateOfArrival: Timestamp.fromDate(date),
-            guests: seats, branch: branch.toString(), message,
+            guests: seats, branch: branch.toString(), message: message,
             userId: userProfile.userId, bookingName: bookingName, seat: "Any",
         };
         await addReservation(newBookingData as any);
