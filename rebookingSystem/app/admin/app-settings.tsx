@@ -17,7 +17,7 @@ import { PauseCircle, PlayCircle, Trash2, AlertTriangle } from 'lucide-react-nat
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getUserProfile } from '@/app/services/auth-service';
 import { getPrettyBranchName } from '../lib/typesConst';
-import { getBranchSettings, updateBranchSettings, cancelAllPendingReservations, pauseAllUpcomingReservations } from '../../utils/firestore';
+import { getBranchSettings, updateBranchSettings, cancelAllPendingReservations, pauseAllUpcomingReservations, rejectAllPausedUpcomingReservations } from '../../utils/firestore';
 import { Timestamp } from 'firebase/firestore';
 
 export default function BranchSettingsScreen() {
@@ -159,13 +159,22 @@ export default function BranchSettingsScreen() {
         if (pausedCount > 0) {
           console.log(`Paused ${pausedCount} upcoming reservations for branch ${branchCode}`);
         }
+      } else {
+        // If unpausing, clear all paused upcoming bookings by rejecting them
+        const rejectedCount = await rejectAllPausedUpcomingReservations(
+          branchCode,
+          'Branch has resumed operations — please rebook your reservation'
+        );
+        if (rejectedCount > 0) {
+          console.log(`Rejected ${rejectedCount} previously paused reservations for branch ${branchCode}`);
+        }
       }
       setPauseBookings(value);
       Alert.alert(
         'Success',
         value
           ? 'Bookings have been paused. New reservations are disabled.'
-          : 'Bookings have been resumed. Customers can now make reservations.'
+          : 'Bookings have been resumed. Previously paused reservations were rejected; customers must rebook.'
       );
       await fetchSettings();
     } catch (error) {

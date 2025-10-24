@@ -157,4 +157,47 @@ export async function pauseAllUpcomingReservations(
   return processed;
 }
 
+// When unpausing a branch, convert all future paused (status 5) bookings to rejected (status 2)
+// so customers must actively rebook, avoiding unintended auto-restores.
+export async function rejectAllPausedUpcomingReservations(
+  branchCode: number | string,
+  reason = 'Branch resumed operations — please rebook your reservation'
+): Promise<number> {
+  const now = Timestamp.now();
+  // Try numeric branch first
+  let q1 = query(
+    collection(db, 'nagbookings'),
+    where('branch', '==', Number(branchCode)),
+    where('dateOfArrival', '>', now),
+    where('status', '==', 5)
+  );
+  let snap = await getDocs(q1);
+  if (snap.empty) {
+    const q2 = query(
+      collection(db, 'nagbookings'),
+      where('branch', '==', String(branchCode)),
+      where('dateOfArrival', '>', now),
+      where('status', '==', 5)
+    );
+    snap = await getDocs(q2);
+  }
+  if (snap.empty) return 0;
+
+  let processed = 0;
+  let batch = writeBatch(db);
+  let ops = 0;
+  for (const d of snap.docs) {
+    batch.update(d.ref, { status: 2, rejectionReason: reason });
+    ops++;
+    processed++;
+    if (ops === 450) {
+      await batch.commit();
+      batch = writeBatch(db);
+      ops = 0;
+    }
+  }
+  if (ops > 0) await batch.commit();
+  return processed;
+}
+
 export default {};

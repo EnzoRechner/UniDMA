@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityInd
 import { BlurView } from 'expo-blur';
 import { Users, MessageSquare, Tag, Calendar, Building, Edit, Trash2, Clock } from 'lucide-react-native';
 import { Timestamp } from 'firebase/firestore';
-import { Picker } from '@react-native-picker/picker';
 import { addReservation, cancelReservation } from '../services/customer-service';
 import { ReservationDetails, UserProfile} from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
@@ -72,7 +71,17 @@ const BookingWidgetComponent: FC<{
     }
   }, [isEditing, booking, isNewBooking]);
 
+  const isRebookable = useMemo(() => {
+    if (!booking) return false;
+    if (booking.status === 5) return true; // paused bookings should be rebookable after unpause
+    if (booking.status !== 2) return false;
+    const reason = (booking.rejectionReason || '').toLowerCase();
+    // Show CTA specifically for rebook-related rejections (e.g., unpause cleanup)
+    return /(rebook|unpause|paused|resume|resumed)/.test(reason);
+  }, [booking]);
+
   const getStatusStyle = (status?: number) => {
+    if (isRebookable) return { text: 'Rebook', color: '#C89A5B' };
     switch (status) {
       case 1: return { text: 'Confirmed', color: '#10B981' };
       case 0: return { text: 'Awaiting Confirmation', color: '#F59E0B' };
@@ -126,6 +135,18 @@ const BookingWidgetComponent: FC<{
     }
   };
 
+  // Ensure edit form opens with the original booking details prefilled before rendering
+  const startEditingFromBooking = () => {
+    if (!booking) return;
+    setDate(booking.dateOfArrival.toDate());
+    setSeats(booking.guests);
+    setBranch(booking.branch as unknown as BranchId);
+    setMessage(booking.message || '');
+    setBookingName(booking.bookingName);
+    setIsEditing(true);
+    setShowOptions(false);
+  };
+
   const handleDeleteBooking = async () => {
     if (!booking?.id) {
         Alert.alert('Error', 'Cannot delete a booking without an ID.');
@@ -142,9 +163,9 @@ const BookingWidgetComponent: FC<{
                 onPress: async () => {
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                     setLoading(true);
-                    try {
-                        await cancelReservation(bookingIdToDelete);
-                    } catch (error: any) {
+          try {
+            await cancelReservation(bookingIdToDelete);
+          } catch {
                         Alert.alert('Error', 'Could not cancel the booking.');
                     } finally {
                         setLoading(false);
@@ -221,6 +242,13 @@ const BookingWidgetComponent: FC<{
           ) : (
             booking && (
                 <View style={[styles.readOnlyContainer, !booking.message && { justifyContent: 'space-around' }]}>
+                    {(booking.status === 2 || booking.status === 5) && (
+                      <View style={styles.infoBanner}>
+                        <Text style={styles.infoBannerText}>
+                          {booking.rejectionReason || 'This booking was paused by the branch. Please rebook to confirm a new time.'}
+                        </Text>
+                      </View>
+                    )}
                     <View style={styles.readOnlyItem}><Calendar size={18} color="#ccc" /><Text style={styles.readOnlyText}>{booking.dateOfArrival.toDate().toLocaleString('en-US', { weekday: 'short', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text></View>
                     <View style={styles.readOnlyItem}><Users size={18} color="#ccc" /><Text style={styles.readOnlyText}>{booking.guests} Seats</Text></View>
                     <View style={styles.readOnlyItem}><Building size={18} color="#ccc" /><Text style={styles.readOnlyText}>{branchMap[booking.branch as unknown as BranchId]}</Text></View>
@@ -230,9 +258,9 @@ const BookingWidgetComponent: FC<{
             )
           )}
           <View>
-            {showOptions && !isFormVisible && (
+      {showOptions && !isFormVisible && (
                 <View style={styles.expandedOptionsContainer}>
-                    <TouchableOpacity style={[styles.optionButton, {backgroundColor: '#3B82F6'}]} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setIsEditing(true); setShowOptions(false); }}>
+          <TouchableOpacity style={[styles.optionButton, {backgroundColor: '#3B82F6'}]} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); startEditingFromBooking(); }}>
                         <Edit size={20} color="white" />
                         <Text style={styles.optionButtonText}>Edit</Text>
                     </TouchableOpacity>
@@ -244,7 +272,15 @@ const BookingWidgetComponent: FC<{
             )}
             <TouchableOpacity
                 style={[styles.confirmButton, { backgroundColor: statusInfo.color }]}
-                onPress={isNewBooking ? handleCreateBooking : isEditing ? handleUpdateBooking : () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowOptions(!showOptions); }}
+                onPress={
+                  isNewBooking
+                    ? handleCreateBooking
+                    : isEditing
+                      ? handleUpdateBooking
+                      : isRebookable
+            ? () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); startEditingFromBooking(); }
+                        : () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowOptions(!showOptions); }
+                }
                 disabled={loading}
             >
                 {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmButtonText}>{isEditing ? 'Save Changes' : statusInfo.text}</Text>}
@@ -313,6 +349,8 @@ const styles = StyleSheet.create({
     modalListItem: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.1)', width: '100%', alignItems: 'center' },
     modalListItemSelected: { backgroundColor: 'rgba(200, 154, 91, 0.2)' },
     modalListItemText: { color: 'white', fontSize: 16,},
+  infoBanner: { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.4)', borderWidth: 1, borderRadius: 8, padding: 10 },
+  infoBannerText: { color: '#FCA5A5', fontSize: 13, fontWeight: '600' },
 });
 
 export default BookingWidgetComponent;
