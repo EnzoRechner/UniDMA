@@ -42,7 +42,7 @@ interface BranchWidgetProps {
   onConfirm: () => void;
 }
 
-const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfirm }) => {
+const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const [branches, setBranches] = useState<BranchDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPopup, setShowPopup] = useState(false);
@@ -88,7 +88,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
 
   const handleAddBranch = async () => {
   if (
-    !userProfile?.branch||
     !branchName ||
     !branchAddress ||
     !branchRestaurant ||
@@ -198,8 +197,8 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
     await updateDoc(ref, {
       name: branchName,
       address: branchAddress,
-      capacity: branchCapacity,
-      restaurant: branchRestaurant,
+      capacity: branchCapacity,     
+      restaurant: user?.restaurant,
       open: branchOpen,
       Coord: branchCoord,
     });
@@ -248,7 +247,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
                 setBranchName(item.name);
                 setBranchAddress(item.address);
                 setBranchCapacity(item.capacity);
-                setBranchRestaurant(item.restaurant);
+                setBranchRestaurant(user?.restaurant || 0);
                 setBranchOpen(item.open);
                 setBranchCoord(item.Coord || null);
                 setIsEditing(true);
@@ -277,11 +276,11 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
                 setBranchName("");
                 setBranchAddress("");
                 setBranchCapacity(0);
-                setBranchRestaurant("");
+                setBranchRestaurant(user?.restaurant || 0);
                 setBranchOpen(false);
                 setBranchCoord(null);
                 setSelectedBranch(null);
-                if (user?.branch == 2){
+                if (user?.role === 3){
                   setIsEditing(false);
                   setShowPopup(true);
                 }
@@ -289,7 +288,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
                   setIsEditing(true);
                   setShowPopup(false);
                   alert("You do not have permission to add branches");
-                }
+                }               
                 setUser(user);
               }}
             >
@@ -332,13 +331,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, userProfile, onConfir
               value={branchCapacity ? branchCapacity.toString() : ""}
               onChangeText={(t) => setBranchCapacity(Number(t))}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Restaurant Name"
-              placeholderTextColor="#aaa"
-              value={branchRestaurant}
-              onChangeText={setBranchRestaurant}
-            />
+            
 
             {/* Open Status Switch */}
             <View style={{ marginBottom: 10 }}>

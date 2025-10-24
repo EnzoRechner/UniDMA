@@ -118,7 +118,7 @@ const CustomerPage: FC = () => {
                 <Text style={styles.subtitle}>Good evening, {user?.nagName}</Text>
               </View>
               <View style={styles.headerIcons}>
-                  <TouchableOpacity style={styles.iconButton}><Settings size={22} color="#C89A5B" /></TouchableOpacity>
+                  <TouchableOpacity style={styles.iconButton} onPress={() => router.push("../customer/profile")}><Settings size={22} color="#C89A5B" /></TouchableOpacity>
                   <TouchableOpacity style={styles.iconButton} onPress={handleLogout}><LogOut size={22} color="#C89A5B" /></TouchableOpacity>
               </View>
             </View>
