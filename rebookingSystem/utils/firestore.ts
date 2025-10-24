@@ -56,7 +56,6 @@ function cleanUpdateSettings(settings: Partial<BranchSettings>): object {
     } else {
       cleaned[key] = value;
     }
-    console.log("Cleaning setting:", cleaned[key]);
   }
   return cleaned;
 }
