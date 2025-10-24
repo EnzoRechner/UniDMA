@@ -73,10 +73,15 @@ export const addReservation = async (
       }
     }
 
-    const restaurant = await getBranchDetails(reservationData.branch);
-
-    if (restaurant === null) {
-      throw new Error("Invalid branch code or missing restaurant details.");
+    let restaurant = null;
+    if (reservationData.restaurant === undefined) {
+      restaurant = await getBranchDetails(reservationData.branch);
+    } else {
+      restaurant = reservationData.restaurant;
+    }
+    
+    if (restaurant === null || restaurant === undefined) {
+        throw new Error("Invalid branch code or missing restaurant details.");
     }  
 
     const newBookingId = await generateUniqueBookingId();

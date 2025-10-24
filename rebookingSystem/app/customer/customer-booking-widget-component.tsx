@@ -111,8 +111,9 @@ const BookingWidgetComponent: FC<{
         await cancelReservation(bookingIdToUpdate);
         const newBookingData = {
             dateOfArrival: Timestamp.fromDate(date),
-            guests: seats, branch: branch.toString(), message: message,
+            guests: seats, branch: branch, message: message,
             userId: userProfile.userId, bookingName: bookingName, seat: "Any",
+            restaurant: booking.restaurant,
         };
         await addReservation(newBookingData as any);
         setIsEditing(false);
