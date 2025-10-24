@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, query, where, updateDoc, writeBatch, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDocs, query, where, updateDoc, writeBatch, Timestamp, deleteField } from 'firebase/firestore';
 import { db } from '@/app/services/firebase-initilisation';
 
 // Settings shape stored on a Branch document
@@ -39,13 +39,36 @@ export async function getBranchSettings(branchCode: number | string): Promise<Br
   };
 }
 
+/**
+ * Creates a clean settings object for Firestore update.
+ * - Converts keys with 'undefined' / 'null' values to FieldValue.delete().
+ * @param settings The raw settings object (Partial<BranchSettings>).
+ * @returns A clean object ready for updateDoc.
+ */
+function cleanUpdateSettings(settings: Partial<BranchSettings>): object {
+  const cleaned: { [key: string]: any } = {};
+
+  for (const key in settings) {
+    const value = settings[key as keyof typeof settings];
+
+    if (value === undefined || value === null) {
+      cleaned[key] = deleteField();
+    } else {
+      cleaned[key] = value;
+    }
+    console.log("Cleaning setting:", cleaned[key]);
+  }
+  return cleaned;
+}
+
 export async function updateBranchSettings(
   branchCode: number | string,
   settings: Partial<BranchSettings>
 ): Promise<void> {
   const ref = await getBranchDocRefByCode(branchCode);
+  const cleanedSettings = cleanUpdateSettings(settings);
   if (!ref) throw new Error('Branch not found');
-  await updateDoc(ref, settings);
+  await updateDoc(ref, cleanedSettings);
 }
 
 // Cancels all pending reservations (status 0) for the given branchCode
