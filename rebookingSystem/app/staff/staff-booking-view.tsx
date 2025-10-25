@@ -1,20 +1,51 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
-import { Timestamp } from 'firebase/firestore';
-import { Check, MessageSquare, X } from 'lucide-react-native';
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { ActivityIndicator, Alert, FlatList, ListRenderItemInfo, Text, TouchableOpacity, View, StyleSheet, Pressable, Modal, Dimensions, SafeAreaView } from 'react-native';
-import { onSnapshotStaffBookings, updateReservationStatus } from '../services/staff-service';
-import { ReservationDetails, UserProfile } from '../lib/types';
 import { router } from 'expo-router';
+import { Calendar, Check, ChevronDown, ChevronUp, MessageSquare, Users, X } from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    LayoutAnimation,
+    ListRenderItemInfo,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    UIManager,
+    View,
+} from 'react-native';
+import { ReservationDetails, UserProfile } from '../lib/types';
 import { fetchUserData } from '../services/customer-service';
+import { onSnapshotStaffBookings, updateReservationStatus } from '../services/staff-service';
 
-// --- CONSTANTS ---
-const { width: windowWidth } = Dimensions.get('window');
-const WIDGET_SPACING = 20;
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const SectionHeader: React.FC<{
+  title: string;
+  count: number;
+  isExpanded: boolean;
+  onPress: () => void;
+  color: string;
+}> = ({ title, count, isExpanded, onPress, color }) => (
+  <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+    <BlurView intensity={20} tint="dark" style={styles.sectionHeader}>
+      <View style={[styles.sectionTitleContainer, { borderLeftColor: color }]}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <View style={[styles.countBadge, { backgroundColor: `${color}40` }]}>
+          <Text style={[styles.countText, { color }]}>{count}</Text>
+        </View>
+      </View>
+      {isExpanded ? <ChevronUp size={20} color="#C89A5B" /> : <ChevronDown size={20} color="#C89A5B" />}
+    </BlurView>
+  </TouchableOpacity>
+);
 
 const BookingView = () => {
-    // --- State and Handlers ---
     const [bookings, setBookings] = useState<ReservationDetails[]>([]);
     const [cancelledBooking, setCancelledBookings] = useState<ReservationDetails[]>([]);
     const [confirmedBooking, setConfirmedBookings] = useState<ReservationDetails[]>([]); 
@@ -23,28 +54,23 @@ const BookingView = () => {
     const [cancelledLoading, setCancelledLoading] = useState(true);
     const [userId, setUserId] = useState<string | null>(null);
     const unsubscribesRef = useRef<(() => void)[]>([]);
-
-    // --- State and Handlers ---
     const [user, setUser] = useState<UserProfile | null>(null);
     
-    // Modal State
-    const [modalVisible, setModalVisible] = useState(false);
-    const [modalBookings, setModalBookings] = useState<ReservationDetails[]>([]);
-    const [modalTitle, setModalTitle] = useState('');
+    const [expandedSections, setExpandedSections] = useState({
+        pending: true,
+        confirmed: false,
+        cancelled: false,
+    });
 
-    // 1. PENDING Bookings Listener Setup
     const setupPendingListener = (id: string) => {
-        // Callback function to handle incoming data stream
         const callback = (newReservations: ReservationDetails[]) => {
             setBookings(newReservations);
             setPendingLoading(false);
         };
-        // Start the listener and store the unsubscribe function
         const unsubscribe = onSnapshotStaffBookings(id, 0, callback);
         unsubscribesRef.current.push(unsubscribe);
     };
 
-    // 2. CONFIRMED Bookings Listener Setup
     const setupConfirmedListener = (id: string) => {
         const callback = (newReservations: ReservationDetails[]) => {
             setConfirmedBookings(newReservations);
@@ -54,7 +80,6 @@ const BookingView = () => {
         unsubscribesRef.current.push(unsubscribe);
     };
     
-    // 3. Rejected Bookings Listener Setup
     const setupCancelledListener = (id: string) => {
         const callback = (newReservations: ReservationDetails[]) => {
             setCancelledBookings(newReservations);
@@ -64,8 +89,6 @@ const BookingView = () => {
         unsubscribesRef.current.push(unsubscribe);
     };
 
-
-    // --- Effect for Initial User Data ---
     useEffect(() => {
         const checkUser = async () => {
             const staffId = await AsyncStorage.getItem('userId');
@@ -84,7 +107,6 @@ const BookingView = () => {
                  router.replace('../login-related/login-page');
             }
 
-            // 2. Start all three listeners
             setPendingLoading(true);
             setConfirmedLoading(true);
             setCancelledLoading(true);
@@ -101,8 +123,6 @@ const BookingView = () => {
         }
     }, []);
 
-    // --- Booking Handlers ---
-
     const handleStatusUpdate = async (id: string, status: 1 | 2, reason: string) => {
         try {
             await updateReservationStatus(id, status, reason); 
@@ -111,639 +131,304 @@ const BookingView = () => {
             console.error('Update error:', error);
         }
     };
-
-    const handleContactCustomer = (email: string) => {
-        Alert.alert("Contact Customer", `Start a chat or email with: ${email}`);
-        console.log(`Initiating contact with: ${email}`);
-    };
     
-    // --- View All Modal Logic ---
-    
-    const getStatusTitle = (status: number) => {
-        switch (status) {
-            case 0: return 'Pending Bookings';
-            case 1: return 'Confirmed Bookings';
-            case 2: return 'Cancelled/Rejected Bookings';
-            default: return 'Bookings';
-        }
+    const toggleSection = (section: 'pending' | 'confirmed' | 'cancelled') => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setExpandedSections(prev => ({
+            ...prev,
+            [section]: !prev[section],
+        }));
     };
 
-    const handleViewAll = useCallback((status: number) => {
-        let itemsToView: ReservationDetails[] = [];
+    const renderCard = ({ 
+        item, 
+        statusColor,
+        showActions,
+    }: { 
+        item: ReservationDetails, 
+        statusColor: string,
+        showActions: boolean,
+    }) => {
         
-        // Choose the correct dataset based on the status
-        switch (status) {
-            case 0: itemsToView = bookings; break;
-            case 1: itemsToView = confirmedBooking; break;
-            case 2: itemsToView = cancelledBooking; break;
-            default: itemsToView = [];
-        }
-
-        if (itemsToView.length > 0) {
-            setModalBookings(itemsToView);
-            setModalTitle(getStatusTitle(status));
-            setModalVisible(true);
-        } else {
-            Alert.alert("No Bookings", "No bookings found with that status.");
-        }
-    }, [bookings, confirmedBooking, cancelledBooking]);
-
-    const handleModalClose = useCallback(() => {
-        setModalVisible(false);
-        setModalBookings([]);
-        setModalTitle('');
-    }, []);
-
-    // --- Render Functions ---
-
-    const renderCard = ({ item, isCancelled, isConfirmed }: { item: ReservationDetails, isCancelled: boolean, isConfirmed: boolean }) => {
-        // ... (renderCard logic remains the same, assuming staff_booking_styles and necessary helper code are available) ...
-        
-        let glowColor = staff_booking_styles.pendingGlow.shadowColor;
-        let infoAccentColor = '#fcd34d'; // Yellow
-        let cardBaseStyle = staff_booking_styles.pendingCard;
-
-        if (isConfirmed) {
-            glowColor = staff_booking_styles.confirmGlow.shadowColor;
-            infoAccentColor = '#34d399'; // Green
-            cardBaseStyle = staff_booking_styles.confirmCard;
-        }
-        if (isCancelled) {
-            glowColor = staff_booking_styles.cancelledGlow.shadowColor;
-            infoAccentColor = '#fb7185'; // Red
-            cardBaseStyle = staff_booking_styles.cancelledCard;
-        }
-
-        const cardStyle = [
-            staff_booking_styles.cardContainer,
-            cardBaseStyle
-        ];
-        
-        const dateObject = item.dateOfArrival instanceof Timestamp 
-            ? item.dateOfArrival.toDate() 
-            : item.dateOfArrival;
-
-        const formattedDate = dateObject.toLocaleDateString('en-GB', { 
-            day: 'numeric', 
-            month: 'long', 
-            year: 'numeric' 
-        });
-        
-        const formattedTime = dateObject.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            hour12: true 
-        });
-
-        const nagName = item.bookingName || 'Guest';
+        const dateObject = item.dateOfArrival.toDate();
+        const formattedDate = dateObject.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        const formattedTime = dateObject.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        console.log(item.nagName);
+        const nagName = item.nagName || 'Guest';
 
         return (
-            <View style={[staff_booking_styles.cardWrapper, {shadowColor: glowColor}]}> 
-                <BlurView 
-                    intensity={80} 
-                    tint="dark" 
-                    style={cardStyle} 
-                >
-                    <View style={staff_booking_styles.cardContent}>
-                        
-                        <View style={staff_booking_styles.cardHeader}>
-                            
-                            <View style={staff_booking_styles.leftContent}>
-                                
-                                <View style={staff_booking_styles.nameAndSeatsRow}>
-                                    <Text style={staff_booking_styles.cardTitle} numberOfLines={1}>
-                                        {nagName}
-                                    </Text>
-                                    
-                                    <View style={[staff_booking_styles.seatsContainer, { borderColor: infoAccentColor }]}>
-                                        <Text style={[staff_booking_styles.seatsLabel, { color: infoAccentColor }]}>🪑 </Text>
-                                        <Text style={[staff_booking_styles.seatsValue, { color: infoAccentColor }]}>{item.guests}</Text>
-                                    </View>
-                                </View>
-
-                                <View style={staff_booking_styles.infoRow}>
-                                    <Text style={[staff_booking_styles.infoLabel, { color: infoAccentColor }]}>📅</Text>
-                                    <Text style={staff_booking_styles.infoValueSmall}>
-                                        {formattedDate} @ {formattedTime}
-                                    </Text>
-                                </View>
-                            </View>
-
-                            <View style={staff_booking_styles.rightContent}>
-                                <View style={staff_booking_styles.actionButtonsContainer}> 
-                                    {!isConfirmed && (
-                                        <Pressable
-                                            onPress={() => {
-                                                if (item.id) {
-                                                    handleStatusUpdate(item.id, 1, ""); // Confirm
-                                                } else {
-                                                    console.error("Cannot update status: Reservation ID is missing.");
-                                                }
-                                            }}
-                                            style={({ pressed }) => [
-                                                staff_booking_styles.actionButtonCircle, 
-                                                staff_booking_styles.confirmButtonCircle,
-                                                { opacity: pressed ? 0.7 : 1 }
-                                            ]}
-                                        >
-                                            <Check color="#fff" size={18} />
-                                        </Pressable>
-                                    )}
-                                    {!isCancelled && (
-                                        <Pressable
-                                            onPress={() => {
-                                                if (item.id) {
-                                                    handleStatusUpdate(item.id, 2, ""); // Cancel/Reject
-                                                } else {
-                                                    console.error("Cannot update status: Reservation ID is missing.");
-                                                }
-                                            }}
-                                            style={({ pressed }) => [
-                                                staff_booking_styles.actionButtonCircle, 
-                                                staff_booking_styles.cancelButtonCircle,
-                                                { opacity: pressed ? 0.7 : 1 }
-                                            ]}
-                                        >
-                                            <X color="#fff" size={18} />
-                                        </Pressable>
-                                    )}
-
-                                    <Pressable
-                                        onPress={() => handleContactCustomer(nagName)} // Note: You should pass the customer's email or phone number here, not their name.
-                                        style={({ pressed }) => [
-                                            staff_booking_styles.actionButtonCircle, 
-                                            staff_booking_styles.contactButtonCircle,
-                                            { opacity: pressed ? 0.7 : 1 }
-                                        ]}
-                                    >
-                                        <MessageSquare color="#fff" size={18} /> 
-                                    </Pressable>
-                                </View>
-                            </View>
-                        </View>
-
-                        <View style={staff_booking_styles.messageContainer}>
-                            <Text style={staff_booking_styles.messageText}>
-                                <Text style={staff_booking_styles.messageLabel}>Note:</Text> {item.message || 'N/A'}
-                            </Text>
-                        </View>
-                        
+            <View style={[styles.card, { borderColor: `${statusColor}80` }]}>
+                <View style={styles.cardHeader}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>{nagName}</Text>
+                    <View style={styles.cardInfoChip}>
+                        <Users size={14} color="#C89A5B" />
+                        <Text style={styles.cardInfoChipText}>{item.guests}</Text>
                     </View>
-                </BlurView>
+                </View>
+
+                <View style={styles.cardInfoRow}>
+                    <Calendar size={14} color="#ccc" />
+                    <Text style={styles.cardInfoText}>{formattedDate} at {formattedTime}</Text>
+                </View>
+
+                {item.message ? (
+                    <View style={styles.cardInfoRow}>
+                        <MessageSquare size={14} color="#ccc" />
+                        <Text style={styles.cardInfoText} numberOfLines={2}>{item.message}</Text>
+                    </View>
+                ) : null}
+                
+                {showActions && (
+                    <View style={styles.cardActions}>
+                        <TouchableOpacity
+                            onPress={() => handleStatusUpdate(item.id!, 2, "Rejected by staff")}
+                            style={[styles.actionButton, styles.rejectButton]}
+                        >
+                            <X size={16} color="#FCA5A5" />
+                            <Text style={[styles.actionButtonText, { color: '#FCA5A5' }]}>Reject</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => handleStatusUpdate(item.id!, 1, "")}
+                            style={[styles.actionButton, styles.confirmButton]}
+                        >
+                            <Check size={16} color="#6EE7B7" />
+                            <Text style={[styles.actionButtonText, { color: '#6EE7B7' }]}>Confirm</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
         );
     };
 
     const renderPendingItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
-        renderCard({ item, isCancelled: false, isConfirmed: false });
+        renderCard({ item, statusColor: '#F59E0B', showActions: true });
 
     const renderConfirmedItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
-        renderCard({ item, isCancelled: false, isConfirmed: true });
+        renderCard({ item, statusColor: '#10B981', showActions: false });
 
     const renderCancelledItem = ({ item } : ListRenderItemInfo<ReservationDetails>) => 
-        renderCard({ item, isCancelled: true, isConfirmed: false });
+        renderCard({ item, statusColor: '#EF4444', showActions: false });
 
-    const renderModalItem = ({ item }: { item: ReservationDetails }) => {
-        const isConfirmed = item.status === 1;
-        const isCancelled = item.status === 2;
-        // The modal should display the simple card view, not the complex MemoizedBookings component
-        return (
-            <View style={{ width: '100%', alignItems: 'center' }}>
-                {renderCard({ item, isConfirmed, isCancelled })}
-            </View>
-        );
-    };
-    
-    // ... (Empty Components and Loading Components remain the same) ...
-    const PendingEmpty = () => (
-        <View style={staff_booking_styles.emptyList}>
-            <Text style={staff_booking_styles.emptyTextPrimary}>🎉 All Caught Up!</Text>
-            <Text style={staff_booking_styles.emptyTextSecondary}>No pending reservations to review.</Text>
-        </View>
-    );
-    const ConfirmedEmpty = () => (
-        <View style={staff_booking_styles.emptyList}>
-            <Text style={staff_booking_styles.emptyTextPrimary}>Ready to Go</Text>
-            <Text style={staff_booking_styles.emptyTextSecondary}>No confirmed bookings currently.</Text>
-        </View>
-    );
-    const CancelledEmpty = () => (
-        <View style={staff_booking_styles.emptyList}>
-            <Text style={staff_booking_styles.emptyTextPrimary}>Clear History</Text>
-            <Text style={staff_booking_styles.emptyTextSecondary}>No cancelled bookings recorded.</Text>
+    const ListEmptyComponent = ({ text }: { text: string }) => (
+        <View style={styles.emptyList}>
+            <Text style={styles.emptyText}>{text}</Text>
         </View>
     );
 
-    const SectionLoading = ({ text }: { text: string }) => (
-        <View style={staff_booking_styles.sectionLoadingContainer}>
-            <ActivityIndicator size="large" color="#a1a1aa" />
-            <Text style={staff_booking_styles.sectionLoadingText}>{text}</Text>
+    const SectionLoading = () => (
+        <View style={styles.sectionLoadingContainer}>
+            <ActivityIndicator size="small" color="#a1a1aa" />
         </View>
     );
     
-    // --- MAIN RENDER BLOCK ---
     return (
-        <View style={staff_booking_styles.mainContainer}> 
-            {/* 1. Pending Bookings Section - YELLOW Tint */}
-            <View style={[staff_booking_styles.listSubSection, staff_booking_styles.listSectionFlex]}>
-                <View style={[staff_booking_styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-                <Text style={staff_booking_styles.headerTitle}>Pending ({bookings.length})</Text>
-                
-                <Pressable
-                    style={({ pressed }) => [staff_booking_styles.viewAllButton, pressed && staff_booking_styles.viewAllButtonPressed]}
-                    onPress={() => handleViewAll(0)} // pending
-                >
-                    <Text style={staff_booking_styles.viewAllButtonText}>View All</Text>
-                </Pressable>
-            </View>
-                
-                {pendingLoading ? (
-                    <SectionLoading text="Loading pending bookings..." />
-                ) : (
-                    <FlatList
-                        data={bookings}
-                        renderItem={renderPendingItem}
-                        keyExtractor={(item) => item.id!.toString()}
-                        ListEmptyComponent={PendingEmpty}
-                        style={[staff_booking_styles.listContentFlatListBase, staff_booking_styles.listContentFlatListYellow]}
-                    />
-                )}
-            </View>
-            
-            {/* 2. Confirmed Bookings Section - GREEN Tint */}
-            <View style={[staff_booking_styles.listSubSection, staff_booking_styles.listSectionFlex]}>
-                <View style={[staff_booking_styles.header, staff_booking_styles.sectionHeader]}>
-                    <Text style={staff_booking_styles.headerTitle}>Confirmed ({confirmedBooking.length})</Text>
-                    <Pressable
-                        style={({ pressed }) => [staff_booking_styles.viewAllButton, pressed && staff_booking_styles.viewAllButtonPressed]}
-                        onPress={() => handleViewAll(1)} // confirmed
-                    >
-                        <Text style={staff_booking_styles.viewAllButtonText}>View All</Text>
-                    </Pressable>
-                </View>
-                
-                {confirmedLoading ? (
-                    <SectionLoading text="Loading confirmed bookings..." />
-                ) : (
-                    <FlatList
-                        data={confirmedBooking}
-                        renderItem={renderConfirmedItem}
-                        keyExtractor={(item) => item.id!.toString()}
-                        ListEmptyComponent={ConfirmedEmpty}
-                        style={[staff_booking_styles.listContentFlatListBase, staff_booking_styles.listContentFlatListGreen]}
-                    />
-                )}
-            </View>
-
-            {/* 3. Cancelled Bookings Section - RED Tint */}
-            <View style={[staff_booking_styles.listSubSection, staff_booking_styles.listSectionFlex]}>
-                <View style={[staff_booking_styles.header, staff_booking_styles.sectionHeader]}>
-                    <Text style={staff_booking_styles.headerTitle}>Cancelled ({cancelledBooking.length})</Text>
-                    <Pressable
-                        style={({ pressed }) => [staff_booking_styles.viewAllButton, pressed && staff_booking_styles.viewAllButtonPressed]}
-                        onPress={() => handleViewAll(2)} // rejected
-                    >
-                        <Text style={staff_booking_styles.viewAllButtonText}>View All</Text>
-                    </Pressable>
-                </View>
-                
-                {cancelledLoading ? (
-                    <SectionLoading text="Loading cancelled bookings..." />
-                ) : (
-                    <FlatList
-                        data={cancelledBooking}
-                        renderItem={renderCancelledItem}
-                        keyExtractor={(item) => item.id!.toString()}
-                        ListEmptyComponent={CancelledEmpty}
-                        style={[staff_booking_styles.listContentFlatListBase, staff_booking_styles.listContentFlatListRed]}
-                    />
-                )}
-            </View>
-
-            {/* --- MODAL OVERLAY --- */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={handleModalClose}
-            >
-                <View style={overlayStyles.modalOverlay}>
-                    <View style={overlayStyles.modalContent}>
-                        
-                        {/* Modal Header (Title and Close Button) */}
-                        <View style={overlayStyles.modalHeader}>
-                            <Text style={overlayStyles.modalTitle}>{modalTitle}</Text>
-                            <TouchableOpacity onPress={handleModalClose} style={overlayStyles.closeButton}>
-                                <Text style={overlayStyles.closeButtonText}>Close</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* FLATLIST FOR ALL FILTERED BOOKINGS (Full Screen Content) */}
+        <ScrollView style={styles.mainContainer}> 
+            <SectionHeader
+                title="Pending"
+                count={bookings.length}
+                isExpanded={expandedSections.pending}
+                onPress={() => toggleSection('pending')}
+                color="#F59E0B"
+            />
+            {expandedSections.pending && (
+                <View style={styles.listContainer}>
+                    {pendingLoading ? (
+                        <SectionLoading />
+                    ) : (
                         <FlatList
-                            data={modalBookings}
-                            renderItem={renderModalItem}
-                            keyExtractor={(item) => item.id as string} 
-                            contentContainerStyle={overlayStyles.modalListContent}
-                            showsVerticalScrollIndicator={false}
+                            data={bookings}
+                            renderItem={renderPendingItem}
+                            keyExtractor={(item) => item.id!.toString()}
+                            ListEmptyComponent={<ListEmptyComponent text="No pending bookings." />}
+                            scrollEnabled={false}
                         />
-                    </View>
+                    )}
                 </View>
-            </Modal>
-        </View>
+            )}
+            
+            <SectionHeader
+                title="Confirmed"
+                count={confirmedBooking.length}
+                isExpanded={expandedSections.confirmed}
+                onPress={() => toggleSection('confirmed')}
+                color="#10B981"
+            />
+            {expandedSections.confirmed && (
+                <View style={styles.listContainer}>
+                    {confirmedLoading ? (
+                        <SectionLoading />
+                    ) : (
+                        <FlatList
+                            data={confirmedBooking}
+                            renderItem={renderConfirmedItem}
+                            keyExtractor={(item) => item.id!.toString()}
+                            ListEmptyComponent={<ListEmptyComponent text="No confirmed bookings." />}
+                            scrollEnabled={false}
+                        />
+                    )}
+                </View>
+            )}
+
+            <SectionHeader
+                title="Cancelled / Rejected"
+                count={cancelledBooking.length}
+                isExpanded={expandedSections.cancelled}
+                onPress={() => toggleSection('cancelled')}
+                color="#EF4444"
+            />
+            {expandedSections.cancelled && (
+                <View style={styles.listContainer}>
+                    {cancelledLoading ? (
+                        <SectionLoading />
+                    ) : (
+                        <FlatList
+                            data={cancelledBooking}
+                            renderItem={renderCancelledItem}
+                            keyExtractor={(item) => item.id!.toString()}
+                            ListEmptyComponent={<ListEmptyComponent text="No cancelled bookings." />}
+                            scrollEnabled={false}
+                        />
+                    )}
+                </View>
+            )}
+            <View style={{ height: 50 }} />
+        </ScrollView>
     );
 };
 
-// Modal Overlay
-const overlayStyles = StyleSheet.create({
-    scrollViewContent: { 
-        paddingHorizontal: (windowWidth) - (WIDGET_SPACING / 2), 
-        alignItems: 'center' 
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.95)',
-        justifyContent: 'flex-start',
-    },
-    modalContent: {
-        width: '100%',
-        height: '100%',
-        backgroundColor: '#1A1A1A',
-        paddingHorizontal: 10,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(200, 154, 91, 0.2)',
-    },
-    modalTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#C89A5B',
-        marginLeft: 10,
-    },
-    closeButton: {
-        padding: 10,
-        marginRight: 5,
-    },
-    closeButtonText: {
-        color: '#C89A5B',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    modalListContent: {
-        paddingTop: 15,
-        paddingBottom: 40,
-        gap: 15, 
-    },
-    widgetScrollContainer: { 
-        height: 540
-    }
-});
-
-const staff_booking_styles = StyleSheet.create({
+const styles = StyleSheet.create({
     mainContainer: {
-        flex: 1, 
+        flex: 1,
     },
-    listSubSection: {
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        backgroundColor: 'rgba(23, 23, 23, 0.8)',
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+        marginTop: 10,
     },
-    listSectionFlex: {
-        flex: 1, 
-        minHeight: 150, 
-    },
-    header: {
+    sectionTitleContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingTop: 10,
-        paddingBottom: 10,
-        zIndex: 1, 
-        backgroundColor: '#09090b',
+        gap: 10,
+        borderLeftWidth: 3,
+        paddingLeft: 10,
     },
-    sectionHeader: { 
-        paddingTop: 15,
-    },
-    headerTitle: {
+    sectionTitle: {
         color: '#fff',
         fontWeight: 'bold',
-        fontSize: 22,
-        letterSpacing: 0.5,
+        fontSize: 20,
+        fontFamily: 'PlayfairDisplay-Bold',
     },
-    
-    // ... rest of the staff_booking_styles (card, glow, button styles)
-    // For brevity, the full style object is assumed to be correctly defined outside this response block.
-
-    pendingGlow: { shadowColor: '#fcd34d' }, 
-    confirmGlow: { shadowColor: '#34d399' }, 
-    cancelledGlow: { shadowColor: '#fb7185' }, 
-    
-    cardWrapper: {
-        marginBottom: 10,
-        overflow: 'hidden', 
+    countBadge: {
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+    },
+    countText: {
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
+    listContainer: {
+        padding: 10,
+        backgroundColor: 'rgba(0,0,0,0.1)',
+    },
+    card: {
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 12,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.7, 
-        shadowRadius: 10,
-        elevation: 8,
-    },
-    
-    cardContainer: {
+        padding: 16,
+        marginBottom: 10,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.3)', 
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
-    pendingCard: {
-        backgroundColor: 'rgba(252, 211, 77, 0.15)', // Light Yellow Tint
-    },
-    cancelledCard: {
-        backgroundColor: 'rgba(239, 68, 68, 0.15)', // Light Red Tint
-    },
-    confirmCard: {
-        backgroundColor: 'rgba(52, 211, 153, 0.15)', // Light Green Tint
-    },
-    
-    cardContent: {
-        flexDirection: 'column',
-        padding: 14, 
-    },
-    
     cardHeader: {
-        flexDirection: 'row', 
+        flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
+        marginBottom: 12,
     },
-    
-    leftContent: {
-        flex: 1, 
-        flexDirection: 'column',
-        marginRight: 8, 
-    },
-
-    nameAndSeatsRow: {
-        flexDirection: 'row',
-        alignItems: 'center', 
-        marginBottom: 4, 
-    },
-    
     cardTitle: {
-        flexShrink: 1, 
         color: '#fff',
         fontSize: 18, 
         fontWeight: 'bold',
-        marginRight: 10, 
+        fontFamily: 'PlayfairDisplay-Bold',
+        flex: 1,
+        marginRight: 10,
     },
-    infoRow: {
+    cardInfoChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 10, 
-    },
-    infoLabel: {
-        fontWeight: 'bold',
-        marginRight: 4,
-        fontSize: 12,
-    },
-    infoValueSmall: {
-        color: '#d1d5db',
-        fontSize: 12,
-    },
-    
-    seatsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(200, 154, 91, 0.15)',
+        paddingHorizontal: 10,
         paddingVertical: 4,
-        paddingHorizontal: 6,
-        backgroundColor: 'transparent', 
-        borderRadius: 8,
-        borderWidth: 1, 
-    },
-    seatsLabel: {
-        fontWeight: 'bold',
-        fontSize: 14, 
-        marginRight: 4,
-    },
-    seatsValue: {
-        fontWeight: 'bold',
-        fontSize: 16, 
-    },
-    
-    rightContent: {
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        justifyContent: 'flex-start',
-    },
-
-    messageContainer: {
-        marginTop: 5,
-        paddingTop: 5,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255, 255, 255, 0.25)', 
-    },
-    messageText: {
-        color: '#a1a1aa',
-        fontSize: 12,
-        lineHeight: 16,
-    },
-    messageLabel: {
-        fontWeight: 'bold',
-        color: '#d1d5db',
-    },
-
-    actionButtonsContainer: {
-        flexDirection: 'row', 
-        gap: 8,
-    },
-    actionButtonCircle: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: 40, 
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.4)', 
-    },
-    confirmButtonCircle: {
-        backgroundColor: 'rgba(34, 197, 94, 0.5)', 
-        borderColor: 'rgba(34, 197, 94, 0.7)',
-    },
-    cancelButtonCircle: {
-        backgroundColor: 'rgba(239, 68, 68, 0.5)',
-        borderColor: 'rgba(239, 68, 68, 0.7)',
-    },
-    contactButtonCircle: {
-        backgroundColor: 'rgba(56, 189, 248, 0.3)',
-        borderColor: 'rgba(56, 189, 248, 0.6)',
-    },
-    
-    sectionLoadingContainer: {
-        flex: 1, 
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 20,
-    },
-    sectionLoadingText: {
-        color: '#a1a1aa',
-        marginTop: 8,
-        fontSize: 14,
-    },
-    emptyList: {
-        alignItems: 'center',
-        marginTop: 40,
-        padding: 20,
         borderRadius: 12,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)', 
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.3)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.3,
-        shadowRadius: 2,
-        elevation: 3,
+        borderColor: 'rgba(200, 154, 91, 0.4)',
     },
-    emptyTextPrimary: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    emptyTextSecondary: {
-        color: '#a1a1aa',
-        marginTop: 4,
-    },
-
-    viewAllButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        backgroundColor: '#EFEFEF', 
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    
-    viewAllButtonText: {
+    cardInfoChipText: {
+        color: '#C89A5B',
         fontSize: 14,
         fontWeight: '600',
-        color: '#4A4A4A',
     },
-    
-    viewAllButtonPressed: {
-        opacity: 0.7, 
+    cardInfoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 8,
     },
-    listContentFlatListBase: {
-        paddingHorizontal: 16,
-        paddingTop: 0,
+    cardInfoText: {
+        color: '#d1d5db',
+        fontSize: 13,
+        flex: 1,
     },
-    listContentFlatListYellow: {
-        backgroundColor: 'rgba(252, 211, 77, 0.04)',
+    cardActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 10,
+        marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.1)',
     },
-    listContentFlatListGreen: {
-        backgroundColor: 'rgba(52, 211, 153, 0.04)',
+    actionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
     },
-    listContentFlatListRed: {
-        backgroundColor: 'rgba(239, 68, 68, 0.04)',
+    rejectButton: {
+        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    },
+    confirmButton: {
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    },
+    actionButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    sectionLoadingContainer: {
+        padding: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyList: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    emptyText: {
+        color: '#a1a1aa',
+        fontSize: 14,
     },
 });
 
