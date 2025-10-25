@@ -1,13 +1,13 @@
-import { useState, useMemo, useEffect, type FC } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Users, MessageSquare, Tag, Calendar, Building, Edit, Trash2, Clock } from 'lucide-react-native';
-import { Timestamp } from 'firebase/firestore';
-import { addReservation, cancelReservation } from '../services/customer-service';
-import { ReservationDetails, UserProfile} from '../lib/types';
-import { BRANCHES, BranchId } from '../lib/typesConst';
-import CustomWheelPicker from './customer-wheel';
 import * as Haptics from 'expo-haptics';
+import { Timestamp } from 'firebase/firestore';
+import { Building, Calendar, Clock, Edit, MessageSquare, Tag, Trash2, Users } from 'lucide-react-native';
+import { useEffect, useMemo, useState, type FC } from 'react';
+import { ActivityIndicator, Alert, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ReservationDetails, UserProfile } from '../lib/types';
+import { BRANCHES, BranchId } from '../lib/typesConst';
+import { addReservation, cancelReservation } from '../services/customer-service';
+import CustomWheelPicker from './customer-wheel';
 
 const branchMap: { [key in BranchId]: string } = {
   [BRANCHES.PAARL]: 'Paarl',
@@ -100,6 +100,7 @@ const BookingWidgetComponent: FC<{
         dateOfArrival: Timestamp.fromDate(date),
         guests: seats, branch: branch, message: message,
         userId: userProfile.userId, bookingName: bookingName, seat: "Any",
+        nagName: userProfile.nagName,
       };
       await addReservation(newBookingData as any);
       onConfirm();
@@ -123,6 +124,7 @@ const BookingWidgetComponent: FC<{
             guests: seats, branch: branch, message: message,
             userId: userProfile.userId, bookingName: bookingName, seat: "Any",
             restaurant: booking.restaurant,
+            nagName: userProfile.nagName,
         };
         await addReservation(newBookingData as any);
         setIsEditing(false);

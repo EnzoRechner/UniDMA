@@ -1,11 +1,11 @@
-import { useState, useEffect, type FC } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Users, MessageSquare, Calendar, Building, Clock } from 'lucide-react-native';
-import { ReservationDetails} from '../lib/types';
-import { BRANCHES, BranchId } from '../lib/typesConst';
 import * as Haptics from 'expo-haptics';
-import { updateReservationStatus } from '../services/staff-service'; 
+import { Building, Calendar, Clock, MessageSquare, Users } from 'lucide-react-native';
+import { useEffect, useState, type FC } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
+import { ReservationDetails } from '../lib/types';
+import { BRANCHES, BranchId } from '../lib/typesConst';
+import { updateReservationStatus } from '../services/staff-service';
 
 
 const branchMap: { [key in BranchId]: string } = {
@@ -20,7 +20,6 @@ const BookingWidgetComponent: FC<{
   onConfirm: () => void;
 }> = ({ booking, isActive, onConfirm }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [bookingName, setBookingName] = useState('My Booking');
   const [date, setDate] = useState<Date>(() => new Date());
   const [seats, setSeats] = useState<number>(2);
   const [message, setMessage] = useState<string>('');
@@ -31,7 +30,6 @@ const BookingWidgetComponent: FC<{
         setDate(booking.dateOfArrival.toDate());
         setSeats(booking.guests);
         setMessage(booking.message || '');
-        setBookingName(booking.bookingName);
     } else {
     }
   }, [isEditing, booking]);
@@ -82,7 +80,6 @@ const BookingWidgetComponent: FC<{
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                     setLoading(true);
                     try {
-                        // Update status to 2 (Rejected)
                         await updateReservationStatus(bookingIdToDelete, 2, 'Restaurant unable to accommodate reservation.');
                     } catch (error: any) {
                         Alert.alert('Error', 'Could not reject the booking.');
@@ -105,19 +102,18 @@ const BookingWidgetComponent: FC<{
       <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
         <View style={styles.content}>
           <Text style={styles.title}>
-            {isEditing ? 'Edit Booking' : booking?.bookingName || 'Reservation Details'}
+            {isEditing ? 'Edit Booking' : booking?.nagName || 'Reservation Details'}
           </Text>
           
           {isFormVisible ? (
             <>
-              {/* Simplified Form View for Staff Editing */}
               <View style={styles.readOnlyContainer}>
                 <Text style={styles.readOnlyText}>Editing is simplified for staff. Use the mobile form to manually modify/rebook if required.</Text>
               </View>
             </>
           ) : (
             booking && (
-              <View style={styles.readOnlyContainer}> {/* ✅ Removed conditional style */}
+              <View style={styles.readOnlyContainer}>
                 <View style={styles.readOnlyItem}><Calendar size={18} color="#ccc" /><Text style={styles.readOnlyText}> {booking.dateOfArrival.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     {' '} @ {' '}
                     {booking.dateOfArrival.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text></View>
@@ -129,7 +125,6 @@ const BookingWidgetComponent: FC<{
             )
           )}
           
-          {/* Action Buttons Section */}
           {booking && !isEditing && (
               <View>
                   <TouchableOpacity
@@ -142,7 +137,6 @@ const BookingWidgetComponent: FC<{
                       </Text>}
                   </TouchableOpacity>
                   
-                  {/* Delete/Reject Button (Visible if not already Rejected/Cancelled) */}
                   {booking.status !== 2 && (
                       <TouchableOpacity
                           style={[styles.deleteButton, { marginTop: 10 }]}
@@ -161,12 +155,11 @@ const BookingWidgetComponent: FC<{
   );
 };
 
-// ... (The styles object definition is omitted here but must be present in the original file)
 const styles = StyleSheet.create({
     widgetContainer: { width: '100%', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(200, 154, 91, 0.4)', minHeight: 520 },
     cardBlur: { flex: 1 },
     content: { padding: 20, justifyContent: 'space-between', flex: 1 },
-    title: { fontSize: 22, fontWeight: 'bold', color: 'white', marginBottom: 10, textAlign: 'center' },
+    title: { fontSize: 22, fontFamily: 'PlayfairDisplay-Bold', color: 'white', marginBottom: 10, textAlign: 'center' },
     readOnlyContainer: { flex: 1, justifyContent: 'flex-start', gap: 15, paddingVertical: 20 },
     readOnlyItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 15, backgroundColor: 'rgba(0, 0, 0, 0.2)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', width: '100%'},
     readOnlyText: { color: '#E0E0E0', fontSize: 16, flex: 1, flexWrap: 'wrap' },
@@ -174,7 +167,6 @@ const styles = StyleSheet.create({
     confirmButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
     deleteButton: { padding: 15, borderRadius: 12, alignItems: 'center', backgroundColor: '#EF4444' },
     deleteButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-    // ... (rest of the required styles for inputs/pickers)
 });
 
 export default BookingWidgetComponent;

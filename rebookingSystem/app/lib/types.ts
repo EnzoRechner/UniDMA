@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 // Removed unused JSX and React Native style imports
-import { RoleId, BranchId, RestaurantId } from './typesConst';
+import { BranchId, RestaurantId, RoleId } from './typesConst';
 /**
  * Interface representing a user document in the 'users' Firestore collection.
  */
@@ -30,6 +30,7 @@ export interface ReservationDetails {
   status: 0 | 1 | 2 | 3 | 4 | 5; // Reservation status (0: pending, 1: confirmed, 2: rejected, 3: completed, 4: cancelled, 5: paused)
   userId?: string; // The ID of the user who made the reservation
   bookingName: string; // Name of the booking
+  nagName?: string; // Name of the user who made the reservation
   restaurant?: string; // Restaurant associated with the reservation
   rejectionReason?: string; // Reason for rejection, if applicable
   seat: string; // The location of the seat area

@@ -1,7 +1,7 @@
 import { memo, type FC } from 'react';
 import { View } from 'react-native';
-import BookingWidgetComponent from './staff-all-widget-component';
 import { ReservationDetails } from '../lib/types';
+import BookingWidgetComponent from './staff-all-widget-component';
 
 interface Props {
   item: ReservationDetails | { id: null };
