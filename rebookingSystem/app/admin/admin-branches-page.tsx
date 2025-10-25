@@ -90,7 +90,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   if (
     !branchName ||
     !branchAddress ||
-    !branchRestaurant ||
     !branchCoord
   ) {
     Alert.alert(

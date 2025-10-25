@@ -59,23 +59,4 @@ export interface BranchDetails {
 
 }
 
-// --- GLOBAL CACHE DEFINITION (Context, Hook, and Provider) ---
-export interface StaffBookingState {
-  // Authentication & User Status
-  isAuthReady: boolean;
-  userId: string | null;
-  userRole: number | null; // Represents the RoleId (e.g., 1 for STAFF, 2 for ADMIN)
-
-  // Data Loading Status
-  pendingLoading: boolean;
-  confirmedLoading: boolean;
-  cancelledLoading: boolean;
-  
-  // Core Data Sets (Filtered by status)
-  allBookings: ReservationDetails[];
-  pendingBookings: ReservationDetails[];
-  confirmedBookings: ReservationDetails[];
-  cancelledBookings: ReservationDetails[];
-}
-
 export default {};
