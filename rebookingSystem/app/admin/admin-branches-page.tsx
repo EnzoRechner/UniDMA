@@ -12,6 +12,7 @@ import {
   TextInput,
   Modal,
   Switch,
+  
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { collection, getDocs, updateDoc, doc, onSnapshot, where, query } from "firebase/firestore";
@@ -20,9 +21,10 @@ import { BlurView } from "expo-blur";
 import { addBranch } from "../services/admin-service";
 import {UserProfile} from "../lib/types";
 import { fetchUserData} from '../services/customer-service';
-import {BRANCHES} from "../lib/typesConst";
-import { updateBranch } from "../services/admin-service";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 import { BranchId,RESTAURANT } from '../lib/typesConst';
+//import * as Location from 'expo-location';
 // --- Firestore Type ---
 
 
@@ -57,7 +59,8 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const [branchName, setBranchName] = useState("");
   const [branchOpen, setBranchOpen] = useState(false);
   const [branchRestaurant, setBranchRestaurant] = useState(0);
-
+  const [location, setLocation] = useState(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   // ---------------------------
   // Updated handleAddBranch
   // ---------------------------
@@ -83,8 +86,29 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     loadData();
   }, []);
 
+  // // Function to get permission for location
+  //   const getLocation = async () => {
+  //   try {
+  //     // Ask for permission
+  //     const { status } = await Location.requestForegroundPermissionsAsync();
+  //     if (status !== 'granted') {
+  //       setErrorMsg('Permission to access location was denied');
+  //       return;
+  //     }
 
+  //     // Get the current position
+  //     const loc = await Location.getCurrentPositionAsync({
+  //       accuracy: Location.Accuracy.Highest,
+  //     });
 
+  //     console.log('📍 Location:', loc);
+  //     setLocation(loc);
+  //     setErrorMsg(null);
+  //   } catch (error) {
+  //     console.error('Location error:', error);
+  //     setErrorMsg('Error getting location');
+  //   }
+  // };
 
   const handleAddBranch = async () => {
   if (
@@ -128,8 +152,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     setBranchCoord(null);
     setBranchOpen(false);
 
-    // Reload updated list
-    loadBranches();
   } catch (error) {
     console.error("Error adding branch:", error);
     Alert.alert("Error", "Failed to add new branch.");
@@ -140,53 +162,36 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 
 //This updates the branch list in real-time 
 // when changes occur in Firestore they get displayed immediately
-
+ 
   useEffect(() => {
-    const branchRef = collection(db, "Branch");
-    //real-time listener
-    const unsubscribe = onSnapshot(branchRef, (snapshot) => {
-      const branchList: BranchDetails[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as BranchDetails[];
+  if (!user) return; 
 
-      setBranches(branchList);
-      setLoading(false);
-    });
+  let q;
+  if (user.role === 2) {
+    q = query(
+      collection(db, "Branch"),
+      where("branchCode", "==", user.branch)
+    );
+  } else{
+    q = collection(db, "Branch"); // all branches
+  } 
 
-    return () => unsubscribe();
-  }, []);
+  setLoading(true);
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const branchList = snapshot.docs.map((doc) => ({
+  id: doc.id,
+  ...(doc.data() as Omit<BranchDetails, "id">),
+}));
 
-  // loadBranches function
-  //Currently filter is accting weird if you open branch locations it will filter 
-  // but if you go back and open again it shows all branches
-  const loadBranches = async () => {
-    try {
-      let snapshot: any = null;
-      if (user?.role === 2) {
-        const q = query(collection(db, "Branch"),
-         where("branchCode", "==", user?.branch));
-         snapshot = await getDocs(q);
-      } else {
-        snapshot = await getDocs(collection(db, "Branch"));
-      }
+    setBranches(branchList);
+    setLoading(false);
+  });
 
-      const branchList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as BranchDetails[];
-      setBranches(branchList);
-    } catch (err) {
-      console.error("Error loading branches:", err);
-      Alert.alert("Error", "Could not load branches");
-    } finally {
-      setLoading(false);
-    }
-  };
+  return () => unsubscribe();
+}, [user]);
 
-  useEffect(() => {
-    loadBranches();
-  }, []);
+
+  
 
   const handleUpdateBranch = async () => {
     if (!selectedBranch) return;
@@ -372,7 +377,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
             placeholder="Coordinates (lat, lng)"
             placeholderTextColor="#aaa"
             value={
-              branchCoord ? `${branchCoord.latitude}, ${branchCoord.longitude}` : ""
+              branchCoord ? `${branchCoord.latitude} , ${branchCoord.longitude}` : ""
             }
             onChangeText={(t) => {
               const parts = t.split(",").map((p) => parseFloat(p.trim()));
@@ -385,9 +390,24 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
                 setBranchCoord(null); // invalid input
               }
             }}
-          />
 
-      <View style={styles.modalButtons}>
+          />
+          <View style={[styles.modalButtons]}>  
+
+          <TouchableOpacity
+            style={[styles.modalButton, { backgroundColor: "#C89A5B"}]}  
+            // onPress={() => [(getLocation) ]}
+          >
+            <Text style={{ color: "white", fontWeight: "bold" }}>Get Geolocation</Text>
+            
+        {/* <Text style={{ marginTop: 10, color: 'white' }}>
+          Latitude: {location.coords.latitude.toFixed(5)}{'\n'}
+          Longitude: {location.coords.longitude.toFixed(5)}
+          </Text> */}
+          </TouchableOpacity>
+          </View>
+
+      <View style={[styles.modalButtons, { marginTop: 20 }]}>
         <TouchableOpacity
           style={[styles.modalButton, { backgroundColor: "#C89A5B" }]}
           onPress={isEditing ? handleUpdateBranch : handleAddBranch}
@@ -398,6 +418,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
         <TouchableOpacity
           style={[styles.modalButton, { backgroundColor: "rgba(255,255,255,0.1)" }]}
           onPress={() => setShowPopup(false)}
+
         >
           <Text style={styles.modalButtonText}>Cancel</Text>
         </TouchableOpacity>
@@ -412,6 +433,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 };
 
 const styles = StyleSheet.create({
+  //Main Widget Container
   widgetContainer: {
     width: "100%",
     borderRadius: 24,
@@ -467,10 +489,10 @@ const styles = StyleSheet.create({
     color: "#999999",
   },
 
-  // Blurred Popup Modal Styles
+  // Modal View with blur background
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -479,7 +501,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: "rgba(200,154,91,0.5)",
+    borderColor: "rgba(200,154,91,0.7)",
   },
   modalTitle: {
     fontSize: 20,
@@ -490,12 +512,12 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "rgba(200,154,91,0.5)",
+    borderColor: "rgba(200,154,91,0.7)",
     borderRadius: 10,
     padding: 10,
     marginBottom: 10,
     color: "white",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    backgroundColor: "rgba(0,0,0,0.7)",
   },
   modalButtons: {
     flexDirection: "row",
