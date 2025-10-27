@@ -1,0 +1,12 @@
+# Only upload the mobile app folder to EAS to avoid permission/path issues
+# Ignore everything by default
+/*
+
+# Allow the rebookingSystem app sources
+!rebookingSystem/**
+
+# Keep gitignore itself if needed
+!.gitignore
+
+# Also ignore local node_modules at repo root if present (safety)
+node_modules/
