@@ -1,17 +1,5 @@
-import {
-  doc,
-  setDoc,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-  Timestamp,
-  collection,
-} from 'firebase/firestore';
+import { doc, setDoc, getDocs, collection } from 'firebase/firestore';
 import { db } from './firebase-initilisation';
-import { ReservationDetails, UserProfile } from '../lib/types';
 import { BranchDetails } from '../lib/types';
 
 
@@ -25,10 +13,10 @@ export async function fetchBranches(): Promise<BranchDetails[]> {
     const snapshot = await getDocs(collection(db, "Branch"));
     //console.log("Documents found:", snapshot.size);
 
-    const branchList: BranchDetails[] = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as BranchDetails[];
+    const branchList: BranchDetails[] = snapshot.docs.map((d) => {
+      const data = d.data() as Omit<BranchDetails, 'id'>;
+      return { id: d.id, ...data };
+    });
 
     return branchList;
   } catch (error) {

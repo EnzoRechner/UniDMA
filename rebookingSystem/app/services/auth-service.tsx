@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, addDoc, getDocs, query, where, Timestamp, doc, setDoc, getDoc, updateDoc, documentId, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, Timestamp, doc, setDoc, getDoc, documentId, deleteDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, signOut as fbSignOut } from 'firebase/auth';
 import { auth, db } from './firebase-initilisation';
 import { UserProfile } from '../lib/types';
-import { BRANCHES, ROLES, BranchId } from '../lib/typesConst';
+import { ROLES, BranchId } from '../lib/typesConst';
 
 /**
  * Generates a unique random 6-digit string to be used as a document ID.
@@ -73,13 +73,14 @@ export const signUp = async (
   const profileDocRef = doc(db, 'rebooking-accounts', cred.user.uid);
   await setDoc(profileDocRef, { ...baseProfile } as any);
 
-  // Persist the 6-digit ID locally (existing app logic expects this)
-  await AsyncStorage.setItem('userId', newUserId);
+  // Persist identifiers locally: use Firebase UID as canonical userId, and store the 6-digit as customerId
+  await AsyncStorage.setItem('userId', cred.user.uid);
+  await AsyncStorage.setItem('customerId', newUserId);
 
   // Try to register device for push notifications (best-effort)
   try {
     const NotificationService = (await import('./notifications')).default;
-    await NotificationService.registerForPushNotifications(newUserId);
+    await NotificationService.registerForPushNotifications(cred.user.uid);
   } catch (err) {
     console.log('Failed to register for push notifications:', err);
   }
@@ -150,6 +151,14 @@ export const signIn = async (email: string, password: string): Promise<UserProfi
   await AsyncStorage.setItem('userId', userId);
   await AsyncStorage.setItem('userRole', userData.role.toString());
 
+  // Best-effort: ensure device token registration on sign in as well
+  try {
+    const NotificationService = (await import('./notifications')).default;
+    await NotificationService.registerForPushNotifications(userId);
+  } catch (err) {
+    console.log('Failed to (re)register for push notifications on sign-in:', err);
+  }
+
   return { ...userData, userId };
 };
 
@@ -169,6 +178,17 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
  * Sign out the current user and clear local cached userId.
  */
 export const signOut = async (): Promise<void> => {
+  // Attempt to deactivate active device tokens for this user
+  try {
+    const currentUserId = await AsyncStorage.getItem('userId');
+    if (currentUserId) {
+      const NotificationService = (await import('./notifications')).default;
+      await NotificationService.unregisterPushNotifications(currentUserId);
+    }
+  } catch (err) {
+    console.log('Failed to unregister push notifications on sign-out:', err);
+  }
+
   await fbSignOut(auth);
   await AsyncStorage.removeItem('userId');
 };

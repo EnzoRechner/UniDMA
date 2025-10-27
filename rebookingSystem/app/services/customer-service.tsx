@@ -14,6 +14,7 @@ import {
 import { db } from './firebase-initilisation';
 import { getBranchSettings } from '../../utils/firestore';
 import { ReservationDetails, UserProfile } from '../lib/types';
+import { BranchId, getPrettyBranchName } from '../lib/typesConst';
 
 /**
  * Generates a unique random 6-digit string ID for a new booking.
@@ -98,7 +99,7 @@ export const addReservation = async (
     try {
       const NotificationService = (await import('./notifications')).default;
       const numericBranchId = reservationData.branch as BranchId;
-      const branchName = branchNameMap[numericBranchId] ?? String(reservationData.branch);
+      const branchName = getPrettyBranchName(numericBranchId) ?? String(reservationData.branch);
 
       await NotificationService.sendNewBookingNotificationToStaff(
         branchName,

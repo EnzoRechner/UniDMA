@@ -16,7 +16,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from './firebase-initilisation';
 import { fetchUserData } from './customer-service';
-import { ROLES, UserProfile } from '../lib/types';
+import { UserProfile } from '../lib/types';
+import { ROLES } from '../lib/typesConst';
 
 // Local type for notification preferences stored under 'notificationPreferences/{userId}'
 export type NotificationPreferences = {

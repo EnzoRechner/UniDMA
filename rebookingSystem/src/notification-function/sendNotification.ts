@@ -9,12 +9,13 @@ interface NotificationRequest {
   data?: Record<string, any>;
 }
 
-export const sendNotification = functions.https.onCall(async (data: NotificationRequest, context) => {
+export const sendNotification = functions.https.onCall(async (data: any, context: any) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { userId, notificationType, title, body, data: notificationData } = data;
+  const payload = data as NotificationRequest;
+  const { userId, notificationType, title, body, data: notificationData } = payload;
 
   if (!userId || !notificationType || !title || !body) {
     throw new functions.https.HttpsError('invalid-argument', 'Missing required fields');
@@ -44,8 +45,10 @@ export const sendNotification = functions.https.onCall(async (data: Notification
       },
       data: notificationData || {},
       android: {
-        channelId: notificationType === 'new_booking' ? 'staff' : 'bookings',
         priority: 'high',
+        notification: {
+          channelId: notificationType === 'new_booking' ? 'staff' : 'bookings',
+        },
       },
       apns: {
         payload: {

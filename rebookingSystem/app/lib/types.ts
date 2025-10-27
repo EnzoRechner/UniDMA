@@ -46,14 +46,14 @@ export interface Branch {
   open?: string; // e.g., "09:00"
 }
 export interface BranchDetails {  
-  id: number; // The Firestore document ID
+  id: string; // The Firestore document ID
   //Bid: BranchId;
   Coord: GeolocationCoordinates; 
   address: string;
   capacity: number;
   name: string;
   open: boolean;
-  restaurant: string;
+  restaurant: RestaurantId;
   pauseBookings: boolean;
   pauseReason?: string;
   pauseUntil?: Timestamp;

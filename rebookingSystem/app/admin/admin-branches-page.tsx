@@ -1,5 +1,5 @@
 // admin-branchs-page.tsx
-import React, { use, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  Switch,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { collection, getDocs, updateDoc, doc, onSnapshot, where, query } from "firebase/firestore";
@@ -20,20 +19,19 @@ import { BlurView } from "expo-blur";
 import { addBranch } from "../services/admin-service";
 import {UserProfile} from "../lib/types";
 import { fetchUserData} from '../services/customer-service';
-import {BRANCHES} from "../lib/typesConst";
-import { updateBranch } from "../services/admin-service";
-import { BranchId,RESTAURANT } from '../lib/typesConst';
+import { RestaurantId } from "../lib/typesConst";
 // --- Firestore Type ---
 
 
 export interface BranchDetails {
-  id: number;
+  id: string;
   Coord: GeolocationCoordinates;
   address: string;
   capacity: number;
   name: string;
   open: boolean;
-  restaurant: number;
+  restaurant: RestaurantId;
+  pauseBookings: boolean;
 }
 
 interface BranchWidgetProps {
@@ -46,17 +44,16 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const [branches, setBranches] = useState<BranchDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPopup, setShowPopup] = useState(false);
-  const [selectedBranch, setSelectedBranch] = useState(null);
+  const [selectedBranch, setSelectedBranch] = useState<BranchDetails | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [userBranch, setUserBranch] = useState<BranchId | null>(null);
   // Branch form fields
   const [branchCoord, setBranchCoord] = useState<GeolocationCoordinates | null>(null);
   const [branchAddress, setBranchAddress] = useState("");
   const [branchCapacity, setBranchCapacity] = useState(0);
   const [branchName, setBranchName] = useState("");
   const [branchOpen, setBranchOpen] = useState(false);
-  const [branchRestaurant, setBranchRestaurant] = useState(0);
+  const [branchRestaurant, setBranchRestaurant] = useState<RestaurantId>(0 as RestaurantId);
 
   // ---------------------------
   // Updated handleAddBranch
@@ -113,6 +110,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
       name: branchName,
       open: branchOpen, // now using the open status from modal
       restaurant: branchRestaurant,
+      pauseBookings: false,
       branchCode,
     };
 
@@ -145,10 +143,10 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     const branchRef = collection(db, "Branch");
     //real-time listener
     const unsubscribe = onSnapshot(branchRef, (snapshot) => {
-      const branchList: BranchDetails[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as BranchDetails[];
+      const branchList: BranchDetails[] = snapshot.docs.map((d) => {
+        const data = d.data() as Omit<BranchDetails, 'id'>;
+        return { id: d.id, ...data };
+      });
 
       setBranches(branchList);
       setLoading(false);
@@ -160,7 +158,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   // loadBranches function
   //Currently filter is accting weird if you open branch locations it will filter 
   // but if you go back and open again it shows all branches
-  const loadBranches = async () => {
+  const loadBranches = useCallback(async () => {
     try {
       let snapshot: any = null;
       if (user?.role === 2) {
@@ -171,10 +169,10 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
         snapshot = await getDocs(collection(db, "Branch"));
       }
 
-      const branchList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as BranchDetails[];
+      const branchList: BranchDetails[] = snapshot.docs.map((d: any) => {
+        const data = d.data() as Omit<BranchDetails, 'id'>;
+        return { id: d.id, ...data };
+      });
       setBranches(branchList);
     } catch (err) {
       console.error("Error loading branches:", err);
@@ -182,11 +180,11 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     loadBranches();
-  }, []);
+  }, [loadBranches]);
 
   const handleUpdateBranch = async () => {
     if (!selectedBranch) return;
@@ -246,7 +244,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
                 setBranchName(item.name);
                 setBranchAddress(item.address);
                 setBranchCapacity(item.capacity);
-                setBranchRestaurant(user?.restaurant || 0);
+                setBranchRestaurant((user?.restaurant ?? 0) as RestaurantId);
                 setBranchOpen(item.open);
                 setBranchCoord(item.Coord || null);
                 setIsEditing(true);
@@ -275,7 +273,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
                 setBranchName("");
                 setBranchAddress("");
                 setBranchCapacity(0);
-                setBranchRestaurant(user?.restaurant || 0);
+                setBranchRestaurant((user?.restaurant ?? 0) as RestaurantId);
                 setBranchOpen(false);
                 setBranchCoord(null);
                 setSelectedBranch(null);
