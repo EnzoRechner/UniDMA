@@ -1,19 +1,31 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { LogOut } from 'lucide-react-native';
+import React from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('userId');
+    router.replace('/auth/auth-login');
+  };
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient colors={['#0D0D0D', '#1A1A1A', '#0D0D0D']} style={styles.background} />
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.pageTitle}>Admin Dashboard</Text>
-          <View style={styles.titleDivider} />
+          <View>
+            <Text style={styles.pageTitle}>Admin Dashboard</Text>
+            <View style={styles.titleDivider} />
+          </View>
+
+          <TouchableOpacity style={styles.iconButton} onPress={handleLogout}>
+            <LogOut size={22} color="#C89A5B" />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.cardsGrid}>
@@ -66,7 +78,14 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   background: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   content: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 24 },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 24,
+    flexDirection: 'row', 
+    justifyContent: 'space-between',
+    alignItems: 'center', 
+  },
   pageTitle: {
     fontSize: 32,
     fontFamily: 'PlayfairDisplay-Bold',
@@ -108,6 +127,5 @@ const styles = StyleSheet.create({
   },
   cardBlur: { flex: 1, padding: 20, justifyContent: 'flex-start', alignItems: 'flex-start' },
   cardLabel: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white', lineHeight: 22, letterSpacing: 0.3 },
+  iconButton: { padding: 5 },
 });
-
-// single default export already defined above
