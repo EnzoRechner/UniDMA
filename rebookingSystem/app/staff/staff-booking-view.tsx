@@ -153,7 +153,7 @@ const BookingView = () => {
         const dateObject = item.dateOfArrival.toDate();
         const formattedDate = dateObject.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
         const formattedTime = dateObject.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-        console.log(item.nagName);
+        //console.log(item.nagName);
         const nagName = item.nagName || 'Guest';
 
         return (

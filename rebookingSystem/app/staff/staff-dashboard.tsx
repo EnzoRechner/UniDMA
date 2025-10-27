@@ -1,16 +1,35 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BookingView from './staff-booking-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { ChevronLeft, LogOut } from 'lucide-react-native'
 
 const StaffDashboard = () => {
 
-const handleLogout = async () => {
+  const handleLogout = async () => {
       await AsyncStorage.removeItem('userId');
       router.replace('/auth/auth-login');
   }
+
+  const handleBack = () => {
+    // This method tells React Navigation to go back to the previous screen in the stack.
+    router.back();
+    console.log('Navigating back...');
+  };
+
+  const [userRole, setUserRole] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    const fetchUserRole = async () => {
+      const roleString = await AsyncStorage.getItem('userRole');
+      if (roleString) {
+        setUserRole(parseInt(roleString, 10));
+      }
+      console.log('User role fetched:', roleString);
+    };
+    fetchUserRole();
+  }, []);
 
   return (
     <View style={styles.fullScreenBackground}> 
@@ -18,15 +37,18 @@ const handleLogout = async () => {
           {/* Header with title and logout button */}
           <View style={styles.header}>
             <Text style={styles.title}>Bookings</Text>
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={async () => {
-                await AsyncStorage.removeItem('userId');
-                router.replace('/auth/auth-login');
-              }}>
-              <Ionicons name="log-out-outline" size={20} color="#fff" />
-              <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
+              {userRole === 1 ? (
+                      // Display LOGOUT button for Role 1
+                      <TouchableOpacity style={styles.iconButton} onPress={handleLogout}>
+                          <LogOut size={22} color="#C89A5B" />
+                      </TouchableOpacity>
+                  ) : (
+                      // Display BACK button for all other roles (2, 3, etc.)
+                      <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
+                          {/* Assuming you have a suitable back icon imported, like ChevronLeft */}
+                          <ChevronLeft size={22} color="#C89A5B" /> 
+                      </TouchableOpacity>
+                  )}
           </View>
           <BookingView />
         </View>
@@ -82,6 +104,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
     },
+    iconButton: { padding: 5 },
 });
 
 export default StaffDashboard;

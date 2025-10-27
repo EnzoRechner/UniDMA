@@ -140,6 +140,7 @@ export const signIn = async (email: string, password: string): Promise<UserProfi
 
   // Final actions after successful lookup/migration
   await AsyncStorage.setItem('userId', userId);
+  await AsyncStorage.setItem('userRole', userData.role.toString());
 
   return { ...userData, userId };
 };
