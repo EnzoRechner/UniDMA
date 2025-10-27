@@ -164,7 +164,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const loadBranches = async () => {
     try {
       let snapshot: any = null;
-      if (user?.role === 2) {
+      if (user?.role == 2) {
         const q = query(collection(db, "Branch"),
          where("branchCode", "==", user?.branch));
          snapshot = await getDocs(q);

@@ -1,18 +1,29 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable,TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LogOut } from 'lucide-react-native';
 export default function AdminDashboard() {
   const router = useRouter();
+  
+   const handleLogout = async () => {
+      await AsyncStorage.removeItem('userId');
+      router.replace('/auth/auth-login');
+  }
+
+
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient colors={['#0D0D0D', '#1A1A1A', '#0D0D0D']} style={styles.background} />
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.pageTitle}>Admin Dashboard</Text>
+          <Text style={styles.pageTitle}>Admin Dashboard       <TouchableOpacity style={styles.iconButton} onPress={handleLogout}><LogOut size={22} color="#C89A5B" /></TouchableOpacity>
+           </Text>
+            <Text style={styles.headLabel}>LogOut </Text>
           <View style={styles.titleDivider} />
         </View>
 
@@ -108,6 +119,9 @@ const styles = StyleSheet.create({
   },
   cardBlur: { flex: 1, padding: 20, justifyContent: 'flex-start', alignItems: 'flex-start' },
   cardLabel: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white', lineHeight: 22, letterSpacing: 0.3 },
+  headLabel: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white',position: 'absolute', right: 10, top: 90, marginRight: 20 },
+  headerIcons: { flexDirection: 'row', gap: 15,},
+  iconButton: { padding: 0 },
 });
 
 // single default export already defined above
