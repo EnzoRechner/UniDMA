@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BookingView from './staff-booking-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { ChevronLeft, LogOut } from 'lucide-react-native'
+import { LogOut, Undo2 } from 'lucide-react-native'
 
 const StaffDashboard = () => {
 
@@ -43,8 +43,7 @@ const StaffDashboard = () => {
                   ) : (
                       // Display BACK button for all other roles (2, 3, etc.)
                       <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
-                          {/* Assuming you have a suitable back icon imported, like ChevronLeft */}
-                          <ChevronLeft size={22} color="#C89A5B" /> 
+                          <Undo2 size={22} color="#C89A5B" /> 
                       </TouchableOpacity>
                   )}
           </View>
