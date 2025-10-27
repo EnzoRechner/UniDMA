@@ -74,7 +74,15 @@ export const signUp = async (
   await setDoc(profileDocRef, { ...baseProfile } as any);
 
   // Persist the 6-digit ID locally (existing app logic expects this)
-  await AsyncStorage.setItem('userId', cred.user.uid);
+  await AsyncStorage.setItem('userId', newUserId);
+
+  // Try to register device for push notifications (best-effort)
+  try {
+    const NotificationService = (await import('./notifications')).default;
+    await NotificationService.registerForPushNotifications(newUserId);
+  } catch (err) {
+    console.log('Failed to register for push notifications:', err);
+  }
 
   return cred.user.uid;
 };

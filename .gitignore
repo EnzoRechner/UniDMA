@@ -2,3 +2,5 @@ node_modules
 rebookingSystem/Firebase
 rebookingSystem/.env
 rebookingSystem/.env
+rebookingSystem/google-services.json
+rebookingSystem/GoogleService-Info.plist
