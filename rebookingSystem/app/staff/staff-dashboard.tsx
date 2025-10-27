@@ -15,7 +15,6 @@ const StaffDashboard = () => {
   const handleBack = () => {
     // This method tells React Navigation to go back to the previous screen in the stack.
     router.back();
-    console.log('Navigating back...');
   };
 
   const [userRole, setUserRole] = React.useState<number | null>(null);
@@ -26,7 +25,6 @@ const StaffDashboard = () => {
       if (roleString) {
         setUserRole(parseInt(roleString, 10));
       }
-      console.log('User role fetched:', roleString);
     };
     fetchUserRole();
   }, []);
