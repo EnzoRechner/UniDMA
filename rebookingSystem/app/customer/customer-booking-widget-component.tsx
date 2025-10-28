@@ -1,12 +1,13 @@
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, collection, doc, setDoc } from 'firebase/firestore';
 import { Building, Calendar, Clock, Edit, MessageSquare, Tag, Trash2, Users } from 'lucide-react-native';
 import { useEffect, useMemo, useState, type FC } from 'react';
 import { ActivityIndicator, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ReservationDetails, UserProfile } from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
-import { addReservation, cancelReservation } from '../services/customer-service';
+import { cancelReservation } from '../services/customer-service';
+import { db } from '../services/firebase-initilisation';
 import CustomWheelPicker from './customer-wheel';
 import { modalService } from '../services/modal-Service';
 
@@ -41,7 +42,7 @@ const BookingWidgetComponent: FC<{
   booking?: ReservationDetails;
   userProfile: UserProfile;
   isActive: boolean;
-  onConfirm: () => void;
+  onConfirm: (newBookingId?: string) => void;
 }> = ({ booking, userProfile, isActive, onConfirm }) => {
   const isNewBooking = !booking;
   const [isEditing, setIsEditing] = useState(false);
@@ -74,10 +75,9 @@ const BookingWidgetComponent: FC<{
 
   const isRebookable = useMemo(() => {
     if (!booking) return false;
-    if (booking.status === 5) return true; // paused bookings should be rebookable after unpause
+    if (booking.status === 5) return true;
     if (booking.status !== 2) return false;
     const reason = (booking.rejectionReason || '').toLowerCase();
-    // Show CTA specifically for rebook-related rejections (e.g., unpause cleanup)
     return /(rebook|unpause|paused|resume|resumed)/.test(reason);
   }, [booking]);
 
@@ -92,19 +92,34 @@ const BookingWidgetComponent: FC<{
   };
   const statusInfo = getStatusStyle(booking?.status);
 
+  const createBookingData = (newId: string) => {
+    return {
+      userId: userProfile.userId,
+      branch: branch,
+      dateOfArrival: Timestamp.fromDate(date),
+      guests: seats,
+      message: message,
+      bookingName: bookingName,
+      seat: "Any",
+      nagName: userProfile.nagName,
+      
+      id: newId,
+      status: 0,
+      createdAt: Timestamp.now(),
+      restaurant: userProfile.restaurant || 0,
+    };
+  };
+
   const handleCreateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (!userProfile?.userId) return modalService.showError('Error', 'Could not find User ID.');
     setLoading(true);
     try {
-      const newBookingData = {
-        dateOfArrival: Timestamp.fromDate(date),
-        guests: seats, branch: branch, message: message,
-        userId: userProfile.userId, bookingName: bookingName, seat: "Any",
-        nagName: userProfile.nagName,
-      };
-      await addReservation(newBookingData as any);
-      onConfirm();
+      const newDocRef = doc(collection(db, 'nagbookings'));
+      const newId = newDocRef.id;
+      const newBookingData = createBookingData(newId);
+      await setDoc(newDocRef, newBookingData);
+      onConfirm(newId);
     } catch (error: any) {
       modalService.showError('Booking Failed', 'There was a problem creating your booking. Please try again.');
     } finally { setLoading(false); }
@@ -120,17 +135,15 @@ const BookingWidgetComponent: FC<{
     setLoading(true);
     try {
         await cancelReservation(bookingIdToUpdate);
-        const newBookingData = {
-            dateOfArrival: Timestamp.fromDate(date),
-            guests: seats, branch: branch, message: message,
-            userId: userProfile.userId, bookingName: bookingName, seat: "Any",
-            restaurant: booking.restaurant,
-            nagName: userProfile.nagName,
-        };
-        await addReservation(newBookingData as any);
+        
+        const newDocRef = doc(collection(db, 'nagbookings'));
+        const newId = newDocRef.id;
+        const newBookingData = createBookingData(newId);
+        await setDoc(newDocRef, newBookingData);
+
         setIsEditing(false);
         setShowOptions(false);
-        onConfirm();
+        onConfirm(newId);
     } catch (error: any) {
         modalService.showError('Update Failed', "There was a problem updating your booking. Please try again.");
     } finally {
@@ -138,7 +151,6 @@ const BookingWidgetComponent: FC<{
     }
   };
 
-  // Ensure edit form opens with the original booking details prefilled before rendering
   const startEditingFromBooking = () => {
     if (!booking) return;
     setDate(booking.dateOfArrival.toDate());
@@ -364,4 +376,3 @@ const styles = StyleSheet.create({
 });
 
 export default BookingWidgetComponent;
-

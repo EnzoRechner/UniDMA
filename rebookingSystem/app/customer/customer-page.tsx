@@ -1,18 +1,22 @@
-import { useEffect, useState, useRef, useCallback, type FC } from 'react';
-import {
-  View, Text, StyleSheet, ActivityIndicator,
-  Dimensions, TouchableOpacity,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { GestureHandlerRootView, FlatList, ScrollView } from 'react-native-gesture-handler';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Settings, LogOut } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { LogOut, Settings } from 'lucide-react-native';
+import { useCallback, useEffect, useRef, useState, type FC } from 'react';
+import {
+  ActivityIndicator,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { FlatList, GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ReservationDetails, UserProfile } from '../lib/types';
 import { fetchUserData, getReservationsRealtime } from '../services/customer-service';
 import MemoizedBookingItem from './customer-booking-memory';
-import { ReservationDetails, UserProfile } from '../lib/types';
 import { modalService } from '../services/modal-Service';
 
 const { width: windowWidth } = Dimensions.get('window');
@@ -43,6 +47,7 @@ const CustomerPage: FC = () => {
   const [widgets, setWidgets] = useState<(ReservationDetails | { id: null })[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [pendingNewBookingId, setPendingNewBookingId] = useState<string | null>(null);
 
   const setupWidgets = useCallback((realBookings: ReservationDetails[]) => {
     const newBookingPlaceholder = { id: null };
@@ -68,6 +73,19 @@ const CustomerPage: FC = () => {
         unsubscribe = getReservationsRealtime(userId, (fetchedBookings) => {
           setupWidgets(fetchedBookings);
           setLoading(false);
+
+          if (pendingNewBookingId) {
+            const sortedList = fetchedBookings.sort((a, b) => a.dateOfArrival.toMillis() - b.dateOfArrival.toMillis());
+            const finalIndex = sortedList.findIndex(b => b.id === pendingNewBookingId);
+            
+            if (finalIndex > -1) {
+              setTimeout(() => {
+                flatListRef.current?.scrollToIndex({ index: finalIndex, animated: true });
+                setActiveIndex(finalIndex);
+              }, 250);
+            }
+            setPendingNewBookingId(null);
+          }
         });
       } catch (error: any) {
         setLoading(false);
@@ -83,7 +101,7 @@ const CustomerPage: FC = () => {
     return () => {
         unsubscribe();
     };
-  }, [router, setupWidgets]);
+  }, [router, setupWidgets, pendingNewBookingId]);
   
   const handleLogout = async () => {
       await AsyncStorage.removeItem('userId');
@@ -94,10 +112,14 @@ const CustomerPage: FC = () => {
   const renderWidgetItem = useCallback(({ item, index }: { item: ReservationDetails | { id: null }, index: number }) => (
     <MemoizedBookingItem
         item={item} index={index} activeIndex={activeIndex} userProfile={user!}
-        onConfirm={() => {
-          setTimeout(() => {
-            flatListRef.current?.scrollToIndex({ index: 0, animated: true });
-          }, 500);
+        onConfirm={(newBookingId?: string) => {
+          if (newBookingId) {
+            setPendingNewBookingId(newBookingId);
+          } else {
+            setTimeout(() => {
+              flatListRef.current?.scrollToIndex({ index: 0, animated: true });
+            }, 500);
+          }
         }}
     />
   ), [activeIndex, user]);
@@ -136,7 +158,8 @@ const CustomerPage: FC = () => {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.scrollViewContent}
                   snapToInterval={SNAP_INTERVAL}
-                  decelerationRate="fast"
+                  decelerationRate="normal"
+                  disableIntervalMomentum={true}
                   onScroll={(e) => setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / SNAP_INTERVAL))}
                   scrollEventThrottle={16}
               />
@@ -166,7 +189,6 @@ const CustomerPage: FC = () => {
 };
 
 const styles = StyleSheet.create({
-    // --- FIXED: Changed background color from 'transparent' to the base dark color ---
     container: { flex: 1, backgroundColor: '#000000', paddingTop: 0},
     background: { position: 'absolute', left: 0, right: 0, top: 0, height: '0%' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0D0D0D' },
@@ -186,4 +208,3 @@ const styles = StyleSheet.create({
 });
 
 export default CustomerPage;
-
