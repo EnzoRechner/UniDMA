@@ -184,7 +184,7 @@ export default function BranchSettingsScreen() {
       );
       await fetchSettings();
     } catch (error) {
-      console.error('Error toggling pause bookings:', error);
+      console.log('Error toggling pause bookings:', error);
       modalService.showError('Error', 'Failed to update booking status');
     } finally {
       setSaving(false);

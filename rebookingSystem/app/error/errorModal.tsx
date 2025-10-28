@@ -12,7 +12,7 @@ interface ErrorModalProps {
   onClose: () => void;
 }
 
-const ErrorModal: React.FC<ErrorModalProps> = ({ 
+const errorModal: React.FC<ErrorModalProps> = ({ 
   isVisible, 
   title = 'Operation Failed', // Default title for convenience
   message, 
@@ -129,4 +129,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ErrorModal;
+export default errorModal;

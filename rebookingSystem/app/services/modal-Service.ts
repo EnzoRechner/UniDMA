@@ -2,51 +2,89 @@
  * Type for the functions that the root component will provide to the service.
  * These functions directly control the global state of the ErrorModal.
  */
-interface ErrorModalControls {
+type ConfirmationCallback = () => void | Promise<void>;
+
+/**
+ * Controls interface for the modal state manager in the root component.
+ * This is what the RootWrapper provides to the service.
+ */
+interface AppModalControls {
+  // For simple error/alert display
   show: (title: string, message: string) => void;
+
+  // NEW: For confirmation dialogs
+  showConfirm: (
+    title: string, 
+    message: string, 
+    confirmCallback: ConfirmationCallback, 
+    confirmText?: string,
+    cancelText?: string
+  ) => void;
+
+  // To hide any currently visible modal
   hide: () => void;
 }
 
 // A private variable to hold the control functions provided by the root component.
-let controls: ErrorModalControls | null = null;
+let controls: AppModalControls | null = null;
 
 /**
  * Initializes the modal service. This function MUST be called once
  * in the top-level component (e.g., _layout.tsx) to provide the state setters.
- * * @param modalControls - Functions to show and hide the error modal.
+ * @param modalControls - Functions to show, confirm, and hide the modal.
  */
-export const initializeModalService = (modalControls: ErrorModalControls) => {
+export const initializeModalService = (modalControls: AppModalControls) => {
   controls = modalControls;
 };
 
 /**
- * The public interface for showing and hiding the error modal.
- * Components across the app will import and use this object:
- * e.g., modalService.showError('Something went wrong.');
+ * The public interface for showing alerts and confirmations across the app.
  */
 export const modalService = {
   /**
-   * Shows the error modal with a specific message and optional title.
-   * * @param message - The error message to display.
-   * @param title - The optional title of the modal.
+   * Shows a simple error/alert modal.
+   * @param title - The title of the modal.
+   * @param message - The body message to display.
    */
   showError: (title: string, message: string) => {
     if (!controls) {
       console.log('ModalService not initialized. Call initializeModalService() in the root component.');
-      // Provide a basic fallback if the service was not set up correctly
+      // Fallback
       alert(`Error: ${title || 'Operation Failed'}\n${message}`);
       return;
     }
-    // Call the 'show' function provided by the root component
-    controls.show(message, title);
+    // Correctly match the signature defined in the AppModalControls interface
+    controls.show(title, message);
+  },
+
+  /**
+   * Shows a confirmation modal with 'Yes' and 'No' buttons, executing a callback on 'Yes'.
+   * @param title - The title of the confirmation modal.
+   * @param message - The question/body message.
+   * @param confirmCallback - The asynchronous function to execute upon confirmation.
+   * @param confirmText - Text for the confirmation button (default 'Confirm').
+   * @param cancelText - Text for the cancel button (default 'Cancel').
+   */
+  showConfirm: (
+    title: string, 
+    message: string, 
+    confirmCallback: ConfirmationCallback, 
+    confirmText: string = 'Confirm', 
+    cancelText: string = 'Cancel'
+  ) => {
+    if (!controls) {
+      console.log('ModalService not initialized. Fallback to native Alert.');
+      alert(`${title}\n${message}`);
+      return;
+    }
+    controls.showConfirm(title, message, confirmCallback, confirmText, cancelText);
   },
   
   /**
-   * Hides the error modal.
+   * Hides any currently visible modal.
    */
-  hideError: () => {
+  hide: () => {
     if (controls) {
-      // Call the 'hide' function provided by the root component
       controls.hide();
     }
   },
