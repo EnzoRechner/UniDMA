@@ -1,10 +1,11 @@
 // branch-local-test.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { default as React, default as React, useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, View, } from "react-native";
+import React, { useEffect, useState } from 'react';
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { UserProfile } from '../lib/types';
-import BranchWidget from "./admin-branches-page";
+import { fetchUserData } from '../services/customer-service';
+import BranchWidget from "./admin-branches-widget";
 
 const BranchListScreen = () =>{
 
