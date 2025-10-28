@@ -1,5 +1,5 @@
 // admin-branchs-page.tsx
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,8 +11,7 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  Switch,
-  
+    
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { collection, getDocs, updateDoc, doc, onSnapshot, where, query } from "firebase/firestore";
@@ -21,9 +20,6 @@ import { BlurView } from "expo-blur";
 import { addBranch } from "../services/admin-service";
 import {UserProfile} from "../lib/types";
 import { fetchUserData} from '../services/customer-service';
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
-import { BranchId,RESTAURANT } from '../lib/typesConst';
 //import * as Location from 'expo-location';
 // --- Firestore Type ---
 
@@ -51,7 +47,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [userBranch, setUserBranch] = useState<BranchId | null>(null);
   // Branch form fields
   const [branchCoord, setBranchCoord] = useState<GeolocationCoordinates | null>(null);
   const [branchAddress, setBranchAddress] = useState("");
@@ -59,8 +54,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const [branchName, setBranchName] = useState("");
   const [branchOpen, setBranchOpen] = useState(false);
   const [branchRestaurant, setBranchRestaurant] = useState(0);
-  const [location, setLocation] = useState(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   // ---------------------------
   // Updated handleAddBranch
   // ---------------------------
@@ -274,7 +268,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
         {/* Add Branch Button */}
         <View>
           <TouchableOpacity
-              style={[styles.button,{ backgroundColor: "#C89A5B" }]}
+              style={[styles.button, { backgroundColor: "#C89A5B" }]}
               onPress={() => {
                 // empty fields before displaying modal
                 setBranchName("");
@@ -296,7 +290,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
                 setUser(user);
               }}
             >
-              <Text style={[styles.buttonText]}>Add Branch</Text>
+              <Text style={styles.buttonText}>Add Branch</Text>
           </TouchableOpacity>
         </View>
 
@@ -435,6 +429,70 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 const styles = StyleSheet.create({
   //Main Widget Container
   widgetContainer: {
+  width: "100%",
+  borderRadius: 20,
+  padding: 25,
+  borderWidth:2,
+  borderColor: "rgba(200,154,91,0.7)",
+  backgroundColor: "rgba(0,0,0,0.7)", // same as modal
+  minHeight: 650,
+  justifyContent: "space-between", // keeps button inside bottom of view
+},
+
+contentContainer: {
+  flex: 1,
+}, // wrap your FlatList or tiles in this
+
+tile: {
+  width: "100%",
+  backgroundColor: "rgba(0,0,0,0.7)",
+  borderRadius: 20,
+  borderWidth: 2,
+  borderColor: "rgba(200,154,91,0.7)",
+  paddingVertical: 20,
+  paddingHorizontal: 16,
+  marginBottom: 16,
+},
+
+tileTitle: {
+  fontSize: 20,
+  fontWeight: "bold",
+  color: "white",
+  textAlign: "center",
+  marginBottom: 8,
+},
+
+tileDescription: {
+  color: "white",
+  fontSize: 14,
+  textAlign: "center",
+  marginBottom: 6,
+},
+
+tileStatus: {
+  marginTop: 8,
+  fontWeight: "600",
+  color: "rgba(200,154,91,1)",
+  textAlign: "center",
+},
+
+button: {
+  alignItems: "center",
+  backgroundColor: "rgba(200,154,91,0.2)",
+  paddingVertical: 14,
+  marginTop: 10,
+  borderRadius: 10,
+  borderColor: "rgba(200,154,91,0.7)",
+  borderWidth: 1,
+  alignSelf: "center",
+  width: "90%", // keeps it centered and not full width
+},
+
+buttonText: {
+  color: "white",
+  fontWeight: "bold",
+  fontSize: 18,
+},
   width: "100%",
   borderRadius: 20,
   padding: 25,

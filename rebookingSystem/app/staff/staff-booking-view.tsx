@@ -17,7 +17,7 @@ import {
     UIManager,
     View,
 } from 'react-native';
-import { ReservationDetails, UserProfile } from '../lib/types';
+import { ReservationDetails } from '../lib/types';
 import { fetchUserData } from '../services/customer-service';
 import { onSnapshotStaffBookings, updateReservationStatus } from '../services/staff-service';
 
@@ -52,9 +52,7 @@ const BookingView = () => {
     const [pendingLoading, setPendingLoading] = useState(true);
     const [confirmedLoading, setConfirmedLoading] = useState(true);
     const [cancelledLoading, setCancelledLoading] = useState(true);
-    const [userId, setUserId] = useState<string | null>(null);
     const unsubscribesRef = useRef<(() => void)[]>([]);
-    const [user, setUser] = useState<UserProfile | null>(null);
     
     const [expandedSections, setExpandedSections] = useState({
         pending: true,
@@ -96,12 +94,10 @@ const BookingView = () => {
                 router.replace('../login-related/login-page');
                 return;
             }
-            setUserId(staffId);
             try {
                 const userData = await fetchUserData(staffId);
                 if (!userData) throw new Error('Could not find user profile.');
                 userData.userId = staffId;
-                setUser(userData);
             } catch (error) {
                  Alert.alert('Error', 'Failed to load user data. Logging out.');
                  router.replace('../login-related/login-page');
