@@ -13,9 +13,11 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     UIManager,
     View,
+    Modal,
 } from 'react-native';
 import { ReservationDetails } from '../lib/types';
 import { fetchUserData } from '../services/customer-service';
@@ -52,7 +54,13 @@ const BookingView = () => {
     const [pendingLoading, setPendingLoading] = useState(true);
     const [confirmedLoading, setConfirmedLoading] = useState(true);
     const [cancelledLoading, setCancelledLoading] = useState(true);
+    // Note: userId and user state removed as they weren't used elsewhere
     const unsubscribesRef = useRef<(() => void)[]>([]);
+    // Rejection modal state
+    const [rejectModalVisible, setRejectModalVisible] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+    const [rejectSubmitting, setRejectSubmitting] = useState(false);
+    const [selectedReservation, setSelectedReservation] = useState<ReservationDetails | null>(null);
     
     const [expandedSections, setExpandedSections] = useState({
         pending: true,
@@ -113,9 +121,10 @@ const BookingView = () => {
         };
         checkUser();
 
+        const currentUnsubs = unsubscribesRef.current;
         return () => {
             console.log("Cleaning up all Firestore listeners...");
-            unsubscribesRef.current.forEach(unsubscribe => unsubscribe());
+            currentUnsubs.forEach(unsubscribe => unsubscribe());
         }
     }, []);
 
@@ -125,6 +134,31 @@ const BookingView = () => {
         } catch (error) {
             Alert.alert('Error', 'Failed to update booking status. Check permissions.');
             console.error('Update error:', error);
+        }
+    };
+
+    const openRejectModal = (reservation: ReservationDetails) => {
+        setSelectedReservation(reservation);
+        setRejectReason('');
+        setRejectModalVisible(true);
+    };
+
+    const submitRejection = async () => {
+        if (!selectedReservation) return;
+        if (!rejectReason.trim()) {
+            Alert.alert('Rejection Reason Required', 'Please provide a reason for rejecting this booking.');
+            return;
+        }
+        try {
+            setRejectSubmitting(true);
+            await handleStatusUpdate(selectedReservation.id!, 2, rejectReason.trim());
+            setRejectModalVisible(false);
+            setSelectedReservation(null);
+            setRejectReason('');
+        } catch {
+            // handleStatusUpdate already alerts; keep here for completeness
+        } finally {
+            setRejectSubmitting(false);
         }
     };
     
@@ -177,7 +211,7 @@ const BookingView = () => {
                 {showActions && (
                     <View style={styles.cardActions}>
                         <TouchableOpacity
-                            onPress={() => handleStatusUpdate(item.id!, 2, "Rejected by staff")}
+                            onPress={() => openRejectModal(item)}
                             style={[styles.actionButton, styles.rejectButton]}
                         >
                             <X size={16} color="#FCA5A5" />
@@ -190,6 +224,14 @@ const BookingView = () => {
                             <Check size={16} color="#6EE7B7" />
                             <Text style={[styles.actionButtonText, { color: '#6EE7B7' }]}>Confirm</Text>
                         </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* Rejection reason display for cancelled/rejected bookings */}
+                {item.status === 2 && !!item.rejectionReason && (
+                    <View style={styles.rejectionContainer}>
+                        <Text style={styles.rejectionLabel}>Rejection Reason:</Text>
+                        <Text style={styles.rejectionText}>{item.rejectionReason}</Text>
                     </View>
                 )}
             </View>
@@ -219,6 +261,54 @@ const BookingView = () => {
     
     return (
         <ScrollView style={styles.mainContainer}> 
+            {/* Reject modal */}
+            <Modal
+                transparent
+                animationType="fade"
+                visible={rejectModalVisible}
+                onRequestClose={() => setRejectModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.modalTitle}>Reject Booking</Text>
+                        <Text style={styles.modalSubtitle}>Please provide a reason for rejecting this booking.</Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            placeholder="Type your reason..."
+                            placeholderTextColor="#9CA3AF"
+                            value={rejectReason}
+                            onChangeText={setRejectReason}
+                            multiline
+                            numberOfLines={4}
+                        />
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setRejectModalVisible(false);
+                                    setSelectedReservation(null);
+                                    setRejectReason('');
+                                }}
+                                style={[styles.actionButton, styles.modalCancelButton]}
+                                disabled={rejectSubmitting}
+                            >
+                                <Text style={[styles.actionButtonText, { color: '#9CA3AF' }]}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={submitRejection}
+                                style={[styles.actionButton, styles.modalSubmitButton, rejectSubmitting || !rejectReason.trim() ? styles.buttonDisabled : null]}
+                                disabled={rejectSubmitting || !rejectReason.trim()}
+                            >
+                                {rejectSubmitting ? (
+                                    <ActivityIndicator size="small" color="#111827" />
+                                ) : (
+                                    <Text style={[styles.actionButtonText, { color: '#111827' }]}>Submit</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
             <SectionHeader
                 title="Pending"
                 count={bookings.length}
@@ -412,6 +502,80 @@ const styles = StyleSheet.create({
     actionButtonText: {
         fontSize: 14,
         fontWeight: '600',
+    },
+    // Rejection reason display styles
+    rejectionContainer: {
+        padding: 12,
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.3)',
+        marginTop: 12,
+    },
+    rejectionLabel: {
+        fontSize: 12,
+        fontFamily: 'Inter-SemiBold',
+        color: '#EF4444',
+        marginBottom: 4,
+    },
+    rejectionText: {
+        fontSize: 13,
+        fontFamily: 'Inter-Regular',
+        color: 'rgba(255, 255, 255, 0.9)',
+        fontStyle: 'italic',
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContainer: {
+        width: '100%',
+        backgroundColor: '#111827',
+        borderRadius: 12,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    modalTitle: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: '700',
+        marginBottom: 6,
+        fontFamily: 'PlayfairDisplay-Bold',
+    },
+    modalSubtitle: {
+        color: '#d1d5db',
+        fontSize: 13,
+        marginBottom: 10,
+    },
+    modalInput: {
+        minHeight: 90,
+        color: '#fff',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 8,
+        padding: 10,
+        textAlignVertical: 'top',
+        marginBottom: 12,
+    },
+    modalActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 10,
+    },
+    modalCancelButton: {
+        backgroundColor: 'rgba(156, 163, 175, 0.15)',
+    },
+    modalSubmitButton: {
+        backgroundColor: '#93C5FD',
+    },
+    buttonDisabled: {
+        opacity: 0.6,
     },
     sectionLoadingContainer: {
         padding: 20,
