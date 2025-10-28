@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import RootWrapper from '../error/RootWrapper';
+import RootWrapper from '../modal/RootWrapper';
 
 export default function AuthenticatedLayout() {
   return (
