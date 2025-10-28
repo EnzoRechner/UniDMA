@@ -5,7 +5,6 @@ import { Calendar, Check, ChevronDown, ChevronUp, MessageSquare, Users, X } from
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     LayoutAnimation,
     ListRenderItemInfo,
@@ -20,6 +19,7 @@ import {
 import { ReservationDetails } from '../lib/types';
 import { fetchUserData } from '../services/customer-service';
 import { onSnapshotStaffBookings, updateReservationStatus } from '../services/staff-service';
+import { modalService } from '../services/modal-Service';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -99,7 +99,7 @@ const BookingView = () => {
                 if (!userData) throw new Error('Could not find user profile.');
                 userData.userId = staffId;
             } catch (error) {
-                 Alert.alert('Error', 'Failed to load user data. Logging out.');
+                 modalService.showError('Error', 'Failed to load user data. Logging out.');
                  router.replace('../login-related/login-page');
             }
 
@@ -123,7 +123,7 @@ const BookingView = () => {
         try {
             await updateReservationStatus(id, status, reason); 
         } catch (error) {
-            Alert.alert('Error', 'Failed to update booking status. Check permissions.');
+            modalService.showError('Error', 'Failed to update booking status. Check permissions.');
             console.error('Update error:', error);
         }
     };

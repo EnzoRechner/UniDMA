@@ -1,12 +1,12 @@
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Building, Calendar, Clock, MessageSquare, Users } from 'lucide-react-native';
-import { useEffect, useState, type FC } from 'react';
+import { useState, type FC } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
 import { ReservationDetails } from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
 import { updateReservationStatus } from '../services/staff-service';
-
+import { modalService } from '../services/modal-Service';
 
 const branchMap: { [key in BranchId]: string } = {
   [BRANCHES.PAARL]: 'Paarl',
@@ -20,19 +20,7 @@ const BookingWidgetComponent: FC<{
   onConfirm: () => void;
 }> = ({ booking, isActive, onConfirm }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [date, setDate] = useState<Date>(() => new Date());
-  const [seats, setSeats] = useState<number>(2);
-  const [message, setMessage] = useState<string>('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (isEditing && booking) {
-        setDate(booking.dateOfArrival.toDate());
-        setSeats(booking.guests);
-        setMessage(booking.message || '');
-    } else {
-    }
-  }, [isEditing, booking]);
 
   const getStatusStyle = (status?: number) => {
     switch (status) {
@@ -47,7 +35,7 @@ const BookingWidgetComponent: FC<{
   const handleUpdateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (!booking?.id) {
-        Alert.alert('Error', 'Cannot update a booking without an ID.');
+        modalService.showError('Error', 'Cannot update a booking without an ID.');
         return;
     }
     const bookingIdToUpdate = booking.id;
@@ -57,7 +45,7 @@ const BookingWidgetComponent: FC<{
         setIsEditing(false);
         onConfirm();
     } catch (error: any) {
-        Alert.alert('Update Failed', error.message);
+        modalService.showError('Update Failed', "An error occurred while updating the booking. Please try again.");
     } finally {
         setLoading(false);
     }
@@ -65,7 +53,7 @@ const BookingWidgetComponent: FC<{
 
   const handleDeleteBooking = async () => {
     if (!booking?.id) {
-        Alert.alert('Error', 'Cannot delete a booking without an ID.');
+        modalService.showError('Error', 'Cannot delete a booking without an ID.');
         return;
     }
     const bookingIdToDelete = booking.id;
@@ -82,7 +70,7 @@ const BookingWidgetComponent: FC<{
                     try {
                         await updateReservationStatus(bookingIdToDelete, 2, 'Restaurant unable to accommodate reservation.');
                     } catch (error: any) {
-                        Alert.alert('Error', 'Could not reject the booking.');
+                        modalService.showError('Error', 'Could not reject the booking.');
                     } finally {
                         setLoading(false);
                     }
@@ -93,7 +81,6 @@ const BookingWidgetComponent: FC<{
   };
   
 
-  const displaySeats = `${isEditing ? seats : booking?.guests ?? seats} Seats`;
   const displayBranch = branchMap[booking?.branch as unknown as BranchId] || ''; 
   const isFormVisible = isEditing;
 

@@ -1,11 +1,12 @@
 // branch-local-test.tsx
 import React, {useState,useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, } from "react-native";
+import { View, Text, StyleSheet} from "react-native";
 import BranchWidget from "./admin-branches-page"; 
 import { useRouter } from 'expo-router';
 import { fetchUserData} from '../services/customer-service';
 import { UserProfile } from '../lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { modalService } from '../services/modal-Service';
 
 const BranchListScreen = () =>{
 
@@ -28,7 +29,7 @@ const BranchListScreen = () =>{
         setUser(userData);
         
       } catch (error: any) {
-        Alert.alert('Error', error.message);
+        modalService.showError('Error', error.message);
         await AsyncStorage.removeItem('userId');
         router.replace('/auth/auth-login');
       }

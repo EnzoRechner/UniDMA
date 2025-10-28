@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback, type FC } from 'react';
 import {
-  View, Text, StyleSheet, ActivityIndicator, Alert,
+  View, Text, StyleSheet, ActivityIndicator,
   Dimensions, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchUserData, getReservationsRealtime } from '../services/customer-service';
 import MemoizedBookingItem from './customer-booking-memory';
 import { ReservationDetails, UserProfile } from '../lib/types';
+import { modalService } from '../services/modal-Service';
 
 const { width: windowWidth } = Dimensions.get('window');
 const WIDGET_WIDTH = windowWidth * 0.9;
@@ -70,7 +71,7 @@ const CustomerPage: FC = () => {
         });
       } catch (error: any) {
         setLoading(false);
-        Alert.alert('Error', error.message || 'An unexpected error occurred.');
+        modalService.showError('Error', error.message || 'An unexpected error occurred.');
         await AsyncStorage.removeItem('userId');
         router.replace('/auth/auth-login');
       }

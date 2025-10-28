@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
 import { AlertTriangle, PauseCircle, PlayCircle, Trash2, Undo2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { modalService } from '../services/modal-Service';
 
 import {
   Alert,
@@ -118,7 +119,7 @@ export default function BranchSettingsScreen() {
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
-      Alert.alert('Error', 'Failed to load branch settings');
+      modalService.showError('Error', 'Failed to load branch settings');
     } finally {
       setLoading(false);
     }
@@ -135,7 +136,7 @@ export default function BranchSettingsScreen() {
     if (branchCode == null) return;
 
     if (value && !pauseReason.trim()) {
-      Alert.alert('Error', 'Please provide a reason for pausing bookings');
+      modalService.showError('Error', 'Please provide a reason for pausing bookings');
       return;
     }
 
@@ -145,7 +146,7 @@ export default function BranchSettingsScreen() {
     if (trimmed.length > 0) {
       const parsed = parseDateTimeLocal(trimmed);
       if (!parsed) {
-        Alert.alert('Invalid date/time', 'Use format YYYY-MM-DD HH:mm (24h), e.g., 2025-10-31 18:30');
+        modalService.showError('Invalid date/time', 'Use format YYYY-MM-DD HH:mm (24h), e.g., 2025-10-31 18:30');
         return;
       }
       pauseUntilTimestamp = Timestamp.fromDate(parsed);
@@ -175,7 +176,7 @@ export default function BranchSettingsScreen() {
         }
       }
       setPauseBookings(value);
-      Alert.alert(
+      modalService.showError(
         'Success',
         value
           ? 'Bookings have been paused. New reservations are disabled.'
@@ -184,7 +185,7 @@ export default function BranchSettingsScreen() {
       await fetchSettings();
     } catch (error) {
       console.error('Error toggling pause bookings:', error);
-      Alert.alert('Error', 'Failed to update booking status');
+      modalService.showError('Error', 'Failed to update booking status');
     } finally {
       setSaving(false);
     }
@@ -193,6 +194,7 @@ export default function BranchSettingsScreen() {
   const handleCancelAllPending = () => {
     if (branchCode == null) return;
 
+    // This needs to be changed to use modalService
     Alert.alert(
       'Cancel All Pending Reservations',
       'This will reject ALL pending reservations for this branch. This action cannot be undone. Are you sure?',
@@ -209,13 +211,13 @@ export default function BranchSettingsScreen() {
                 'Branch manager cancelled all pending reservations'
               );
 
-              Alert.alert(
+              modalService.showError(
                 'Success',
                 `${cancelledCount} pending reservation${cancelledCount !== 1 ? 's' : ''} have been cancelled.`
               );
             } catch (error) {
               console.error('Error cancelling reservations:', error);
-              Alert.alert('Error', 'Failed to cancel pending reservations');
+              modalService.showError('Error', 'Failed to cancel pending reservations');
             } finally {
               setSaving(false);
             }

@@ -11,6 +11,7 @@ import { db } from '../services/firebase-initilisation';
 import { getUserProfile } from '../services/auth-service';
 import { UserProfile } from '../lib/types';
 import { getPrettyBranchName } from '../lib/typesConst';
+import { modalService } from '../services/modal-Service';
 
 export default function StaffManagementScreen() {
   const router = useRouter();
@@ -64,7 +65,7 @@ export default function StaffManagementScreen() {
       setStaffList(results);
     } catch (error) {
       console.error('Error fetching staff profiles:', error);
-      Alert.alert('Error', 'Failed to load staff information');
+      modalService.showError('Error', 'Failed to load staff information');
     } finally {
       setLoading(false);
     }
@@ -89,11 +90,11 @@ export default function StaffManagementScreen() {
         onPress: async () => {
           try {
             await updateDoc(doc(db, 'rebooking-accounts', userId), { role: 0 });
-            Alert.alert('Success', 'Staff removed');
+            modalService.showError('Success', 'Staff removed');
             if (branchCode != null) fetchStaffForBranch(branchCode);
           } catch (e) {
             console.error('Remove staff error:', e);
-            Alert.alert('Error', 'Failed to remove staff');
+            modalService.showError('Error', 'Failed to remove staff');
           }
         },
       },

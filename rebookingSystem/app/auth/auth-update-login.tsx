@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity, Alert,
+  View, Text, StyleSheet, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { Lock } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../services/firebase-initilisation';
+import { modalService } from '../services/modal-Service';
 
 const UpdateLoginScreen = () => {
   const [EmailAdd, setEmailAdd] = useState('');
@@ -20,7 +21,7 @@ const UpdateLoginScreen = () => {
   const handlePassword = async () => {
     await sendPasswordResetEmail(auth, EmailAdd)
     .then(() => {
-      Alert.alert(
+      modalService.showError(
         'Password Reset Email Sent 😲',
         'A password reset email has been sent to your email address. Please check your inbox.'
       );

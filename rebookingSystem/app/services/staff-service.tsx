@@ -24,7 +24,7 @@ export function onSnapshotStaffBookings(
             const staffData = await getUserProfile(staffId); 
 
             if (staffData == null) {
-                console.error(`Staff document with ID ${staffId} not found.`);
+                console.log(`Staff document with ID ${staffId} not found.`);
                 callback([]);
                 return;
             }
@@ -35,7 +35,7 @@ export function onSnapshotStaffBookings(
             const staffRole = staffData.role;
 
             if (staffBranch === null || staffBranch === undefined || staffRestaurant === null || staffRestaurant === undefined) {
-                console.error("Staff document is missing branch or restaurant data.");
+                console.log("Staff document is missing branch or restaurant data.");
                 callback([]);
                 return;
             }
@@ -55,7 +55,7 @@ export function onSnapshotStaffBookings(
             } else if (staffRole === 1 || staffRole === 2) { // Staff: Filter by Branch
                 queryConstraints.push(where('branch', '==', staffBranch));
             } else {
-                console.warn(`User ${staffId} has invalid role: ${staffRole}. No bookings fetched.`);
+                console.log(`User ${staffId} has invalid role: ${staffRole}. No bookings fetched.`);
                 callback([]);
                 return;
             }
@@ -79,12 +79,12 @@ export function onSnapshotStaffBookings(
                 callback(bookings);
                 
             }, (error) => {
-                console.error("Error listening to staff bookings:", error);
+                console.log("Error listening to staff bookings:", error);
                 callback([]); 
             });
 
         } catch (error) {
-            console.error("Error setting up staff booking listener:", error);
+            console.log("Error setting up staff booking listener:", error);
             callback([]);
         }
     };
@@ -121,7 +121,7 @@ export const updateReservationStatus = async (
 
     await updateDoc(docRef, updateData);
   } catch (error) {
-    console.error('Error updating reservation status:', error);
+    console.log('Error updating reservation status:', error);
     throw error;
   }
 };

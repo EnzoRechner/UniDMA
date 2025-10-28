@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Pressable,
   TouchableOpacity,
-  Alert,
   FlatList,
   ActivityIndicator,
   TextInput,
@@ -20,6 +19,7 @@ import { BlurView } from "expo-blur";
 import { addBranch } from "../services/admin-service";
 import {UserProfile} from "../lib/types";
 import { fetchUserData} from '../services/customer-service';
+import { modalService } from '../services/modal-Service';
 //import * as Location from 'expo-location';
 // --- Firestore Type ---
 
@@ -73,7 +73,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
         if (!userData) throw new Error('Could not find user profile.');
         setUser(userData);
       } catch (error: any) {
-        Alert.alert('Error', error.message);       
+        modalService.showError('Error', error.message);       
       }
     };
     
@@ -110,7 +110,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     !branchAddress ||
     !branchCoord
   ) {
-    Alert.alert(
+    modalService.showError(
       "Missing Info",
       "Please fill in all required fields including coordinates."
     );
@@ -135,7 +135,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     };
 
     await addBranch(newBranch);
-    Alert.alert("✅ Success", `Branch #${branchCode} added successfully!`);
+    modalService.showError("✅ Success", `Branch #${branchCode} added successfully!`);
 
     // Close modal and reset form
     setShowPopup(false);
@@ -148,7 +148,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 
   } catch (error) {
     console.error("Error adding branch:", error);
-    Alert.alert("Error", "Failed to add new branch.");
+    modalService.showError("Error", "Failed to add new branch.");
   } finally {
     setLoading(false);
   }
@@ -205,7 +205,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     setShowPopup(false);
     setSelectedBranch(null);
   } catch (error) {
-    console.error("Error updating branch:", error);
+    modalService.showError("Branch Error: ", "Error updating branch:");
   }
 };
 
@@ -285,7 +285,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
                 else{
                   setIsEditing(true);
                   setShowPopup(false);
-                  alert("You do not have permission to add branches");
+                  modalService.showError("Alert!", "You do not have permission to add branches");
                 }               
                 setUser(user);
               }}

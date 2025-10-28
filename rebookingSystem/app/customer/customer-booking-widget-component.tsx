@@ -8,6 +8,7 @@ import { ReservationDetails, UserProfile } from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
 import { addReservation, cancelReservation } from '../services/customer-service';
 import CustomWheelPicker from './customer-wheel';
+import { modalService } from '../services/modal-Service';
 
 const branchMap: { [key in BranchId]: string } = {
   [BRANCHES.PAARL]: 'Paarl',
@@ -93,7 +94,7 @@ const BookingWidgetComponent: FC<{
 
   const handleCreateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (!userProfile?.userId) return Alert.alert('Error', 'Could not find User ID.');
+    if (!userProfile?.userId) return modalService.showError('Error', 'Could not find User ID.');
     setLoading(true);
     try {
       const newBookingData = {
@@ -105,14 +106,14 @@ const BookingWidgetComponent: FC<{
       await addReservation(newBookingData as any);
       onConfirm();
     } catch (error: any) {
-      Alert.alert('Booking Failed', error.message || 'An error occurred.');
+      modalService.showError('Booking Failed', 'There was a problem creating your booking. Please try again.');
     } finally { setLoading(false); }
   };
 
   const handleUpdateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (!booking?.id) {
-        Alert.alert('Error', 'Cannot update a booking without an ID.');
+        modalService.showError('Error', 'Cannot update a booking without an ID.');
         return;
     }
     const bookingIdToUpdate = booking.id;
@@ -131,7 +132,7 @@ const BookingWidgetComponent: FC<{
         setShowOptions(false);
         onConfirm();
     } catch (error: any) {
-        Alert.alert('Update Failed', error.message);
+        modalService.showError('Update Failed', "There was a problem updating your booking. Please try again.");
     } finally {
         setLoading(false);
     }
@@ -151,7 +152,7 @@ const BookingWidgetComponent: FC<{
 
   const handleDeleteBooking = async () => {
     if (!booking?.id) {
-        Alert.alert('Error', 'Cannot delete a booking without an ID.');
+        modalService.showError('Error', 'Cannot delete a booking without an ID.');
         return;
     }
     const bookingIdToDelete = booking.id;
@@ -168,7 +169,7 @@ const BookingWidgetComponent: FC<{
           try {
             await cancelReservation(bookingIdToDelete);
           } catch {
-                        Alert.alert('Error', 'Could not cancel the booking.');
+                        modalService.showError('Error', 'Could not cancel the booking.');
                     } finally {
                         setLoading(false);
                         setShowOptions(false);

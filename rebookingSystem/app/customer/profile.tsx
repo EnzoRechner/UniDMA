@@ -8,7 +8,7 @@ import {
   Image,
   ActivityIndicator,
   TextInput,
-  Alert,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -30,6 +30,7 @@ import { db } from '../services/firebase-initilisation';
 import { fetchUserData } from '../services/customer-service';
 //import NotificationSettingsModal from '../services/notification-settings';
 import { UserProfile } from '../lib/types';
+import { modalService } from '../services/modal-Service';
 
 const profileStats = [
   { icon: Calendar, label: 'Bookings', value: '24', color: '#C89A5B' },
@@ -71,7 +72,7 @@ export default function ProfileScreen() {
         setProfile(p);
         setNameInput(p.nagName || '');
       } catch (e: any) {
-        Alert.alert('Error', e?.message || 'Failed to load profile');
+        modalService.showError('Error', e?.message || 'Failed to load profile');
         await AsyncStorage.removeItem('userId');
         router.replace('/auth/auth-login');
       } finally {
@@ -85,16 +86,16 @@ export default function ProfileScreen() {
     if (!userId) return;
     const newName = nameInput.trim();
     if (!newName) {
-      Alert.alert('Validation', 'Please enter a valid name');
+      modalService.showError('Validation', 'Please enter a valid name');
       return;
     }
     try {
       await updateDoc(doc(db, 'rebooking-accounts', userId), { nagName: newName });
       setProfile((prev) => (prev ? { ...prev, nagName: newName } : prev));
       setIsEditingName(false);
-      Alert.alert('Saved', 'Your display name has been updated');
+      modalService.showError('Saved', 'Your display name has been updated');
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to update name');
+      modalService.showError('Error', 'Failed to update name');
     }
   };
 
@@ -112,7 +113,7 @@ export default function ProfileScreen() {
               await AsyncStorage.removeItem('userId');
               router.replace('/auth/auth-login');
             } catch {
-              Alert.alert('Error', 'Failed to sign out');
+              modalService.showError('Error', 'Failed to sign out');
             }
           }
         }
