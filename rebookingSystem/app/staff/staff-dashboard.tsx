@@ -9,6 +9,7 @@ const StaffDashboard = () => {
 
   const handleLogout = async () => {
       await AsyncStorage.removeItem('userId');
+      await AsyncStorage.removeItem('userRole');
       router.replace('/auth/auth-login');
   }
 

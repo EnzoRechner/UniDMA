@@ -82,23 +82,25 @@ export default function StaffManagementScreen() {
   const formatDateDMY = (d: Date) => `${two(d.getDate())}-${two(d.getMonth() + 1)}-${d.getFullYear()}`;
 
   const handleRemoveStaff = (userId: string) => {
-    Alert.alert('Remove Staff', 'This will remove staff privileges for this user. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
+      // Run if confirmed
+      const removeStaffLogic = async () => {
           try {
-            await updateDoc(doc(db, 'rebooking-accounts', userId), { role: 0 });
-            modalService.showError('Success', 'Staff removed');
-            if (branchCode != null) fetchStaffForBranch(branchCode);
+              await updateDoc(doc(db, 'rebooking-accounts', userId), { role: 0 }); 
+              modalService.showSuccess('Success', `Staff privileges successfully removed for user ID: ${userId}.`);
+              if (branchCode != null) fetchStaffForBranch(branchCode);
+              
           } catch (e) {
-            console.error('Remove staff error:', e);
-            modalService.showError('Error', 'Failed to remove staff');
+              modalService.showError('Error', 'Failed to remove staff privileges.');
           }
-        },
-      },
-    ]);
+      };
+
+      modalService.showConfirm(
+          'Remove Staff', 
+          'This will remove staff privileges for this user. This action cannot be undone. Continue?',
+          removeStaffLogic, // Function to execute if the user confirms
+          'Remove Staff',
+          'Cancel'
+      );
   };
 
   const handleAddStaff = () => {

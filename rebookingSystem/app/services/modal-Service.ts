@@ -10,7 +10,9 @@ type ConfirmationCallback = () => void | Promise<void>;
  */
 interface AppModalControls {
   // For simple error/alert display
-  show: (title: string, message: string) => void;
+  showError: (title: string, message: string) => void;
+  // For simple success display
+  showSuccess: (title: string, message: string) => void;
 
   // NEW: For confirmation dialogs
   showConfirm: (
@@ -54,8 +56,26 @@ export const modalService = {
       return;
     }
     // Correctly match the signature defined in the AppModalControls interface
-    controls.show(title, message);
+    controls.showError(title, message);
   },
+
+
+  /**
+   * Shows a simple error/alert modal.
+   * @param title - The title of the modal.
+   * @param message - The body message to display.
+   */
+  showSuccess: (title: string, message: string) => {
+    if (!controls) {
+      console.log('ModalService not initialized. Call initializeModalService() in the root component.');
+      // Fallback
+      alert(`Success: ${title }\n${message}`);
+      return;
+    }
+    // Correctly match the signature defined in the AppModalControls interface
+    controls.showSuccess(title, message);
+  },
+
 
   /**
    * Shows a confirmation modal with 'Yes' and 'No' buttons, executing a callback on 'Yes'.

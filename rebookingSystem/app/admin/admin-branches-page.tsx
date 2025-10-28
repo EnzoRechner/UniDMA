@@ -135,7 +135,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     };
 
     await addBranch(newBranch);
-    modalService.showError("✅ Success", `Branch #${branchCode} added successfully!`);
+    modalService.showSuccess("✅ Success", `Branch #${branchCode} added successfully!`);
 
     // Close modal and reset form
     setShowPopup(false);

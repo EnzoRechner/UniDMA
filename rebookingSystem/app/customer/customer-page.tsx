@@ -73,6 +73,7 @@ const CustomerPage: FC = () => {
         setLoading(false);
         modalService.showError('Error', error.message || 'An unexpected error occurred.');
         await AsyncStorage.removeItem('userId');
+        await AsyncStorage.removeItem('userRole');
         router.replace('/auth/auth-login');
       }
     };
@@ -86,6 +87,7 @@ const CustomerPage: FC = () => {
   
   const handleLogout = async () => {
       await AsyncStorage.removeItem('userId');
+      await AsyncStorage.removeItem('userRole');
       router.replace('/auth/auth-login');
   }
 

@@ -159,7 +159,7 @@ const BookingWidgetComponent: FC<{
         await cancelReservation(bookingIdToDelete);
         
         // Optional: Provide success feedback
-        modalService.showError('Success', 'Booking has been successfully deleted.'); 
+        modalService.showSuccess('Success', 'Booking has been successfully deleted.'); 
 
     } catch (error: any) {
         // Use the centralized error modal for reporting failure

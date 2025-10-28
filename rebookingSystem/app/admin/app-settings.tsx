@@ -117,7 +117,6 @@ export default function BranchSettingsScreen() {
         setPauseUntilText('');
       }
     } catch (error) {
-      console.error('Error fetching settings:', error);
       modalService.showError('Error', 'Failed to load branch settings');
     } finally {
       setLoading(false);
@@ -175,7 +174,7 @@ export default function BranchSettingsScreen() {
         }
       }
       setPauseBookings(value);
-      modalService.showError(
+      modalService.showSuccess(
         'Success',
         value
           ? 'Bookings have been paused. New reservations are disabled.'
@@ -204,7 +203,7 @@ export default function BranchSettingsScreen() {
           );
 
           // Success notification (using modalService.showError for the single-button alert)
-          modalService.showError(
+          modalService.showSuccess(
               'Success',
               `${cancelledCount} pending reservation${cancelledCount !== 1 ? 's' : ''} have been cancelled.`
           );

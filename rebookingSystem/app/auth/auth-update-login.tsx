@@ -21,7 +21,7 @@ const UpdateLoginScreen = () => {
   const handlePassword = async () => {
     await sendPasswordResetEmail(auth, EmailAdd)
     .then(() => {
-      modalService.showError(
+      modalService.showSuccess(
         'Password Reset Email Sent 😲',
         'A password reset email has been sent to your email address. Please check your inbox.'
       );

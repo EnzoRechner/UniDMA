@@ -93,7 +93,7 @@ export default function ProfileScreen() {
       await updateDoc(doc(db, 'rebooking-accounts', userId), { nagName: newName });
       setProfile((prev) => (prev ? { ...prev, nagName: newName } : prev));
       setIsEditingName(false);
-      modalService.showError('Saved', 'Your display name has been updated');
+      modalService.showSuccess('Saved', 'Your display name has been updated');
     } catch (e: any) {
       modalService.showError('Error', 'Failed to update name');
     }
@@ -137,6 +137,7 @@ export default function ProfileScreen() {
   const handlePasswordResetAction = async () => {
     try {
         await AsyncStorage.removeItem('userId');
+        await AsyncStorage.removeItem('userRole');
         router.replace('/auth/auth-update-login');
         
     } catch {
