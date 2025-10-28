@@ -1,7 +1,8 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import Constants from 'expo-constants';
 import { db } from './firebase-initilisation';
+import { supabase } from './supabase-client';
 import {
   collection,
   addDoc,
@@ -32,8 +33,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Use the default Firebase app initialized by our firebase-initilisation module
-const functions = getFunctions();
+// Supabase Edge Functions will be used to send notifications via Expo Push
 
 export class NotificationService {
   private static instance: NotificationService;
@@ -97,26 +97,23 @@ export class NotificationService {
   // --- Local Firestore helpers (replacing external utils) ---
   private async saveDeviceToken(
     userId: string,
-    fcmToken: string,
+    expoPushToken: string,
     platform: 'ios' | 'android',
     meta?: { deviceName?: string; appVersion?: string }
   ): Promise<void> {
-    const tokensRef = collection(db, 'deviceTokens');
-    // Upsert by userId + token
-    const existing = await getDocs(query(tokensRef, where('userId', '==', userId), where('fcmToken', '==', fcmToken)));
-    if (!existing.empty) {
-      const docRef = existing.docs[0].ref;
-      await updateDoc(docRef, { isActive: true, platform, updatedAt: Timestamp.now(), ...meta });
-    } else {
-      await addDoc(tokensRef, {
-        userId,
-        fcmToken,
+    // Store in Supabase for server-side sending
+    const { error } = await supabase
+      .from('device_tokens')
+      .upsert({
+        user_id: userId,
+        expo_push_token: expoPushToken,
+        is_active: true,
         platform,
-        isActive: true,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        updated_at: new Date().toISOString(),
         ...(meta || {}),
-      });
+      }, { onConflict: 'user_id,expo_push_token' });
+    if (error) {
+      console.error('Failed to save Expo push token to Supabase', error);
     }
   }
 
@@ -166,33 +163,22 @@ export class NotificationService {
         return null;
       }
       if (Platform.OS === 'web') {
-        console.log('FCM is not supported on web in this app; skipping token registration');
+        console.log('Push notifications token not registered on web in this app; skipping token registration');
         return null;
       }
-      // Request FCM registration token via RNFirebase Messaging (dynamic import)
-      const messaging = (await import('@react-native-firebase/messaging')).default;
-      await messaging().registerDeviceForRemoteMessages();
-      const fcmToken = await messaging().getToken();
+
+      // Get Expo push token
+      const projectId = (Constants?.expoConfig as any)?.extra?.eas?.projectId || (Constants as any)?.easConfig?.projectId;
+      const tokenResp = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined as any);
+      const expoPushToken = tokenResp.data;
       const platform = Platform.OS as 'ios' | 'android';
 
-      await this.saveDeviceToken(userId, fcmToken, platform, {
+      await this.saveDeviceToken(userId, expoPushToken, platform, {
         deviceName: Platform.OS,
         appVersion: '1.0.0',
       });
 
-      // Listen for token refresh events and update stored token
-      messaging().onTokenRefresh(async (newToken: string) => {
-        try {
-          await this.saveDeviceToken(userId, newToken, platform, {
-            deviceName: Platform.OS,
-            appVersion: '1.0.0',
-          });
-        } catch (e) {
-          console.error('Failed to update refreshed FCM token', e);
-        }
-      });
-
-      return fcmToken;
+      return expoPushToken;
     } catch (error) {
       console.error('Error registering for push notifications:', error);
       return null;
@@ -255,21 +241,22 @@ export class NotificationService {
         return;
       }
 
-      const sendNotificationFunction = httpsCallable(functions, 'sendNotification');
-
-      const result = await sendNotificationFunction({
-        userId,
-        notificationType: 'booking_confirmed',
-        title: 'Booking Confirmed',
-        body: `Your reservation for ${bookingDetails.guests} at ${bookingDetails.branch} on ${bookingDetails.date} at ${bookingDetails.time} has been confirmed!`,
-        data: {
-          bookingId,
-          type: 'booking_confirmed',
-          ...bookingDetails,
+      const { data: result, error } = await supabase.functions.invoke('send-notification', {
+        body: {
+          target: 'user',
+          userId,
+          notificationType: 'booking_confirmed',
+          title: 'Booking Confirmed',
+          body: `Your reservation for ${bookingDetails.guests} at ${bookingDetails.branch} on ${bookingDetails.date} at ${bookingDetails.time} has been confirmed!`,
+          data: {
+            bookingId,
+            type: 'booking_confirmed',
+            ...bookingDetails,
+          },
         },
       });
-
-      console.log('Booking confirmation sent:', result.data);
+      if (error) throw error;
+      console.log('Booking confirmation sent:', result);
     } catch (error) {
       console.error('Error sending booking confirmation notification:', error);
     }
@@ -294,22 +281,23 @@ export class NotificationService {
         return;
       }
 
-      const sendNotificationFunction = httpsCallable(functions, 'sendNotification');
-
-      const result = await sendNotificationFunction({
-        userId,
-        notificationType: 'booking_rejected',
-        title: 'Booking Update',
-        body: `Unfortunately, your reservation for ${bookingDetails.branch} on ${bookingDetails.date} at ${bookingDetails.time} could not be confirmed. Reason: ${rejectionReason}`,
-        data: {
-          bookingId,
-          type: 'booking_rejected',
-          rejectionReason,
-          ...bookingDetails,
+      const { data: result, error } = await supabase.functions.invoke('send-notification', {
+        body: {
+          target: 'user',
+          userId,
+          notificationType: 'booking_rejected',
+          title: 'Booking Update',
+          body: `Unfortunately, your reservation for ${bookingDetails.branch} on ${bookingDetails.date} at ${bookingDetails.time} could not be confirmed. Reason: ${rejectionReason}`,
+          data: {
+            bookingId,
+            type: 'booking_rejected',
+            rejectionReason,
+            ...bookingDetails,
+          },
         },
       });
-
-      console.log('Booking rejection sent:', result.data);
+      if (error) throw error;
+      console.log('Booking rejection sent:', result);
     } catch (error) {
       console.error('Error sending booking rejection notification:', error);
     }
@@ -329,23 +317,24 @@ export class NotificationService {
     branchId?: number
   ): Promise<void> {
     try {
-      const sendStaffNotificationFunction = httpsCallable(functions, 'sendStaffNotification');
-
-      const result = await sendStaffNotificationFunction({
-        branchName,
-        branchId,
-        notificationType: 'new_booking',
-        title: 'New Booking Request',
-        body: `New reservation from ${bookingDetails.customerName} (ID: ${bookingDetails.customerId}) for ${bookingDetails.guests} guests on ${bookingDetails.date} at ${bookingDetails.time}`,
-        data: {
-          bookingId,
-          type: 'new_booking',
-          branch: branchName,
-          ...bookingDetails,
+      const { data: result, error } = await supabase.functions.invoke('send-notification', {
+        body: {
+          target: 'staff',
+          branchName,
+          branchId,
+          notificationType: 'new_booking',
+          title: 'New Booking Request',
+          body: `New reservation from ${bookingDetails.customerName} (ID: ${bookingDetails.customerId}) for ${bookingDetails.guests} guests on ${bookingDetails.date} at ${bookingDetails.time}`,
+          data: {
+            bookingId,
+            type: 'new_booking',
+            branch: branchName,
+            ...bookingDetails,
+          },
         },
       });
-
-      console.log('Staff notification sent:', result.data);
+      if (error) throw error;
+      console.log('Staff notification sent:', result);
     } catch (error) {
       console.error('Error sending new booking notification to staff:', error);
     }
