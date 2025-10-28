@@ -274,7 +274,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
         {/* Add Branch Button */}
         <View>
           <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, { backgroundColor: "#C89A5B" }]}
               onPress={() => {
                 // empty fields before displaying modal
                 setBranchName("");
@@ -296,7 +296,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
                 setUser(user);
               }}
             >
-              <Text style={styles.tileTitle}>Add Branch</Text>
+              <Text style={styles.buttonText}>Add Branch</Text>
           </TouchableOpacity>
         </View>
 
@@ -435,59 +435,70 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 const styles = StyleSheet.create({
   //Main Widget Container
   widgetContainer: {
-    width: "100%",
-    borderRadius: 24,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(200, 154, 91, 0.4)",
-    minHeight: 700,
-  },
-  cardBlur: { flex: 1 },
-  button: {
-    alignItems: "center",
-    backgroundColor: "rgba(200,154,91,0.2)",
-    padding: 18,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 12,
-    borderColor: "rgba(200,154,91,0.5)",
-    borderWidth: 1,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(20, 20, 20, 1)",
-  },
-  tile: {
-    backgroundColor: "rgba(255,255,255,0.05)",
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: "rgba(200,154,91,0.3)",
-    paddingVertical: 40,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    width: "100%",
-    shadowColor: "#C89A5B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.7,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  tileTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "rgba(255,255,255,1)",
-  },
-  tileDescription: {
-    color: "rgba(255,255,255,1)",
-    marginTop: 4,
-  },
-  tileStatus: {
-    marginTop: 8,
-    fontWeight: "600",
-    color: "#999999",
-  },
+  width: "100%",
+  borderRadius: 20,
+  padding: 25,
+  borderWidth:2,
+  borderColor: "rgba(200,154,91,0.7)",
+  backgroundColor: "rgba(0,0,0,0.7)", // same as modal
+  minHeight: 650,
+  justifyContent: "space-between", // keeps button inside bottom of view
+},
+
+contentContainer: {
+  flex: 1,
+}, // wrap your FlatList or tiles in this
+
+tile: {
+  width: "100%",
+  backgroundColor: "rgba(0,0,0,0.7)",
+  borderRadius: 20,
+  borderWidth: 2,
+  borderColor: "rgba(200,154,91,0.7)",
+  paddingVertical: 20,
+  paddingHorizontal: 16,
+  marginBottom: 16,
+},
+
+tileTitle: {
+  fontSize: 20,
+  fontWeight: "bold",
+  color: "white",
+  textAlign: "center",
+  marginBottom: 8,
+},
+
+tileDescription: {
+  color: "white",
+  fontSize: 14,
+  textAlign: "center",
+  marginBottom: 6,
+},
+
+tileStatus: {
+  marginTop: 8,
+  fontWeight: "600",
+  color: "rgba(200,154,91,1)",
+  textAlign: "center",
+},
+
+button: {
+  alignItems: "center",
+  backgroundColor: "rgba(200,154,91,0.2)",
+  paddingVertical: 14,
+  marginTop: 10,
+  borderRadius: 10,
+  borderColor: "rgba(200,154,91,0.7)",
+  borderWidth: 1,
+  alignSelf: "center",
+  width: "90%", // keeps it centered and not full width
+},
+
+buttonText: {
+  color: "white",
+  fontWeight: "bold",
+  fontSize: 18,
+},
 
   // Modal View with blur background
   modalOverlay: {

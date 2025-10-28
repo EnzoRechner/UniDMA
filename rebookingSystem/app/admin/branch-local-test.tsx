@@ -58,12 +58,7 @@ const BranchListScreen = () =>{
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Branch Locations</Text>
-      <View >
-        <Text style={styles.subtitle}>Good evening, {user.nagName} UserRole: {user.role} </Text>  
-        {/* <Text style={styles.subtitle}>Branch ID: {user.branch} </Text> */}
-        </View>
-
-      {/* ✅ Render the Firestore widget */}
+      
       <BranchWidget />
 
     </View>
