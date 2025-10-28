@@ -101,7 +101,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 
       setErrorMsg(null);
     } catch (err) {
-      console.error('Location error:', err);
+      modalService.showError('Location error:', 'cannot find the location');
       setErrorMsg('Error getting location');
     }
   };
@@ -150,7 +150,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     setBranchOpen(false);
 
   } catch (error) {
-    console.error("Error adding branch:", error);
     modalService.showError("Error", "Failed to add new branch.");
   } finally {
     setLoading(false);

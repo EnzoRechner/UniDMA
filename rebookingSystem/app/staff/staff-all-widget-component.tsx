@@ -46,6 +46,7 @@ const BookingWidgetComponent: FC<{
         onConfirm();
     } catch (error: any) {
         modalService.showError('Update Failed', "An error occurred while updating the booking. Please try again.");
+        console.log('Update booking error:', error);
     } finally {
         setLoading(false);
     }

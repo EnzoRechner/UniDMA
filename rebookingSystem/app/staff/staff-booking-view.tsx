@@ -22,7 +22,6 @@ import { ReservationDetails } from '../lib/types';
 import { fetchUserData } from '../services/customer-service';
 import { onSnapshotStaffBookings, updateReservationStatus } from '../services/staff-service';
 import { modalService } from '../services/modal-Service';
-import * as Haptics from 'expo-haptics';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -55,7 +54,6 @@ const BookingView = () => {
     const [pendingLoading, setPendingLoading] = useState(true);
     const [confirmedLoading, setConfirmedLoading] = useState(true);
     const [cancelledLoading, setCancelledLoading] = useState(true);
-    const [loading, setLoading] = useState(false);
 
     const unsubscribesRef = useRef<(() => void)[]>([]);
     // Rejection modal state
@@ -101,7 +99,9 @@ const BookingView = () => {
         const checkUser = async () => {
             const staffId = await AsyncStorage.getItem('userId');
             if (!staffId) {
-                router.replace('../login-related/login-page');
+                 await AsyncStorage.removeItem('userId');
+                 await AsyncStorage.removeItem('userRole');
+                router.replace('../auth/auth-login');
                 return;
             }
             try {
@@ -109,8 +109,10 @@ const BookingView = () => {
                 if (!userData) throw new Error('Could not find user profile.');
                 userData.userId = staffId;
             } catch (error) {
-                 modalService.showError('Error', 'Failed to load user data. Logging out.');
-                 router.replace('../login-related/login-page');
+                 console.log('Error', error);
+                 await AsyncStorage.removeItem('userId');
+                 await AsyncStorage.removeItem('userRole');
+                 router.replace('../auth/auth-login');
             }
 
             setPendingLoading(true);
@@ -130,64 +132,12 @@ const BookingView = () => {
         }
     }, []);
 
-    const performRejection = async (id: string, message: string) => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setLoading(true);
-
-        try {
-            await updateReservationStatus(
-                id, 
-                2, // Status 2 for 'Rejected'
-                message
-            );
-            // List refresh is handled automatically by the onSnapshot listener
-        } catch (error: any) {
-            modalService.showError(
-                'Could Not Reject Booking', 
-                error.message || 'An unknown server error occurred.'
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleRejectConfirmation = (id: string, rejectionMessage: string) => {
-        if (loading) return; // Prevent multiple requests
-
-        // Function passed to the modal service, which will execute performRejection on 'Yes'
-        const confirmationCallback = () => {
-            performRejection(id, rejectionMessage); 
-        };
-
-        modalService.showConfirm(
-            'Reject Booking', 
-            'Are you sure you want to reject this reservation? This action cannot be undone.',
-            confirmationCallback, 
-            'Yes, Reject Booking', 
-            'No'
-        );
-    };
-
     const handleStatusUpdate = async (id: string, status: 1 | 2, reason: string) => {
-        if (loading) return;
-
-        if (status === 2) {
-            // REJECT: Redirect to the confirmation flow
-            handleRejectConfirmation(id, reason);
-            return;
-        }
-
-        if (status === 1) {
-            // CONFIRM: Execute API call directly (no confirmation modal needed)
-            setLoading(true);
-            try {
-                await updateReservationStatus(id, 1, reason);
-            } catch (error: any) {
-                modalService.showError('Could Not Confirm Booking', error.message || 'An unknown error occurred.');
-            } finally {
-                setLoading(false);
-            }
-            return;
+        try {
+            await updateReservationStatus(id, status, reason); 
+        } catch (error) {
+            modalService.showError('Error', 'Failed to update booking status. Check permissions.');
+            console.log('Update error:', error);
         }
     };
 
@@ -200,7 +150,7 @@ const BookingView = () => {
     const submitRejection = async () => {
         if (!selectedReservation) return;
         if (!rejectReason.trim()) {
-            Alert.alert('Rejection Reason Required', 'Please provide a reason for rejecting this booking.');
+            modalService.showError('Rejection Reason Required', 'Please provide a reason for rejecting this booking.');
             return;
         }
         try {
@@ -240,8 +190,6 @@ const BookingView = () => {
         //console.log(item.nagName);
         const nagName = item.nagName || 'Guest';
 
-        const rejectionMessage = "Rejected by staff";
-
         return (
             <View style={[styles.card, { borderColor: `${statusColor}80` }]}>
                 <View style={styles.cardHeader}>
@@ -267,7 +215,7 @@ const BookingView = () => {
                 {showActions && (
                     <View style={styles.cardActions}>
                         <TouchableOpacity
-                                onPress={() => handleStatusUpdate(item.id!, 2, rejectionMessage)} 
+                                onPress={() => openRejectModal(item)} 
                                 style={[styles.actionButton, styles.rejectButton]} >
                                 <X size={16} color="#FCA5A5" />
                                 <Text style={[styles.actionButtonText, { color: '#FCA5A5' }]}>Reject</Text>
