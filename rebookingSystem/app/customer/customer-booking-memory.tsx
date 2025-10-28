@@ -1,9 +1,7 @@
-// In app/customer/customer-booking-memory.tsx
-
 import { memo, type FC } from 'react';
-import { View, Dimensions } from 'react-native';
-import BookingWidgetComponent from './customer-booking-widget-component';
+import { Dimensions, View } from 'react-native';
 import { ReservationDetails, UserProfile } from '../lib/types';
+import BookingWidgetComponent from './customer-booking-widget-component';
 
 const { width: windowWidth } = Dimensions.get('window');
 const WIDGET_WIDTH = windowWidth * 0.9;
@@ -14,7 +12,7 @@ interface Props {
   index: number;
   activeIndex: number;
   userProfile: UserProfile;
-  onConfirm: () => void;
+  onConfirm: (newBookingId?: string) => void;
 }
 
 const MemoizedBookingItem: FC<Props> = ({ item, index, activeIndex, userProfile, onConfirm }) => {

@@ -1,12 +1,12 @@
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Building, Calendar, Clock, MessageSquare, Users } from 'lucide-react-native';
-import { useEffect, useState, type FC } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
+import { useState, type FC } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
 import { ReservationDetails } from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
 import { updateReservationStatus } from '../services/staff-service';
-
+import { modalService } from '../services/modal-Service';
 
 const branchMap: { [key in BranchId]: string } = {
   [BRANCHES.PAARL]: 'Paarl',
@@ -20,19 +20,7 @@ const BookingWidgetComponent: FC<{
   onConfirm: () => void;
 }> = ({ booking, isActive, onConfirm }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [date, setDate] = useState<Date>(() => new Date());
-  const [seats, setSeats] = useState<number>(2);
-  const [message, setMessage] = useState<string>('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (isEditing && booking) {
-        setDate(booking.dateOfArrival.toDate());
-        setSeats(booking.guests);
-        setMessage(booking.message || '');
-    } else {
-    }
-  }, [isEditing, booking]);
 
   const getStatusStyle = (status?: number) => {
     switch (status) {
@@ -47,7 +35,7 @@ const BookingWidgetComponent: FC<{
   const handleUpdateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (!booking?.id) {
-        Alert.alert('Error', 'Cannot update a booking without an ID.');
+        modalService.showError('Error', 'Cannot update a booking without an ID.');
         return;
     }
     const bookingIdToUpdate = booking.id;
@@ -57,7 +45,8 @@ const BookingWidgetComponent: FC<{
         setIsEditing(false);
         onConfirm();
     } catch (error: any) {
-        Alert.alert('Update Failed', error.message);
+        modalService.showError('Update Failed', "An error occurred while updating the booking. Please try again.");
+        console.log('Update booking error:', error);
     } finally {
         setLoading(false);
     }
@@ -65,35 +54,58 @@ const BookingWidgetComponent: FC<{
 
   const handleDeleteBooking = async () => {
     if (!booking?.id) {
-        Alert.alert('Error', 'Cannot delete a booking without an ID.');
+        modalService.showError('Error', 'Cannot delete a booking without an ID.');
         return;
     }
     const bookingIdToDelete = booking.id;
-    Alert.alert(
-        'Reject Booking', 'Are you sure you want to reject this reservation?',
-        [
-            { text: 'No', style: 'cancel' },
-            {
-                text: 'Yes, Reject Booking',
-                style: 'destructive',
-                onPress: async () => {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                    setLoading(true);
-                    try {
-                        await updateReservationStatus(bookingIdToDelete, 2, 'Restaurant unable to accommodate reservation.');
-                    } catch (error: any) {
-                        Alert.alert('Error', 'Could not reject the booking.');
-                    } finally {
-                        setLoading(false);
-                    }
-                },
-            },
-        ]
+
+    const rejectBookingLogic = async () => {
+        // NOTE: This logic runs ONLY AFTER the user presses 'Yes' in the custom modal.
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setLoading(true);
+        
+        try {
+            await updateReservationStatus(
+                bookingIdToDelete, 
+                2, // Assuming 2 is the status for 'Rejected'
+                'Restaurant unable to accommodate reservation.'
+            );
+            // Optionally: Show a success toast/alert or re-fetch data
+        } catch (error: any) {
+            // Step 2: Use the updated showError signature (title, message)
+            modalService.showError(
+                'Could Not Reject Booking', 
+                error.message || 'An unknown server error occurred.'
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRejectBooking = () => {
+        modalService.showConfirm(
+            'Reject Booking', 
+            'Are you sure you want to reject this reservation? This action cannot be undone.',
+            rejectBookingLogic, // Pass the function to be executed on confirmation
+            'Yes, Reject Booking', 
+            'No'
+        );
+    };
+
+    return (
+        <View>
+            <TouchableOpacity 
+                style={[styles.authButton, { backgroundColor: '#B91C1C' }]}
+                onPress={handleRejectBooking} 
+                disabled={loading}
+            >
+                <Text style={styles.authButtonText}>{loading ? 'Rejecting...' : 'Reject Reservation'}</Text>
+            </TouchableOpacity>
+        </View>
     );
   };
   
 
-  const displaySeats = `${isEditing ? seats : booking?.guests ?? seats} Seats`;
   const displayBranch = branchMap[booking?.branch as unknown as BranchId] || ''; 
   const isFormVisible = isEditing;
 
@@ -167,6 +179,13 @@ const styles = StyleSheet.create({
     confirmButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
     deleteButton: { padding: 15, borderRadius: 12, alignItems: 'center', backgroundColor: '#EF4444' },
     deleteButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+
+    authButton: {
+      borderRadius: 16, overflow: 'hidden', marginTop: 10, marginBottom: 20, shadowColor: '#C89A5B',
+      shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16,
+    },
+    authButtonGradient: { paddingVertical: 16, alignItems: 'center' },
+    authButtonText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white' },
 });
 
 export default BookingWidgetComponent;

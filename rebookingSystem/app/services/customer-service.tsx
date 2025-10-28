@@ -48,7 +48,7 @@ export const fetchUserData = async (userId: string): Promise<UserProfile | null>
     }
     return null;
   } catch (error) {
-    console.error("Error fetching user data:", error);
+    console.log("Error fetching user data:", error);
     throw error;
   }
 };
@@ -120,7 +120,7 @@ export const addReservation = async (
 
     return newBookingId;
   } catch (error) {
-    console.error('Error adding reservation:', error);
+    console.log('Error adding reservation:', error);
     throw error;
   }
 };
@@ -146,7 +146,7 @@ export const getBranchDetails = async (branchId: number) : Promise<number | null
     // Return the restaurant name
     return branchDoc.data().restaurant 
   } catch (error) {
-      console.error("Error fetching branch data by branchCode:", error);
+      console.log("Error fetching branch data by branchCode:", error);
       throw error;
   }
 }
@@ -176,7 +176,7 @@ export const getReservationsRealtime = (
       callback(activeReservations);
     },
     (error) => {
-      console.error("Error listening to reservations:", error);
+      console.log("Error listening to reservations:", error);
       callback([]);
     }
   );
@@ -195,7 +195,7 @@ export const cancelReservation = async (bookingId: string): Promise<void> => {
         // Status 4 is 'cancelled'
         await updateDoc(bookingDocRef, { status: 4 });
     } catch (error) {
-        console.error("Error cancelling reservation:", error);
+        console.log("Error cancelling reservation:", error);
         throw error;
     }
 };

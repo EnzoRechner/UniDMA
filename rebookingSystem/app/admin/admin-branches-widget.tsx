@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Pressable,
   TouchableOpacity,
-  Alert,
   FlatList,
   ActivityIndicator,
   TextInput,
@@ -19,7 +18,9 @@ import { BlurView } from "expo-blur";
 import { addBranch } from "../services/admin-service";
 import {UserProfile} from "../lib/types";
 import { fetchUserData} from '../services/customer-service';
-import { RestaurantId } from "../lib/typesConst";
+import { modalService } from '../services/modal-Service';
+//import * as Location from 'expo-location';
+import * as Location from 'expo-location';
 // --- Firestore Type ---
 
 
@@ -53,8 +54,8 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const [branchCapacity, setBranchCapacity] = useState(0);
   const [branchName, setBranchName] = useState("");
   const [branchOpen, setBranchOpen] = useState(false);
-  const [branchRestaurant, setBranchRestaurant] = useState<RestaurantId>(0 as RestaurantId);
-
+  const [branchRestaurant, setBranchRestaurant] = useState(0);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   // ---------------------------
   // Updated handleAddBranch
   // ---------------------------
@@ -73,36 +74,38 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
         if (!userData) throw new Error('Could not find user profile.');
         setUser(userData);
       } catch (error: any) {
-        Alert.alert('Error', error.message);       
+        modalService.showError('Error', error.message);       
       }
     };
     
     loadData();
   }, []);
 
-  // // Function to get permission for location
-  //   const getLocation = async () => {
-  //   try {
-  //     // Ask for permission
-  //     const { status } = await Location.requestForegroundPermissionsAsync();
-  //     if (status !== 'granted') {
-  //       setErrorMsg('Permission to access location was denied');
-  //       return;
-  //     }
+  // Function to get permission for location
+    const getLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permission denied');
+        return;
+      }
 
-  //     // Get the current position
-  //     const loc = await Location.getCurrentPositionAsync({
-  //       accuracy: Location.Accuracy.Highest,
-  //     });
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Highest,
+      });
 
-  //     console.log('📍 Location:', loc);
-  //     setLocation(loc);
-  //     setErrorMsg(null);
-  //   } catch (error) {
-  //     console.error('Location error:', error);
-  //     setErrorMsg('Error getting location');
-  //   }
-  // };
+      setBranchCoord({
+        latitude: loc.coords.latitude,
+       longitude: loc.coords.longitude,     
+      });
+
+      setErrorMsg(null);
+    } catch (err) {
+      modalService.showError('Location error:', 'cannot find the location');
+      setErrorMsg('Error getting location');
+    }
+  };
+
 
   const handleAddBranch = async () => {
   if (
@@ -110,7 +113,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     !branchAddress ||
     !branchCoord
   ) {
-    Alert.alert(
+    modalService.showError(
       "Missing Info",
       "Please fill in all required fields including coordinates."
     );
@@ -136,7 +139,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     };
 
     await addBranch(newBranch);
-    Alert.alert("✅ Success", `Branch #${branchCode} added successfully!`);
+    modalService.showSuccess("✅ Success", `Branch #${branchCode} added successfully!`);
 
     // Close modal and reset form
     setShowPopup(false);
@@ -148,8 +151,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     setBranchOpen(false);
 
   } catch (error) {
-    console.error("Error adding branch:", error);
-    Alert.alert("Error", "Failed to add new branch.");
+    modalService.showError("Error", "Failed to add new branch.");
   } finally {
     setLoading(false);
   }
@@ -233,7 +235,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     setShowPopup(false);
     setSelectedBranch(null);
   } catch (error) {
-    console.error("Error updating branch:", error);
+    modalService.showError("Branch Error: ", "Error updating branch:");
   }
 };
 
@@ -313,7 +315,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
                 else{
                   setIsEditing(true);
                   setShowPopup(false);
-                  alert("You do not have permission to add branches");
+                  modalService.showError("Alert!", "You do not have permission to add branches");
                 }               
                 setUser(user);
               }}
@@ -391,6 +393,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
             <Text style={{ color: "white", fontWeight: "bold" }}>False</Text>
           </TouchableOpacity>
         </View>
+
       </View>
 
                 {/* Coordinates Inputs */}
@@ -399,7 +402,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
             placeholder="Coordinates (lat, lng)"
             placeholderTextColor="#aaa"
             value={
-              branchCoord ? `${branchCoord.latitude} , ${branchCoord.longitude}` : ""
+              branchCoord ? `${branchCoord.latitude.toFixed(5)} , ${branchCoord.longitude.toFixed(5)}` : ""
             }
             onChangeText={(t) => {
               const parts = t.split(",").map((p) => parseFloat(p.trim()));
@@ -415,20 +418,19 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 
           />
           <View style={[styles.modalButtons]}>  
-
           <TouchableOpacity
             style={[styles.modalButton, { backgroundColor: "#C89A5B"}]}  
-            // onPress={() => [(getLocation) ]}
+             onPress={getLocation}
           >
-            <Text style={{ color: "white", fontWeight: "bold" }}>Get Geolocation</Text>
-            
-        {/* <Text style={{ marginTop: 10, color: 'white' }}>
-          Latitude: {location.coords.latitude.toFixed(5)}{'\n'}
-          Longitude: {location.coords.longitude.toFixed(5)}
-          </Text> */}
+            <Text style={{ color: "white", fontWeight: "bold" }}>Get Geolocation</Text>          
           </TouchableOpacity>
-          </View>
 
+          {errorMsg && (
+             <Text style={{ color: 'red', marginTop: 8 }}>{errorMsg}</Text>
+          )}
+          </View>
+            
+             
       <View style={[styles.modalButtons, { marginTop: 20 }]}>
         <TouchableOpacity
           style={[styles.modalButton, { backgroundColor: "#C89A5B" }]}
@@ -466,6 +468,16 @@ const styles = StyleSheet.create({
   minHeight: 650,
   justifyContent: "space-between", // keeps button inside bottom of view
 },
+
+cardBlur: 
+{ flex: 1 }, 
+loaderContainer: 
+{ flex: 1, 
+  justifyContent: "center", 
+  alignItems: "center", 
+  backgroundColor: "rgba(20, 20, 20, 1)", 
+},
+
 
 contentContainer: {
   flex: 1,

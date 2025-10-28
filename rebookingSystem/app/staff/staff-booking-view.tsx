@@ -5,7 +5,6 @@ import { Calendar, Check, ChevronDown, ChevronUp, MessageSquare, Users, X } from
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     LayoutAnimation,
     ListRenderItemInfo,
@@ -22,6 +21,7 @@ import {
 import { ReservationDetails } from '../lib/types';
 import { fetchUserData } from '../services/customer-service';
 import { onSnapshotStaffBookings, updateReservationStatus } from '../services/staff-service';
+import { modalService } from '../services/modal-Service';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -54,7 +54,7 @@ const BookingView = () => {
     const [pendingLoading, setPendingLoading] = useState(true);
     const [confirmedLoading, setConfirmedLoading] = useState(true);
     const [cancelledLoading, setCancelledLoading] = useState(true);
-    // Note: userId and user state removed as they weren't used elsewhere
+
     const unsubscribesRef = useRef<(() => void)[]>([]);
     // Rejection modal state
     const [rejectModalVisible, setRejectModalVisible] = useState(false);
@@ -99,7 +99,9 @@ const BookingView = () => {
         const checkUser = async () => {
             const staffId = await AsyncStorage.getItem('userId');
             if (!staffId) {
-                router.replace('../login-related/login-page');
+                 await AsyncStorage.removeItem('userId');
+                 await AsyncStorage.removeItem('userRole');
+                router.replace('../auth/auth-login');
                 return;
             }
             try {
@@ -107,8 +109,10 @@ const BookingView = () => {
                 if (!userData) throw new Error('Could not find user profile.');
                 userData.userId = staffId;
             } catch (error) {
-                 Alert.alert('Error', 'Failed to load user data. Logging out.');
-                 router.replace('../login-related/login-page');
+                 console.log('Error', error);
+                 await AsyncStorage.removeItem('userId');
+                 await AsyncStorage.removeItem('userRole');
+                 router.replace('../auth/auth-login');
             }
 
             setPendingLoading(true);
@@ -132,8 +136,8 @@ const BookingView = () => {
         try {
             await updateReservationStatus(id, status, reason); 
         } catch (error) {
-            Alert.alert('Error', 'Failed to update booking status. Check permissions.');
-            console.error('Update error:', error);
+            modalService.showError('Error', 'Failed to update booking status. Check permissions.');
+            console.log('Update error:', error);
         }
     };
 
@@ -146,7 +150,7 @@ const BookingView = () => {
     const submitRejection = async () => {
         if (!selectedReservation) return;
         if (!rejectReason.trim()) {
-            Alert.alert('Rejection Reason Required', 'Please provide a reason for rejecting this booking.');
+            modalService.showError('Rejection Reason Required', 'Please provide a reason for rejecting this booking.');
             return;
         }
         try {
@@ -211,12 +215,11 @@ const BookingView = () => {
                 {showActions && (
                     <View style={styles.cardActions}>
                         <TouchableOpacity
-                            onPress={() => openRejectModal(item)}
-                            style={[styles.actionButton, styles.rejectButton]}
-                        >
-                            <X size={16} color="#FCA5A5" />
-                            <Text style={[styles.actionButtonText, { color: '#FCA5A5' }]}>Reject</Text>
-                        </TouchableOpacity>
+                                onPress={() => openRejectModal(item)} 
+                                style={[styles.actionButton, styles.rejectButton]} >
+                                <X size={16} color="#FCA5A5" />
+                                <Text style={[styles.actionButtonText, { color: '#FCA5A5' }]}>Reject</Text>
+                            </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => handleStatusUpdate(item.id!, 1, "")}
                             style={[styles.actionButton, styles.confirmButton]}
@@ -590,6 +593,12 @@ const styles = StyleSheet.create({
         color: '#a1a1aa',
         fontSize: 14,
     },
+    authButton: {
+      borderRadius: 16, overflow: 'hidden', marginTop: 10, marginBottom: 20, shadowColor: '#C89A5B',
+      shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16,
+    },
+    authButtonGradient: { paddingVertical: 16, alignItems: 'center' },
+    authButtonText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white' },
 });
 
 export default BookingView;

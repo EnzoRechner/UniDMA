@@ -11,7 +11,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const handleLogout = async () => {
     await AsyncStorage.removeItem('userId');
-    router.replace('/auth/auth-login');
+    router.replace('../auth/auth-login');
   };
   return (
     <SafeAreaView style={styles.container}>
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
           <View style={styles.gridRow}>
             <Pressable
               style={({ pressed }) => [styles.managementCard, styles.halfCard, pressed && styles.cardPressed]}
-              onPress={() => router.push('/admin/staff')}
+              onPress={() => router.push('./staff')}
             >
               <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
                 <Text style={styles.cardLabel}>Manage Staff{"\n"}Accounts</Text>
@@ -52,7 +52,7 @@ export default function AdminDashboard() {
           <View style={styles.gridRow}>
             <Pressable
               style={({ pressed }) => [styles.managementCard, styles.halfCard, pressed && styles.cardPressed]}
-              onPress={() => router.push('../admin/branch-local-test')}
+              onPress={() => router.push('./admin-branch-page')}
             >
               <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
                 <Text style={styles.cardLabel}>Branch{"\n"}Locations</Text>
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
 
             <Pressable
               style={({ pressed }) => [styles.managementCard, styles.halfCard, pressed && styles.cardPressed]}
-              onPress={() => router.push('../admin/app-settings')}
+              onPress={() => router.push('./app-settings')}
             >
               <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
                 <Text style={styles.cardLabel}>Application{"\n"}Settings</Text>

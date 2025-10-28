@@ -42,11 +42,25 @@
             "backgroundColor": "#000000"
           }
         }
+      
+      ],
+      [
+      "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+        }
       ]
     ],
+    
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5927a381-8a6b-48b2-ba0c-040740c9bc15"
+      }
     }
   }
 }

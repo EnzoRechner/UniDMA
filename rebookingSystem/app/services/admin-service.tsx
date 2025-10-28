@@ -7,7 +7,6 @@ import {
 import { db } from './firebase-initilisation';
 import { BranchDetails } from '../lib/types';
 
-
 /**
  * Fetches all branches from Firestore.
  * @returns Promise resolving to an array of BranchDetails.
@@ -25,7 +24,7 @@ export async function fetchBranches(): Promise<BranchDetails[]> {
 
     return branchList;
   } catch (error) {
-    console.error("Error fetching branches:", error);
+    console.log("Error fetching branches:", error);
     throw error;
   }
 }
@@ -40,7 +39,7 @@ export const addBranch = async (
     await setDoc(newBranchRef, branchData);
     return newBranchRef.id;
   } catch (error) {
-    console.error("Error creating branch:", error);
+    console.log("Error creating branch:", error);
     throw error;
   }
 };
@@ -53,7 +52,7 @@ export const updateBranch = async (
     const branchRef = doc(db, 'Branch', branchId.toString());
     await setDoc(branchRef, updatedData, { merge: true });
   } catch (error) {
-    console.error("Error updating branch:", error);
+    console.log("Error updating branch:", error);
     throw error;
   }
 };

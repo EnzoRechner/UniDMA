@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView,
+  View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView,
   Platform, ScrollView, Image, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { signUp } from '../services/auth-service';
 import { Picker } from '@react-native-picker/picker';
 import { BranchId, BRANCHES } from '../lib/typesConst';
+import { modalService } from '../services/modal-Service';
 
 const SignupScreen = () => {
   const [email, setEmail] = useState('');
@@ -62,16 +63,16 @@ const SignupScreen = () => {
 
   const handleSignUp = async () => {
   if (!email.trim() || !nagName.trim() || !password.trim()) {
-    Alert.alert('Error', 'Please fill in all fields');
+    modalService.showError('Error', 'Please fill in all fields');
     return;
   }
   if (!email.includes('@')) {
-    Alert.alert('Error', 'Please enter a valid email address');
+    modalService.showError('Error', 'Please enter a valid email address');
     return;
   }
   const passwordError = validatePassword(password);
   if (passwordError) {
-    Alert.alert('Password Requirements', passwordError);
+    modalService.showError('Password Requirements', passwordError );
     return;
   }
 
@@ -89,7 +90,7 @@ const SignupScreen = () => {
 
     router.replace(nextUrl as any);
   } catch (error: any) {
-    Alert.alert('Sign Up Failed', error.message || 'An unknown error occurred.');
+    modalService.showError('Sign Up Failed', error.message || 'An unknown error occurred.');
   } finally {
     setLoading(false);
   }
