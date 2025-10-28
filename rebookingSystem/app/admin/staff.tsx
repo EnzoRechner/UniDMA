@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { Calendar, Mail, Undo2, User, UserMinus, UserPlus } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserProfile } from '../lib/types';
 import { getPrettyBranchName } from '../lib/typesConst';

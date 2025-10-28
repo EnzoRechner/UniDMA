@@ -2,7 +2,7 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Building, Calendar, Clock, MessageSquare, Users } from 'lucide-react-native';
 import { useState, type FC } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
 import { ReservationDetails } from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
 import { updateReservationStatus } from '../services/staff-service';
