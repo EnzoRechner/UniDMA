@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, addDoc, getDocs, query, where, Timestamp, doc, setDoc, getDoc, updateDoc, documentId, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, Timestamp, doc, setDoc, getDoc, documentId, deleteDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, signOut as fbSignOut } from 'firebase/auth';
 import { auth, db } from './firebase-initilisation';
 import { UserProfile } from '../lib/types';
-import { BRANCHES, ROLES, BranchId } from '../lib/typesConst';
+import { ROLES, BranchId } from '../lib/typesConst';
 
 /**
  * Generates a unique random 6-digit string to be used as a document ID.
