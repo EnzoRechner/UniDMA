@@ -1,17 +1,10 @@
 import {
   doc,
   setDoc,
-  getDoc,
   getDocs,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-  Timestamp,
   collection,
 } from 'firebase/firestore';
 import { db } from './firebase-initilisation';
-import { ReservationDetails, UserProfile } from '../lib/types';
 import { BranchDetails } from '../lib/types';
 
 

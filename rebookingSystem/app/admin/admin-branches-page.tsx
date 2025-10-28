@@ -1,5 +1,5 @@
 // admin-branchs-page.tsx
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  Switch,
+    
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { collection, getDocs, updateDoc, doc, onSnapshot, where, query } from "firebase/firestore";
@@ -20,9 +20,7 @@ import { BlurView } from "expo-blur";
 import { addBranch } from "../services/admin-service";
 import {UserProfile} from "../lib/types";
 import { fetchUserData} from '../services/customer-service';
-import {BRANCHES} from "../lib/typesConst";
-import { updateBranch } from "../services/admin-service";
-import { BranchId,RESTAURANT } from '../lib/typesConst';
+//import * as Location from 'expo-location';
 // --- Firestore Type ---
 
 
@@ -49,7 +47,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [userBranch, setUserBranch] = useState<BranchId | null>(null);
   // Branch form fields
   const [branchCoord, setBranchCoord] = useState<GeolocationCoordinates | null>(null);
   const [branchAddress, setBranchAddress] = useState("");
@@ -83,8 +80,29 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     loadData();
   }, []);
 
+  // // Function to get permission for location
+  //   const getLocation = async () => {
+  //   try {
+  //     // Ask for permission
+  //     const { status } = await Location.requestForegroundPermissionsAsync();
+  //     if (status !== 'granted') {
+  //       setErrorMsg('Permission to access location was denied');
+  //       return;
+  //     }
 
+  //     // Get the current position
+  //     const loc = await Location.getCurrentPositionAsync({
+  //       accuracy: Location.Accuracy.Highest,
+  //     });
 
+  //     console.log('📍 Location:', loc);
+  //     setLocation(loc);
+  //     setErrorMsg(null);
+  //   } catch (error) {
+  //     console.error('Location error:', error);
+  //     setErrorMsg('Error getting location');
+  //   }
+  // };
 
   const handleAddBranch = async () => {
   if (
@@ -128,8 +146,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     setBranchCoord(null);
     setBranchOpen(false);
 
-    // Reload updated list
-    loadBranches();
   } catch (error) {
     console.error("Error adding branch:", error);
     Alert.alert("Error", "Failed to add new branch.");
@@ -140,53 +156,36 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 
 //This updates the branch list in real-time 
 // when changes occur in Firestore they get displayed immediately
-
+ 
   useEffect(() => {
-    const branchRef = collection(db, "Branch");
-    //real-time listener
-    const unsubscribe = onSnapshot(branchRef, (snapshot) => {
-      const branchList: BranchDetails[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as BranchDetails[];
+  if (!user) return; 
 
-      setBranches(branchList);
-      setLoading(false);
-    });
+  let q;
+  if (user.role === 2) {
+    q = query(
+      collection(db, "Branch"),
+      where("branchCode", "==", user.branch)
+    );
+  } else{
+    q = collection(db, "Branch"); // all branches
+  } 
 
-    return () => unsubscribe();
-  }, []);
+  setLoading(true);
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const branchList = snapshot.docs.map((doc) => ({
+  id: doc.id,
+  ...(doc.data() as Omit<BranchDetails, "id">),
+}));
 
-  // loadBranches function
-  //Currently filter is accting weird if you open branch locations it will filter 
-  // but if you go back and open again it shows all branches
-  const loadBranches = async () => {
-    try {
-      let snapshot: any = null;
-      if (user?.role === 2) {
-        const q = query(collection(db, "Branch"),
-         where("branchCode", "==", user?.branch));
-         snapshot = await getDocs(q);
-      } else {
-        snapshot = await getDocs(collection(db, "Branch"));
-      }
+    setBranches(branchList);
+    setLoading(false);
+  });
 
-      const branchList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as BranchDetails[];
-      setBranches(branchList);
-    } catch (err) {
-      console.error("Error loading branches:", err);
-      Alert.alert("Error", "Could not load branches");
-    } finally {
-      setLoading(false);
-    }
-  };
+  return () => unsubscribe();
+}, [user]);
 
-  useEffect(() => {
-    loadBranches();
-  }, []);
+
+  
 
   const handleUpdateBranch = async () => {
     if (!selectedBranch) return;
@@ -269,7 +268,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
         {/* Add Branch Button */}
         <View>
           <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, { backgroundColor: "#C89A5B" }]}
               onPress={() => {
                 // empty fields before displaying modal
                 setBranchName("");
@@ -291,7 +290,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
                 setUser(user);
               }}
             >
-              <Text style={styles.tileTitle}>Add Branch</Text>
+              <Text style={styles.buttonText}>Add Branch</Text>
           </TouchableOpacity>
         </View>
 
@@ -372,7 +371,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
             placeholder="Coordinates (lat, lng)"
             placeholderTextColor="#aaa"
             value={
-              branchCoord ? `${branchCoord.latitude}, ${branchCoord.longitude}` : ""
+              branchCoord ? `${branchCoord.latitude} , ${branchCoord.longitude}` : ""
             }
             onChangeText={(t) => {
               const parts = t.split(",").map((p) => parseFloat(p.trim()));
@@ -385,9 +384,24 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
                 setBranchCoord(null); // invalid input
               }
             }}
-          />
 
-      <View style={styles.modalButtons}>
+          />
+          <View style={[styles.modalButtons]}>  
+
+          <TouchableOpacity
+            style={[styles.modalButton, { backgroundColor: "#C89A5B"}]}  
+            // onPress={() => [(getLocation) ]}
+          >
+            <Text style={{ color: "white", fontWeight: "bold" }}>Get Geolocation</Text>
+            
+        {/* <Text style={{ marginTop: 10, color: 'white' }}>
+          Latitude: {location.coords.latitude.toFixed(5)}{'\n'}
+          Longitude: {location.coords.longitude.toFixed(5)}
+          </Text> */}
+          </TouchableOpacity>
+          </View>
+
+      <View style={[styles.modalButtons, { marginTop: 20 }]}>
         <TouchableOpacity
           style={[styles.modalButton, { backgroundColor: "#C89A5B" }]}
           onPress={isEditing ? handleUpdateBranch : handleAddBranch}
@@ -398,6 +412,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
         <TouchableOpacity
           style={[styles.modalButton, { backgroundColor: "rgba(255,255,255,0.1)" }]}
           onPress={() => setShowPopup(false)}
+
         >
           <Text style={styles.modalButtonText}>Cancel</Text>
         </TouchableOpacity>
@@ -412,65 +427,77 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 };
 
 const styles = StyleSheet.create({
+  //Main Widget Container
   widgetContainer: {
-    width: "100%",
-    borderRadius: 24,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(200, 154, 91, 0.4)",
-    minHeight: 700,
-  },
-  cardBlur: { flex: 1 },
-  button: {
-    alignItems: "center",
-    backgroundColor: "rgba(200,154,91,0.2)",
-    padding: 18,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 12,
-    borderColor: "rgba(200,154,91,0.5)",
-    borderWidth: 1,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(20, 20, 20, 1)",
-  },
-  tile: {
-    backgroundColor: "rgba(255,255,255,0.05)",
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: "rgba(200,154,91,0.3)",
-    paddingVertical: 40,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    width: "100%",
-    shadowColor: "#C89A5B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.7,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  tileTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "rgba(255,255,255,1)",
-  },
-  tileDescription: {
-    color: "rgba(255,255,255,1)",
-    marginTop: 4,
-  },
-  tileStatus: {
-    marginTop: 8,
-    fontWeight: "600",
-    color: "#999999",
-  },
+  width: "100%",
+  borderRadius: 20,
+  padding: 25,
+  borderWidth:2,
+  borderColor: "rgba(200,154,91,0.7)",
+  backgroundColor: "rgba(0,0,0,0.7)", // same as modal
+  minHeight: 650,
+  justifyContent: "space-between", // keeps button inside bottom of view
+},
 
-  // Blurred Popup Modal Styles
+contentContainer: {
+  flex: 1,
+}, // wrap your FlatList or tiles in this
+
+tile: {
+  width: "100%",
+  backgroundColor: "rgba(0,0,0,0.7)",
+  borderRadius: 20,
+  borderWidth: 2,
+  borderColor: "rgba(200,154,91,0.7)",
+  paddingVertical: 20,
+  paddingHorizontal: 16,
+  marginBottom: 16,
+},
+
+tileTitle: {
+  fontSize: 20,
+  fontWeight: "bold",
+  color: "white",
+  textAlign: "center",
+  marginBottom: 8,
+},
+
+tileDescription: {
+  color: "white",
+  fontSize: 14,
+  textAlign: "center",
+  marginBottom: 6,
+},
+
+tileStatus: {
+  marginTop: 8,
+  fontWeight: "600",
+  color: "rgba(200,154,91,1)",
+  textAlign: "center",
+},
+
+button: {
+  alignItems: "center",
+  backgroundColor: "rgba(200,154,91,0.2)",
+  paddingVertical: 14,
+  marginTop: 10,
+  borderRadius: 10,
+  borderColor: "rgba(200,154,91,0.7)",
+  borderWidth: 1,
+  alignSelf: "center",
+  width: "90%", // keeps it centered and not full width
+},
+
+buttonText: {
+  color: "white",
+  fontWeight: "bold",
+  fontSize: 18,
+},
+
+  // Modal View with blur background
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -479,7 +506,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: "rgba(200,154,91,0.5)",
+    borderColor: "rgba(200,154,91,0.7)",
   },
   modalTitle: {
     fontSize: 20,
@@ -490,12 +517,12 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "rgba(200,154,91,0.5)",
+    borderColor: "rgba(200,154,91,0.7)",
     borderRadius: 10,
     padding: 10,
     marginBottom: 10,
     color: "white",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    backgroundColor: "rgba(0,0,0,0.7)",
   },
   modalButtons: {
     flexDirection: "row",
