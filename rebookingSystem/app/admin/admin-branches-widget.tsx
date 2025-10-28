@@ -20,7 +20,7 @@ import { BlurView } from "expo-blur";
 import { addBranch } from "../services/admin-service";
 import {UserProfile} from "../lib/types";
 import { fetchUserData} from '../services/customer-service';
-//import * as Location from 'expo-location';
+import * as Location from 'expo-location';
 // --- Firestore Type ---
 
 
@@ -54,7 +54,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const [branchName, setBranchName] = useState("");
   const [branchOpen, setBranchOpen] = useState(false);
   const [branchRestaurant, setBranchRestaurant] = useState(0);
-
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   // ---------------------------
   // Updated handleAddBranch
   // ---------------------------
@@ -80,29 +80,31 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     loadData();
   }, []);
 
-  // // Function to get permission for location
-  //   const getLocation = async () => {
-  //   try {
-  //     // Ask for permission
-  //     const { status } = await Location.requestForegroundPermissionsAsync();
-  //     if (status !== 'granted') {
-  //       setErrorMsg('Permission to access location was denied');
-  //       return;
-  //     }
+  // Function to get permission for location
+    const getLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permission denied');
+        return;
+      }
 
-  //     // Get the current position
-  //     const loc = await Location.getCurrentPositionAsync({
-  //       accuracy: Location.Accuracy.Highest,
-  //     });
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Highest,
+      });
 
-  //     console.log('📍 Location:', loc);
-  //     setLocation(loc);
-  //     setErrorMsg(null);
-  //   } catch (error) {
-  //     console.error('Location error:', error);
-  //     setErrorMsg('Error getting location');
-  //   }
-  // };
+      setBranchCoord({
+        latitude: loc.coords.latitude,
+       longitude: loc.coords.longitude,     
+      });
+
+      setErrorMsg(null);
+    } catch (err) {
+      console.error('Location error:', err);
+      setErrorMsg('Error getting location');
+    }
+  };
+
 
   const handleAddBranch = async () => {
   if (
@@ -363,6 +365,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
             <Text style={{ color: "white", fontWeight: "bold" }}>False</Text>
           </TouchableOpacity>
         </View>
+
       </View>
 
                 {/* Coordinates Inputs */}
@@ -371,7 +374,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
             placeholder="Coordinates (lat, lng)"
             placeholderTextColor="#aaa"
             value={
-              branchCoord ? `${branchCoord.latitude} , ${branchCoord.longitude}` : ""
+              branchCoord ? `${branchCoord.latitude.toFixed(5)} , ${branchCoord.longitude.toFixed(5)}` : ""
             }
             onChangeText={(t) => {
               const parts = t.split(",").map((p) => parseFloat(p.trim()));
@@ -387,20 +390,19 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 
           />
           <View style={[styles.modalButtons]}>  
-
           <TouchableOpacity
             style={[styles.modalButton, { backgroundColor: "#C89A5B"}]}  
-            // onPress={() => [(getLocation) ]}
+             onPress={getLocation}
           >
-            <Text style={{ color: "white", fontWeight: "bold" }}>Get Geolocation</Text>
-            
-        {/* <Text style={{ marginTop: 10, color: 'white' }}>
-          Latitude: {location.coords.latitude.toFixed(5)}{'\n'}
-          Longitude: {location.coords.longitude.toFixed(5)}
-          </Text> */}
+            <Text style={{ color: "white", fontWeight: "bold" }}>Get Geolocation</Text>          
           </TouchableOpacity>
-          </View>
 
+          {errorMsg && (
+             <Text style={{ color: 'red', marginTop: 8 }}>{errorMsg}</Text>
+          )}
+          </View>
+            
+             
       <View style={[styles.modalButtons, { marginTop: 20 }]}>
         <TouchableOpacity
           style={[styles.modalButton, { backgroundColor: "#C89A5B" }]}
@@ -438,6 +440,16 @@ const styles = StyleSheet.create({
   minHeight: 650,
   justifyContent: "space-between", // keeps button inside bottom of view
 },
+
+cardBlur: 
+{ flex: 1 }, 
+loaderContainer: 
+{ flex: 1, 
+  justifyContent: "center", 
+  alignItems: "center", 
+  backgroundColor: "rgba(20, 20, 20, 1)", 
+},
+
 
 contentContainer: {
   flex: 1,
