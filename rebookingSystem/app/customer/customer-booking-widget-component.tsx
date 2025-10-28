@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Timestamp } from 'firebase/firestore';
 import { Building, Calendar, Clock, Edit, MessageSquare, Tag, Trash2, Users } from 'lucide-react-native';
 import { useEffect, useMemo, useState, type FC } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ReservationDetails, UserProfile } from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
 import { addReservation, cancelReservation } from '../services/customer-service';
@@ -150,33 +150,40 @@ const BookingWidgetComponent: FC<{
     setShowOptions(false);
   };
 
+  const cancelBookingLogic = async (bookingIdToDelete: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    setLoading(true);
+
+    try {
+        // Assuming cancelReservation handles the API call to update the status to cancelled/deleted
+        await cancelReservation(bookingIdToDelete);
+        
+        // Optional: Provide success feedback
+        modalService.showError('Success', 'Booking has been successfully deleted.'); 
+
+    } catch (error: any) {
+        // Use the centralized error modal for reporting failure
+        modalService.showError('Error', 'Could not delete the booking.');
+    } finally {
+        setLoading(false);
+        // Hide options menu regardless of success/failure
+        setShowOptions(false); 
+    }
+};
+
   const handleDeleteBooking = async () => {
     if (!booking?.id) {
         modalService.showError('Error', 'Cannot delete a booking without an ID.');
         return;
     }
     const bookingIdToDelete = booking.id;
-    Alert.alert(
-        'Delete Booking', 'Are you sure you want to cancel this booking?',
-        [
-            { text: 'No', style: 'cancel' },
-            {
-                text: 'Yes, Cancel Booking',
-                style: 'destructive',
-                onPress: async () => {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                    setLoading(true);
-          try {
-            await cancelReservation(bookingIdToDelete);
-          } catch {
-                        modalService.showError('Error', 'Could not cancel the booking.');
-                    } finally {
-                        setLoading(false);
-                        setShowOptions(false);
-                    }
-                },
-            },
-        ]
+
+    modalService.showConfirm(
+        'Delete Booking', 
+        'Are you sure you want to delete this booking? This action cannot be undone.',
+        () => cancelBookingLogic(bookingIdToDelete), 
+        'Yes, Delete Booking', 
+        'No'
     );
   };
 

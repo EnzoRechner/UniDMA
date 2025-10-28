@@ -9,7 +9,6 @@ import React, { useEffect, useState } from 'react';
 import { modalService } from '../services/modal-Service';
 
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Switch,
@@ -191,39 +190,41 @@ export default function BranchSettingsScreen() {
     }
   };
 
+  // Cancel Booking Logic that runs on confirmation
+  const cancelAllPendingLogic = async () => {
+      if (branchCode == null) return; 
+
+      try {
+          // Assuming setSaving manages the loading state for this mass action
+          setSaving(true); 
+          
+          const cancelledCount = await cancelAllPendingReservations(
+              branchCode,
+              'Branch manager cancelled all pending reservations'
+          );
+
+          // Success notification (using modalService.showError for the single-button alert)
+          modalService.showError(
+              'Success',
+              `${cancelledCount} pending reservation${cancelledCount !== 1 ? 's' : ''} have been cancelled.`
+          );
+      } catch (error: any) {
+          console.error('Error cancelling reservations:', error);
+          modalService.showError('Error', error.message || 'Failed to cancel pending reservations');
+      } finally {
+          setSaving(false);
+      }
+  };
+
   const handleCancelAllPending = () => {
     if (branchCode == null) return;
 
-    // This needs to be changed to use modalService
-    Alert.alert(
-      'Cancel All Pending Reservations',
-      'This will reject ALL pending reservations for this branch. This action cannot be undone. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setSaving(true);
-              const cancelledCount = await cancelAllPendingReservations(
-                branchCode,
-                'Branch manager cancelled all pending reservations'
-              );
-
-              modalService.showError(
-                'Success',
-                `${cancelledCount} pending reservation${cancelledCount !== 1 ? 's' : ''} have been cancelled.`
-              );
-            } catch (error) {
-              console.error('Error cancelling reservations:', error);
-              modalService.showError('Error', 'Failed to cancel pending reservations');
-            } finally {
-              setSaving(false);
-            }
-          },
-        },
-      ]
+    modalService.showConfirm(
+        'Cancel All Pending Reservations',
+        'This will reject ALL pending reservations for this branch. This action cannot be undone. Are you sure?',
+        cancelAllPendingLogic, // This function runs if the user confirms
+        'Confirm', 
+        'Cancel'
     );
   };
 

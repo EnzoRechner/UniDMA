@@ -26,7 +26,7 @@ export const generateUniqueCustomerID = async (): Promise<string> => {
 
       attempts++;
     } catch (error) {
-      console.error('Error checking customer ID uniqueness:', error);
+      console.log('Error checking customer ID uniqueness:', error);
       throw new Error('Failed to generate unique customer ID. Please try again.');
     }
   }

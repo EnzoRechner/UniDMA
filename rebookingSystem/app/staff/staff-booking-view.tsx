@@ -20,6 +20,7 @@ import { ReservationDetails } from '../lib/types';
 import { fetchUserData } from '../services/customer-service';
 import { onSnapshotStaffBookings, updateReservationStatus } from '../services/staff-service';
 import { modalService } from '../services/modal-Service';
+import * as Haptics from 'expo-haptics';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -52,6 +53,8 @@ const BookingView = () => {
     const [pendingLoading, setPendingLoading] = useState(true);
     const [confirmedLoading, setConfirmedLoading] = useState(true);
     const [cancelledLoading, setCancelledLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
+
     const unsubscribesRef = useRef<(() => void)[]>([]);
     
     const [expandedSections, setExpandedSections] = useState({
@@ -119,15 +122,67 @@ const BookingView = () => {
         }
     }, []);
 
-    const handleStatusUpdate = async (id: string, status: 1 | 2, reason: string) => {
+    const performRejection = async (id: string, message: string) => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setLoading(true);
+
         try {
-            await updateReservationStatus(id, status, reason); 
-        } catch (error) {
-            modalService.showError('Error', 'Failed to update booking status. Check permissions.');
-            console.error('Update error:', error);
+            await updateReservationStatus(
+                id, 
+                2, // Status 2 for 'Rejected'
+                message
+            );
+            // List refresh is handled automatically by the onSnapshot listener
+        } catch (error: any) {
+            modalService.showError(
+                'Could Not Reject Booking', 
+                error.message || 'An unknown server error occurred.'
+            );
+        } finally {
+            setLoading(false);
         }
     };
-    
+
+    const handleRejectConfirmation = (id: string, rejectionMessage: string) => {
+        if (loading) return; // Prevent multiple requests
+
+        // Function passed to the modal service, which will execute performRejection on 'Yes'
+        const confirmationCallback = () => {
+            performRejection(id, rejectionMessage); 
+        };
+
+        modalService.showConfirm(
+            'Reject Booking', 
+            'Are you sure you want to reject this reservation? This action cannot be undone.',
+            confirmationCallback, 
+            'Yes, Reject Booking', 
+            'No'
+        );
+    };
+
+    const handleStatusUpdate = async (id: string, status: 1 | 2, reason: string) => {
+        if (loading) return;
+
+        if (status === 2) {
+            // REJECT: Redirect to the confirmation flow
+            handleRejectConfirmation(id, reason);
+            return;
+        }
+
+        if (status === 1) {
+            // CONFIRM: Execute API call directly (no confirmation modal needed)
+            setLoading(true);
+            try {
+                await updateReservationStatus(id, 1, reason);
+            } catch (error: any) {
+                modalService.showError('Could Not Confirm Booking', error.message || 'An unknown error occurred.');
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+    };
+
     const toggleSection = (section: 'pending' | 'confirmed' | 'cancelled') => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setExpandedSections(prev => ({
@@ -151,6 +206,8 @@ const BookingView = () => {
         const formattedTime = dateObject.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
         //console.log(item.nagName);
         const nagName = item.nagName || 'Guest';
+
+        const rejectionMessage = "Rejected by staff";
 
         return (
             <View style={[styles.card, { borderColor: `${statusColor}80` }]}>
@@ -177,12 +234,11 @@ const BookingView = () => {
                 {showActions && (
                     <View style={styles.cardActions}>
                         <TouchableOpacity
-                            onPress={() => handleStatusUpdate(item.id!, 2, "Rejected by staff")}
-                            style={[styles.actionButton, styles.rejectButton]}
-                        >
-                            <X size={16} color="#FCA5A5" />
-                            <Text style={[styles.actionButtonText, { color: '#FCA5A5' }]}>Reject</Text>
-                        </TouchableOpacity>
+                                onPress={() => handleStatusUpdate(item.id!, 2, rejectionMessage)} 
+                                style={[styles.actionButton, styles.rejectButton]} >
+                                <X size={16} color="#FCA5A5" />
+                                <Text style={[styles.actionButtonText, { color: '#FCA5A5' }]}>Reject</Text>
+                            </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => handleStatusUpdate(item.id!, 1, "")}
                             style={[styles.actionButton, styles.confirmButton]}
@@ -426,6 +482,12 @@ const styles = StyleSheet.create({
         color: '#a1a1aa',
         fontSize: 14,
     },
+    authButton: {
+      borderRadius: 16, overflow: 'hidden', marginTop: 10, marginBottom: 20, shadowColor: '#C89A5B',
+      shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16,
+    },
+    authButtonGradient: { paddingVertical: 16, alignItems: 'center' },
+    authButtonText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white' },
 });
 
 export default BookingView;

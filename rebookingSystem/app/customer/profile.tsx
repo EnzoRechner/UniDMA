@@ -100,25 +100,26 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
+      // Only run on confirmation
+      const signOutLogic = async () => {
+          try {
               await AsyncStorage.removeItem('userId');
+              await AsyncStorage.removeItem('userRole');
+
               router.replace('/auth/auth-login');
-            } catch {
-              modalService.showError('Error', 'Failed to sign out');
-            }
+              
+          } catch (error: any) {
+              modalService.showError('Error', 'Failed to sign out. Please try closing and reopening the app.');
           }
-        }
-      ]
-    );
+      };
+
+      modalService.showConfirm(
+          'Sign Out',
+          'Are you sure you want to sign out?',
+          signOutLogic, // Function to execute if the user presses 'Sign Out'
+          'Sign Out',
+          'Cancel'
+      );
   };
 
   const renderStatCard = (stat: typeof profileStats[0], index: number) => (
@@ -133,41 +134,47 @@ export default function ProfileScreen() {
     </View>
   );
 
+  const handlePasswordResetAction = async () => {
+    try {
+        await AsyncStorage.removeItem('userId');
+        router.replace('/auth/auth-update-login');
+        
+    } catch {
+        modalService.showError('Error', 'Failed to sign out for password reset. Please try again.');
+    }
+};
+
   const renderMenuItem = (item: any) => (
     <TouchableOpacity
-      key={item.label}
-      style={styles.menuItem}
-      onPress={() => {
-        if (item.label === 'Notifications') {
-          setNotificationModalVisible(true);
-        } else if (item.label === 'Personal Info') {
-          setIsEditingName(true);
-        } else if (item.label === 'Password Reset') {
-            Alert.alert('To reset your password','You will be signed out and sent to our password reset page', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Continue', style: 'destructive', onPress: async () => {                  
-                    try {
-                    await AsyncStorage.removeItem('userId');
-                    router.replace('/auth/auth-update-login');
-                    } catch {
-                    Alert.alert('Error', 'Failed to sign out');
-                    }
-          }
-        }
-      ]);
-    }                  
-      }}
+        key={item.label}
+        style={styles.menuItem}
+        onPress={() => {
+            if (item.label === 'Notifications') {
+                setNotificationModalVisible(true);
+            } else if (item.label === 'Personal Info') {
+                setIsEditingName(true);
+            } else if (item.label === 'Password Reset') {
+
+                modalService.showConfirm(
+                    'To Reset Your Password', 
+                    'You will be signed out and sent to our password reset page. Do you wish to continue?',
+                    handlePasswordResetAction, // Function to execute on 'Continue'
+                    'Continue',
+                    'Cancel'
+                );
+            } 
+        }}
     >
       <View style={styles.menuItemLeft}>
-        <View style={styles.menuItemIcon}>
-          <item.icon size={20} color="#C89A5B" />
+            <View style={styles.menuItemIcon}>
+                <item.icon size={20} color="#C89A5B" />
+            </View>
+            <View style={styles.menuItemText}>
+                <Text style={styles.menuItemLabel}>{item.label}</Text>
+                <Text style={styles.menuItemSubtitle}>{item.subtitle}</Text>
+            </View>
         </View>
-        <View style={styles.menuItemText}>
-          <Text style={styles.menuItemLabel}>{item.label}</Text>
-          <Text style={styles.menuItemSubtitle}>{item.subtitle}</Text>
-        </View>
-      </View>
-      <ChevronRight size={16} color="rgba(200, 154, 91, 0.6)" />
+        <ChevronRight size={16} color="rgba(200, 154, 91, 0.6)" />
     </TouchableOpacity>
   );
 
