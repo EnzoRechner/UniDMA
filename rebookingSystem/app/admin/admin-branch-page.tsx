@@ -1,12 +1,11 @@
 // branch-local-test.tsx
-import React, {useState,useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions,Alert, } from "react-native";
-import BranchWidget from "./admin-branches-page"; 
-import { useRouter } from 'expo-router';
-import { fetchUserData} from '../services/customer-service';
-import { UserProfile } from '../lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, onSnapshot } from "firebase/firestore";
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, Dimensions, StyleSheet, Text, View } from "react-native";
+import { UserProfile } from '../lib/types';
+import { fetchUserData } from '../services/customer-service';
+import BranchWidget from "./admin-branches-widget";
 
 
 
@@ -58,7 +57,7 @@ const BranchListScreen = () =>{
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Branch Locations</Text>
-      
+
       <BranchWidget />
 
     </View>
