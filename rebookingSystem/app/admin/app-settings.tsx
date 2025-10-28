@@ -1,24 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'expo-router';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  Switch,
-  TextInput,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { getUserProfile } from '@/app/services/auth-service';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { PauseCircle, PlayCircle, Trash2, AlertTriangle } from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getUserProfile } from '@/app/services/auth-service';
-import { getPrettyBranchName } from '../lib/typesConst';
-import { getBranchSettings, updateBranchSettings, cancelAllPendingReservations, pauseAllUpcomingReservations, rejectAllPausedUpcomingReservations } from '../../utils/firestore';
+import { useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
+import { AlertTriangle, PauseCircle, PlayCircle, Trash2, Undo2 } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { cancelAllPendingReservations, getBranchSettings, pauseAllUpcomingReservations, rejectAllPausedUpcomingReservations, updateBranchSettings } from '../../utils/firestore';
+import { getPrettyBranchName } from '../lib/typesConst';
 
 export default function BranchSettingsScreen() {
   const router = useRouter();
@@ -91,6 +92,10 @@ export default function BranchSettingsScreen() {
     base.setDate(base.getDate() + days);
     setPauseUntilText(formatDateTimeLocal(base));
   };
+
+  const handleBack = () => {
+      router.back();
+    };
 
   const fetchSettings = async () => {
     if (branchCode == null) return;
@@ -248,6 +253,9 @@ export default function BranchSettingsScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Application Settings</Text>
+          <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
+            <Undo2 size={22} color="#C89A5B" /> 
+          </TouchableOpacity>
           <Text style={styles.headerSubtitle}>
             Manage {getPrettyBranchName(Number(branchCode)) || String(branchCode)} branch configuration
           </Text>
@@ -577,4 +585,5 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
   },
+  iconButton: { padding: 5 },
 });

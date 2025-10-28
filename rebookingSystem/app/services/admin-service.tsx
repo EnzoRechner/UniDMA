@@ -1,4 +1,9 @@
-import { doc, setDoc, getDocs, collection } from 'firebase/firestore';
+import {
+  doc,
+  setDoc,
+  getDocs,
+  collection,
+} from 'firebase/firestore';
 import { db } from './firebase-initilisation';
 import { BranchDetails } from '../lib/types';
 

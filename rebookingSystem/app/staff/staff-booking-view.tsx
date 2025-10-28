@@ -106,7 +106,7 @@ const BookingView = () => {
                 const userData = await fetchUserData(staffId);
                 if (!userData) throw new Error('Could not find user profile.');
                 userData.userId = staffId;
-            } catch {
+            } catch (error) {
                  Alert.alert('Error', 'Failed to load user data. Logging out.');
                  router.replace('../login-related/login-page');
             }
