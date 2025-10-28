@@ -1,5 +1,5 @@
 // admin-branchs-page.tsx
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,8 +11,7 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  Switch,
-  
+    
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { collection, getDocs, updateDoc, doc, onSnapshot, where, query } from "firebase/firestore";
@@ -21,9 +20,6 @@ import { BlurView } from "expo-blur";
 import { addBranch } from "../services/admin-service";
 import {UserProfile} from "../lib/types";
 import { fetchUserData} from '../services/customer-service';
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
-import { BranchId,RESTAURANT } from '../lib/typesConst';
 //import * as Location from 'expo-location';
 // --- Firestore Type ---
 
@@ -51,7 +47,6 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [userBranch, setUserBranch] = useState<BranchId | null>(null);
   // Branch form fields
   const [branchCoord, setBranchCoord] = useState<GeolocationCoordinates | null>(null);
   const [branchAddress, setBranchAddress] = useState("");
@@ -59,8 +54,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const [branchName, setBranchName] = useState("");
   const [branchOpen, setBranchOpen] = useState(false);
   const [branchRestaurant, setBranchRestaurant] = useState(0);
-  const [location, setLocation] = useState(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   // ---------------------------
   // Updated handleAddBranch
   // ---------------------------

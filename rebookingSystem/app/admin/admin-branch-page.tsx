@@ -1,29 +1,20 @@
 // branch-local-test.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Alert, Dimensions, StyleSheet, Text, View } from "react-native";
+import { default as React, default as React, useEffect, useState } from 'react';
+import { Alert, StyleSheet, Text, View, } from "react-native";
 import { UserProfile } from '../lib/types';
-import { fetchUserData } from '../services/customer-service';
-import BranchWidget from "./admin-branches-widget";
-
-
-
-const { width: windowWidth } = Dimensions.get('window');
-const WIDGET_WIDTH = windowWidth * 0.9;
-const WIDGET_SPACING = 20;
-const SNAP_INTERVAL = WIDGET_WIDTH + WIDGET_SPACING;
-
+import BranchWidget from "./admin-branches-page";
 
 const BranchListScreen = () =>{
 
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  //const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
+      //setLoading(true);
       try {
         const userId = await AsyncStorage.getItem('userId');
         if (!userId) {
