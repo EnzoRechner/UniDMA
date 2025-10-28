@@ -58,10 +58,7 @@ const BranchListScreen = () =>{
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Branch Locations</Text>
-      <View >
-        <Text style={styles.subtitle}>Good evening, {user.nagName} UserRole: {user.role} </Text>  
-        {/* <Text style={styles.subtitle}>Branch ID: {user.branch} </Text> */}
-        </View>
+      
 
       {/* ✅ Render the Firestore widget */}
       <BranchWidget />
@@ -72,10 +69,8 @@ const BranchListScreen = () =>{
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "rgba(20,20,20,1)",
-  },
+  container: { flex: 1, backgroundColor: '#000000', paddingTop: 0},
+    background: { position: 'absolute', left: 0, right: 0, top: 0, height: '0%' },
   header: {
     fontSize: 36,
     fontWeight: "bold",
