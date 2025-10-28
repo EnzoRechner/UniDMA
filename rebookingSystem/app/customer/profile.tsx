@@ -1,33 +1,33 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  TextInput,
-  Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  User, 
-  Calendar, 
-  Heart, 
-  Bell, 
-  ChevronRight,
-  Edit3,
-  LogOut,
-  PersonStandingIcon,
-} from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../services/firebase-initilisation';
+import {
+  Bell,
+  Calendar,
+  ChevronRight,
+  Edit3,
+  Heart,
+  LogOut,
+  PersonStandingIcon,
+  User,
+} from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchUserData } from '../services/customer-service';
+import { db } from '../services/firebase-initilisation';
 //import NotificationSettingsModal from '../services/notification-settings';
 import { UserProfile } from '../lib/types';
 
@@ -201,7 +201,6 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text style={styles.title}>Profile</Text>
@@ -226,7 +225,6 @@ export default function ProfileScreen() {
           <Text style={styles.subtitle}>Member Profile</Text>
         </View>
 
-        {/* Profile Card */}
         <BlurView intensity={25} tint="dark" style={styles.profileCard}>
           <View style={styles.profileContent}>
             <View style={styles.profileInfo}>
@@ -259,7 +257,6 @@ export default function ProfileScreen() {
           </View>
         </BlurView>
 
-        {/* Stats */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Activity</Text>
           <View style={styles.statsContainer}>
@@ -267,10 +264,8 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Menu Sections */}
         {menuSections.map(renderMenuSection)}
 
-        {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <BlurView intensity={25} tint="dark" style={styles.logoutButtonBlur}>
             <LogOut size={20} color="#EF4444" />
@@ -281,11 +276,6 @@ export default function ProfileScreen() {
         <View style={styles.bottomSpacer} />
       </ScrollView>
       )}
-
-      {/* <NotificationSettingsModal
-        visible={notificationModalVisible}
-        onClose={() => setNotificationModalVisible(false)}
-      /> */}
     </SafeAreaView>
   );
 }
@@ -641,4 +631,3 @@ const styles = StyleSheet.create({
     height: 20,
   },
 });
-

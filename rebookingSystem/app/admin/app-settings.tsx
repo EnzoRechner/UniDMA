@@ -252,13 +252,15 @@ export default function BranchSettingsScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Application Settings</Text>
+          <View>
+            <Text style={styles.headerTitle}>Application Settings</Text>
+            <Text style={styles.headerSubtitle}>
+              Manage {getPrettyBranchName(Number(branchCode)) || String(branchCode)} branch configuration
+            </Text>
+          </View>
           <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
             <Undo2 size={22} color="#C89A5B" /> 
           </TouchableOpacity>
-          <Text style={styles.headerSubtitle}>
-            Manage {getPrettyBranchName(Number(branchCode)) || String(branchCode)} branch configuration
-          </Text>
         </View>
 
         <View style={styles.settingsSection}>
@@ -395,6 +397,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 28,

@@ -1,16 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Calendar, UserPlus, UserMinus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
-import { db } from '../services/firebase-initilisation';
-import { getUserProfile } from '../services/auth-service';
+import { Calendar, Mail, Undo2, User, UserMinus, UserPlus } from 'lucide-react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserProfile } from '../lib/types';
 import { getPrettyBranchName } from '../lib/typesConst';
+import { getUserProfile } from '../services/auth-service';
+import { db } from '../services/firebase-initilisation';
 
 export default function StaffManagementScreen() {
   const router = useRouter();
@@ -79,6 +79,10 @@ export default function StaffManagementScreen() {
   // Format dates as dd-mm-yyyy
   const two = (n: number) => String(n).padStart(2, '0');
   const formatDateDMY = (d: Date) => `${two(d.getDate())}-${two(d.getMonth() + 1)}-${d.getFullYear()}`;
+
+  const handleBack = () => {
+    router.back();
+  };
 
   const handleRemoveStaff = (userId: string) => {
     Alert.alert('Remove Staff', 'This will remove staff privileges for this user. Continue?', [
@@ -154,8 +158,13 @@ export default function StaffManagementScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Staff Management</Text>
-          <Text style={styles.headerSubtitle}>Manage {prettyBranch || String(branchCode)} branch staff</Text>
+          <View>
+            <Text style={styles.headerTitle}>Staff Management</Text>
+            <Text style={styles.headerSubtitle}>Manage {prettyBranch || String(branchCode)} branch staff</Text>
+          </View>
+          <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
+            <Undo2 size={22} color="#C89A5B" /> 
+          </TouchableOpacity>
         </View>
         {staffList.map((staff) => (
           <View key={staff.userId} style={styles.profileCard}>
@@ -241,9 +250,17 @@ const styles = StyleSheet.create({
   actionButtonGradient: { paddingVertical: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 16 },
   actionButtonText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white' },
 
-  header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20 },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   headerTitle: { fontSize: 28, fontFamily: 'PlayfairDisplay-Bold', color: '#C89A5B', marginBottom: 4 },
   headerSubtitle: { fontSize: 14, fontFamily: 'Inter-Regular', color: 'rgba(255, 255, 255, 0.8)' },
+  iconButton: { padding: 5 },
 
   profileCard: { marginHorizontal: 20, marginBottom: 24, borderRadius: 20, overflow: 'hidden', backgroundColor: 'rgba(0, 0, 0, 0.2)', borderWidth: 1, borderColor: 'rgba(200, 154, 91, 0.4)' },
   profileCardBlur: { padding: 24 },

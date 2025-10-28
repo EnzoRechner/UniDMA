@@ -1,8 +1,9 @@
 // branch-local-test.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { Undo2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { UserProfile } from '../lib/types';
 import { fetchUserData } from '../services/customer-service';
 import BranchWidget from "./admin-branches-widget";
@@ -35,12 +36,16 @@ const BranchListScreen = () =>{
     };
     
     loadData();
-  }, []);
+  }, [router]);
+
+  const handleBack = () => {
+    router.back();
+  };
 
   if (!user) {
     return (
       <View style={styles.container}>
-        <Text style={styles.header}>Loading...</Text>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
@@ -48,7 +53,12 @@ const BranchListScreen = () =>{
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Branch Locations</Text>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Branch Locations</Text>
+        <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
+          <Undo2 size={22} color="#C89A5B" />
+        </TouchableOpacity>
+      </View>
 
       <BranchWidget />
 
@@ -63,12 +73,26 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(20,20,20,1)",
   },
   header: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#fff",
-    marginTop: 40,
-    marginBottom: 16,
-    textAlign: "center",
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontFamily: 'PlayfairDisplay-Bold',
+    color: '#C89A5B',
+  },
+  iconButton: {
+    padding: 5,
+  },
+  loadingText: {
+    fontSize: 18,
+    color: "#ccc",
+    textAlign: 'center',
+    marginTop: 60,
   },
   subtitle: {
     fontSize: 18,
