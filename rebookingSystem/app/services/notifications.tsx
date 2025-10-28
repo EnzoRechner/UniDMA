@@ -8,10 +8,6 @@ import {
   addDoc,
   doc,
   getDoc,
-  getDocs,
-  query,
-  where,
-  updateDoc,
   Timestamp,
   setDoc,
 } from 'firebase/firestore';
@@ -102,26 +98,34 @@ export class NotificationService {
     meta?: { deviceName?: string; appVersion?: string }
   ): Promise<void> {
     // Store in Supabase for server-side sending
+    // Only include columns that exist in schema to avoid failures
     const { error } = await supabase
       .from('device_tokens')
-      .upsert({
-        user_id: userId,
-        expo_push_token: expoPushToken,
-        is_active: true,
-        platform,
-        updated_at: new Date().toISOString(),
-        ...(meta || {}),
-      }, { onConflict: 'user_id,expo_push_token' });
+      .upsert(
+        {
+          user_id: userId,
+          expo_push_token: expoPushToken,
+          is_active: true,
+          platform,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,expo_push_token' }
+      );
     if (error) {
       console.error('Failed to save Expo push token to Supabase', error);
     }
   }
 
   private async deactivateUserTokens(userId: string): Promise<void> {
-    const tokensRef = collection(db, 'deviceTokens');
-    const qs = await getDocs(query(tokensRef, where('userId', '==', userId), where('isActive', '==', true)));
-    const updates = qs.docs.map((d) => updateDoc(d.ref, { isActive: false, updatedAt: Timestamp.now() }));
-    await Promise.all(updates);
+    // Deactivate in Supabase (source of truth for push tokens)
+    const { error } = await supabase
+      .from('device_tokens')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('is_active', true);
+    if (error) {
+      console.error('Failed to deactivate tokens in Supabase', error);
+    }
   }
 
   private async getNotificationPreferences(userId: string): Promise<any> {
@@ -235,12 +239,6 @@ export class NotificationService {
     }
   ): Promise<void> {
     try {
-      const prefs = await this.getNotificationPreferences(userId);
-      if (!prefs || !prefs.pushNotificationsEnabled || !prefs.bookingConfirmedEnabled) {
-        console.log('User has disabled booking confirmation notifications');
-        return;
-      }
-
       const { data: result, error } = await supabase.functions.invoke('send-notification', {
         body: {
           target: 'user',
@@ -275,12 +273,6 @@ export class NotificationService {
     rejectionReason: string
   ): Promise<void> {
     try {
-      const prefs = await this.getNotificationPreferences(userId);
-      if (!prefs || !prefs.pushNotificationsEnabled || !prefs.bookingRejectedEnabled) {
-        console.log('User has disabled booking rejection notifications');
-        return;
-      }
-
       const { data: result, error } = await supabase.functions.invoke('send-notification', {
         body: {
           target: 'user',
@@ -300,6 +292,41 @@ export class NotificationService {
       console.log('Booking rejection sent:', result);
     } catch (error) {
       console.error('Error sending booking rejection notification:', error);
+    }
+  }
+
+  async sendBookingCancellationNotification(
+    userId: string,
+    bookingId: string,
+    bookingDetails: {
+      customerName: string;
+      date: string;
+      time: string;
+      guests: number;
+      branch: string;
+    },
+    cancellationReason: string
+  ): Promise<void> {
+    try {
+      const { data: result, error } = await supabase.functions.invoke('send-notification', {
+        body: {
+          target: 'user',
+          userId,
+          notificationType: 'booking_cancelled',
+          title: 'Booking Cancelled',
+          body: `Your reservation for ${bookingDetails.branch} on ${bookingDetails.date} at ${bookingDetails.time} has been cancelled. Reason: ${cancellationReason}`,
+          data: {
+            bookingId,
+            type: 'booking_cancelled',
+            cancellationReason,
+            ...bookingDetails,
+          },
+        },
+      });
+      if (error) throw error;
+      console.log('Booking cancellation sent:', result);
+    } catch (error) {
+      console.error('Error sending booking cancellation notification:', error);
     }
   }
 

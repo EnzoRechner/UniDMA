@@ -80,15 +80,25 @@ serve(async (req) => {
     if (target === "user") {
       if (!userId) return new Response(JSON.stringify({ error: "userId required for target=user" }), { status: 400 });
 
-      // Check preferences
+      // Check preferences (push + type-specific)
       const { data: prefs } = await supabase
         .from("notification_preferences")
-        .select("push_enabled")
+        .select("push_enabled, booking_confirmed_enabled, booking_rejected_enabled")
         .eq("user_id", userId)
         .maybeSingle();
 
-      if (prefs && prefs.push_enabled === false) {
-        return new Response(JSON.stringify({ message: "User has push disabled", sent: 0 }), { status: 200 });
+      if (prefs) {
+        // Global push disabled
+        if (prefs.push_enabled === false) {
+          return new Response(JSON.stringify({ message: "User has push disabled", sent: 0 }), { status: 200 });
+        }
+        // Type-specific toggles
+        if (
+          (notificationType === "booking_confirmed" && prefs.booking_confirmed_enabled === false) ||
+          ((notificationType === "booking_rejected" || notificationType === "booking_cancelled") && prefs.booking_rejected_enabled === false)
+        ) {
+          return new Response(JSON.stringify({ message: "User has disabled this notification type", sent: 0 }), { status: 200 });
+        }
       }
 
       const { data: trows } = await supabase
@@ -99,7 +109,7 @@ serve(async (req) => {
 
       tokens = (trows || []).map((r: any) => r.expo_push_token).filter(Boolean);
       userIds = [userId];
-    } else if (target === "staff") {
+  } else if (target === "staff") {
       // Find staff accounts (role 1/2/3) and optional branch filter
       let q = supabase
         .from("accounts")
