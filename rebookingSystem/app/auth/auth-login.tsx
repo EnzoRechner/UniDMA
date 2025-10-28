@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -18,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { signIn } from '../services/auth-service';
+import { modalService } from '../services/modal-Service';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -28,15 +28,15 @@ const LoginScreen = () => {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      modalService.showError('Login Error', 'Please fill in all fields');
       return;
     }
     if (!email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      modalService.showError('Login Error', 'Please enter a valid email address');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      modalService.showError('Login Error', 'Password must be at least 6 characters');
       return;
     }
 
@@ -46,10 +46,7 @@ const LoginScreen = () => {
       const profile = await signIn(email.trim(), password);
 
       if (!profile) {
-        Alert.alert(
-          'Profile Missing',
-          'We could not find your user profile. Please complete setup or contact support.'
-        );
+        modalService.showError('Profile Missing', 'We could not find your user profile. Please complete setup or contact support.');
         // Keep user in auth flow
         router.replace('../auth');
         return;
@@ -73,7 +70,7 @@ const LoginScreen = () => {
       // Regular customer 
       router.replace('../customer/customer-page');
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'An unknown error occurred.');
+      modalService.showError('Login Failed', 'Your email/password is incorrect.');
     } finally {
       setLoading(false);
     }

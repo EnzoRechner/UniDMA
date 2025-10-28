@@ -3,10 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Undo2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { UserProfile } from '../lib/types';
 import { fetchUserData } from '../services/customer-service';
 import BranchWidget from "./admin-branches-widget";
+import { modalService } from '../services/modal-Service';
 
 const BranchListScreen = () =>{
 
@@ -29,7 +30,7 @@ const BranchListScreen = () =>{
         setUser(userData);
         
       } catch (error: any) {
-        Alert.alert('Error', error.message);
+        modalService.showError('Error', error.message);
         await AsyncStorage.removeItem('userId');
         router.replace('/auth/auth-login');
       }

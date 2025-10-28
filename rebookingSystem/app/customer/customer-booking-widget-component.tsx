@@ -3,12 +3,13 @@ import * as Haptics from 'expo-haptics';
 import { Timestamp, collection, doc, setDoc } from 'firebase/firestore';
 import { Building, Calendar, Clock, Edit, MessageSquare, Tag, Trash2, Users } from 'lucide-react-native';
 import { useEffect, useMemo, useState, type FC } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ReservationDetails, UserProfile } from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
 import { cancelReservation } from '../services/customer-service';
 import { db } from '../services/firebase-initilisation';
 import CustomWheelPicker from './customer-wheel';
+import { modalService } from '../services/modal-Service';
 
 const branchMap: { [key in BranchId]: string } = {
   [BRANCHES.PAARL]: 'Paarl',
@@ -111,7 +112,7 @@ const BookingWidgetComponent: FC<{
 
   const handleCreateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (!userProfile?.userId) return Alert.alert('Error', 'Could not find User ID.');
+    if (!userProfile?.userId) return modalService.showError('Error', 'Could not find User ID.');
     setLoading(true);
     try {
       const newDocRef = doc(collection(db, 'nagbookings'));
@@ -120,14 +121,14 @@ const BookingWidgetComponent: FC<{
       await setDoc(newDocRef, newBookingData);
       onConfirm(newId);
     } catch (error: any) {
-      Alert.alert('Booking Failed', error.message || 'An error occurred.');
+      modalService.showError('Booking Failed', 'There was a problem creating your booking. Please try again.');
     } finally { setLoading(false); }
   };
 
   const handleUpdateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (!booking?.id) {
-        Alert.alert('Error', 'Cannot update a booking without an ID.');
+        modalService.showError('Error', 'Cannot update a booking without an ID.');
         return;
     }
     const bookingIdToUpdate = booking.id;
@@ -144,7 +145,7 @@ const BookingWidgetComponent: FC<{
         setShowOptions(false);
         onConfirm(newId);
     } catch (error: any) {
-        Alert.alert('Update Failed', error.message);
+        modalService.showError('Update Failed', "There was a problem updating your booking. Please try again.");
     } finally {
         setLoading(false);
     }
@@ -161,34 +162,40 @@ const BookingWidgetComponent: FC<{
     setShowOptions(false);
   };
 
+  const cancelBookingLogic = async (bookingIdToDelete: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    setLoading(true);
+
+    try {
+        // Assuming cancelReservation handles the API call to update the status to cancelled/deleted
+        await cancelReservation(bookingIdToDelete);
+        
+        // Optional: Provide success feedback
+        modalService.showSuccess('Success', 'Booking has been successfully deleted.'); 
+
+    } catch (error: any) {
+        // Use the centralized error modal for reporting failure
+        modalService.showError('Error', 'Could not delete the booking.');
+    } finally {
+        setLoading(false);
+        // Hide options menu regardless of success/failure
+        setShowOptions(false); 
+    }
+};
+
   const handleDeleteBooking = async () => {
     if (!booking?.id) {
-        Alert.alert('Error', 'Cannot delete a booking without an ID.');
+        modalService.showError('Error', 'Cannot delete a booking without an ID.');
         return;
     }
     const bookingIdToDelete = booking.id;
-    Alert.alert(
-        'Delete Booking', 'Are you sure you want to cancel this booking?',
-        [
-            { text: 'No', style: 'cancel' },
-            {
-                text: 'Yes, Cancel Booking',
-                style: 'destructive',
-                onPress: async () => {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                    setLoading(true);
-          try {
-            await cancelReservation(bookingIdToDelete);
-            onConfirm();
-          } catch {
-                        Alert.alert('Error', 'Could not cancel the booking.');
-                    } finally {
-                        setLoading(false);
-                        setShowOptions(false);
-                    }
-                },
-            },
-        ]
+
+    modalService.showConfirm(
+        'Delete Booking', 
+        'Are you sure you want to delete this booking? This action cannot be undone.',
+        () => cancelBookingLogic(bookingIdToDelete), 
+        'Yes, Delete Booking', 
+        'No'
     );
   };
 

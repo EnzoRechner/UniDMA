@@ -5,12 +5,13 @@ import { useRouter } from 'expo-router';
 import { collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { Calendar, Mail, Undo2, User, UserMinus, UserPlus } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserProfile } from '../lib/types';
 import { getPrettyBranchName } from '../lib/typesConst';
 import { getUserProfile } from '../services/auth-service';
 import { db } from '../services/firebase-initilisation';
+import { modalService } from '../services/modal-Service';
 
 export default function StaffManagementScreen() {
   const router = useRouter();
@@ -64,7 +65,7 @@ export default function StaffManagementScreen() {
       setStaffList(results);
     } catch (error) {
       console.error('Error fetching staff profiles:', error);
-      Alert.alert('Error', 'Failed to load staff information');
+      modalService.showError('Error', 'Failed to load staff information');
     } finally {
       setLoading(false);
     }
@@ -85,23 +86,25 @@ export default function StaffManagementScreen() {
   };
 
   const handleRemoveStaff = (userId: string) => {
-    Alert.alert('Remove Staff', 'This will remove staff privileges for this user. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
+      // Run if confirmed
+      const removeStaffLogic = async () => {
           try {
-            await updateDoc(doc(db, 'rebooking-accounts', userId), { role: 0 });
-            Alert.alert('Success', 'Staff removed');
-            if (branchCode != null) fetchStaffForBranch(branchCode);
+              await updateDoc(doc(db, 'rebooking-accounts', userId), { role: 0 }); 
+              modalService.showSuccess('Success', `Staff privileges successfully removed for user ID: ${userId}.`);
+              if (branchCode != null) fetchStaffForBranch(branchCode);
+              
           } catch (e) {
-            console.error('Remove staff error:', e);
-            Alert.alert('Error', 'Failed to remove staff');
+              modalService.showError('Error', 'Failed to remove staff privileges.');
           }
-        },
-      },
-    ]);
+      };
+
+      modalService.showConfirm(
+          'Remove Staff', 
+          'This will remove staff privileges for this user. This action cannot be undone. Continue?',
+          removeStaffLogic, // Function to execute if the user confirms
+          'Remove Staff',
+          'Cancel'
+      );
   };
 
   const handleAddStaff = () => {

@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { LogOut, Settings } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState, type FC } from 'react';
 import {
-  ActivityIndicator, Alert,
+  ActivityIndicator,
   Dimensions,
   StyleSheet,
   Text,
@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ReservationDetails, UserProfile } from '../lib/types';
 import { fetchUserData, getReservationsRealtime } from '../services/customer-service';
 import MemoizedBookingItem from './customer-booking-memory';
+import { modalService } from '../services/modal-Service';
 
 const { width: windowWidth } = Dimensions.get('window');
 const WIDGET_WIDTH = windowWidth * 0.9;
@@ -88,8 +89,9 @@ const CustomerPage: FC = () => {
         });
       } catch (error: any) {
         setLoading(false);
-        Alert.alert('Error', error.message || 'An unexpected error occurred.');
+        modalService.showError('Error', error.message || 'An unexpected error occurred.');
         await AsyncStorage.removeItem('userId');
+        await AsyncStorage.removeItem('userRole');
         router.replace('/auth/auth-login');
       }
     };
@@ -103,6 +105,7 @@ const CustomerPage: FC = () => {
   
   const handleLogout = async () => {
       await AsyncStorage.removeItem('userId');
+      await AsyncStorage.removeItem('userRole');
       router.replace('/auth/auth-login');
   }
 
