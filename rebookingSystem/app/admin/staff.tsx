@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { collection, doc, getDocs, query, updateDoc, where, Timestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, query, where, Timestamp, setDoc, deleteDoc } from 'firebase/firestore';
 import { Calendar, Mail, Undo2, User, UserMinus, UserPlus, Lock, Eye, EyeOff } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -165,8 +165,8 @@ export default function StaffManagementScreen() {
       // Run if confirmed
       const removeStaffLogic = async () => {
           try {
-              await updateDoc(doc(db, 'rebooking-accounts', userId), { role: 0 }); 
-              modalService.showSuccess('Success', `Staff privileges successfully removed for user ID: ${userId}.`);
+              await deleteDoc(doc(db, 'rebooking-accounts', userId));
+              modalService.showSuccess('Success', `Staff account deleted: ${userId}.`);
               if (branchCode != null) fetchStaffForBranch(branchCode);
               
       } catch {
@@ -263,6 +263,121 @@ export default function StaffManagementScreen() {
             </LinearGradient>
           </TouchableOpacity>
         </View>
+
+        {/* Add Staff Modal (rendered here so it works in empty state too) */}
+        <Modal
+          visible={isAddVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setIsAddVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+              <View style={styles.modalCenter}>
+                <BlurView intensity={40} tint="dark" style={styles.modalCard}>
+                  <Text style={styles.modalTitle}>Add Staff Member</Text>
+                  <Text style={styles.modalSubtitle}>Create a staff account for {prettyBranch || String(branchCode)}</Text>
+
+                  {/* Nag Name */}
+                  <View style={styles.modalInputContainer}>
+                    <BlurView intensity={80} tint="dark" style={styles.modalInputBlur}>
+                      <User size={18} color="#C89A5B" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.modalInput}
+                        placeholder="Nag Name"
+                        placeholderTextColor="#666666"
+                        value={newNagName}
+                        onChangeText={setNewNagName}
+                        autoCapitalize="words"
+                      />
+                    </BlurView>
+                  </View>
+
+                  {/* Email */}
+                  <View style={styles.modalInputContainer}>
+                    <BlurView intensity={80} tint="dark" style={styles.modalInputBlur}>
+                      <Mail size={18} color="#C89A5B" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.modalInput}
+                        placeholder="Email Address"
+                        placeholderTextColor="#666666"
+                        value={newEmail}
+                        onChangeText={setNewEmail}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                      />
+                    </BlurView>
+                  </View>
+
+                  {/* Password */}
+                  <View style={styles.modalInputContainer}>
+                    <BlurView intensity={80} tint="dark" style={styles.modalInputBlur}>
+                      <Lock size={18} color="#C89A5B" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.modalInput}
+                        placeholder="Password"
+                        placeholderTextColor="#666666"
+                        value={newPassword}
+                        onChangeText={setNewPassword}
+                        secureTextEntry={!showPassword}
+                        autoCapitalize="none"
+                      />
+                      <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
+                        {showPassword ? <EyeOff size={18} color="#666666" /> : <Eye size={18} color="#666666" />}
+                      </TouchableOpacity>
+                    </BlurView>
+
+                    {/* Strength bar */}
+                    {newPassword.length > 0 && (
+                      <View style={styles.passwordStrengthContainer}>
+                        <View style={styles.passwordStrengthBar}>
+                          <View
+                            style={[
+                              styles.passwordStrengthFill,
+                              {
+                                width: `${(getPasswordStrength(newPassword).level === 'weak' ? 25 :
+                                  getPasswordStrength(newPassword).level === 'medium' ? 50 :
+                                  getPasswordStrength(newPassword).level === 'strong' ? 75 : 100)}%`,
+                                backgroundColor: getPasswordStrength(newPassword).color,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Text style={[styles.passwordStrengthText, { color: getPasswordStrength(newPassword).color }]}>
+                          {getPasswordStrength(newPassword).level.charAt(0).toUpperCase() + getPasswordStrength(newPassword).level.slice(1)}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Requirements */}
+                    <View style={styles.passwordRequirements}>
+                      <Text style={styles.requirementsTitle}>Password must contain:</Text>
+                      <Text style={[styles.requirementItem, newPassword.length >= 6 && styles.requirementMet]}>• At least 6 characters</Text>
+                      <Text style={[styles.requirementItem, /[A-Z]/.test(newPassword) && styles.requirementMet]}>• One uppercase letter</Text>
+                      <Text style={[styles.requirementItem, /[a-z]/.test(newPassword) && styles.requirementMet]}>• One lowercase letter</Text>
+                      <Text style={[styles.requirementItem, /\d/.test(newPassword) && styles.requirementMet]}>• One number</Text>
+                      <Text style={[styles.requirementItem, /[!@#$%^&*(),.?":{}|<>]/.test(newPassword) && styles.requirementMet]}>• One special character</Text>
+                    </View>
+                  </View>
+
+                  {/* Actions */}
+                  <View style={styles.modalActions}>
+                    <TouchableOpacity style={styles.modalButton} onPress={() => setIsAddVisible(false)} disabled={creating}>
+                      <LinearGradient colors={["#6B7280", "#4B5563"]} style={styles.modalButtonGradient}>
+                        <Text style={styles.modalButtonText}>Cancel</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.modalButton} onPress={handleCreateStaff} disabled={creating}>
+                      <LinearGradient colors={["#10B981", "#059669"]} style={styles.modalButtonGradient}>
+                        {creating ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.modalButtonText}>Create</Text>}
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </BlurView>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </Modal>
       </SafeAreaView>
     );
   }

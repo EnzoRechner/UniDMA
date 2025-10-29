@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Dark semi-transparent overlay
+    backgroundColor: 'rgba(0, 0, 0, 0.9)', // Dark semi-transparent overlay
   },
   errorModalContent: {
     width: '85%', // Slightly wider than the 80% from the previous example for better message display

@@ -31,7 +31,7 @@ export default function AuthenticatedLayout() {
             headerShown: false,
             animation: Platform.OS === 'android' ? 'fade' : 'fade',
             // Transparent so the shared gradient shows through
-            contentStyle: { backgroundColor: 'transparent' },
+            contentStyle: {backgroundColor: 'transparent'},
           }}
         />
       </View>
