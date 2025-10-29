@@ -119,7 +119,7 @@ const SignupScreen = () => {
                   <User size={20} color="#C89A5B" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Nag Name"
+                    placeholder="Nag Name (used for your reservation)"
                     placeholderTextColor="#666666"
                     value={nagName}
                     onChangeText={setNagName}
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     color: '#10B981',
   },
   inputIcon: { marginLeft: 16 },
-  input: { flex: 1, height: 56, paddingHorizontal: 16, fontSize: 16, fontFamily: 'Inter-Regular', color: 'white' },
+  input: { flex: 1, height: 56, paddingHorizontal: 16, fontSize: 13, fontFamily: 'Inter-Regular', color: 'white' },
   eyeIcon: { paddingHorizontal: 16 },
   pickerLabel: { color: '#C89A5B', fontSize: 14, fontFamily: 'Inter-SemiBold', marginBottom: 8, paddingLeft: 4 },
   picker: { flex: 1, color: 'white', height: 56 },
