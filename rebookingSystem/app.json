@@ -12,7 +12,7 @@
       "supportsTablet": true,
       "googleServicesFile": "./GoogleService-Info.plist"
     },
-  "android": {
+    "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -22,7 +22,11 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.rebookingSystem",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -42,16 +46,14 @@
             "backgroundColor": "#000000"
           }
         }
-      
       ],
       [
-      "expo-location",
+        "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
       ]
     ],
-    
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
@@ -59,8 +61,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5927a381-8a6b-48b2-ba0c-040740c9bc15"
+        "projectId": "299eca6d-a10c-4480-9207-9daf3017a86b"
       }
-    }
+    },
+    "owner": "eduv477"
   }
 }
