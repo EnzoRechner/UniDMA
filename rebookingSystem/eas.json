@@ -9,19 +9,22 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "workingDirectory": "rebookingSystem"
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "workingDirectory": "rebookingSystem"
     },
     "production": {
       "distribution": "store",
       "android": {
         "buildType": "app-bundle"
-      }
+      },
+      "workingDirectory": "rebookingSystem"
     }
   }
 }
