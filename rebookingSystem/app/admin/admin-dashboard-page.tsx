@@ -3,12 +3,31 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { LogOut } from 'lucide-react-native';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getUserProfile } from '../services/auth-service';
+import { getPrettyBranchName } from '../lib/typesConst';
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const [branchName, setBranchName] = useState<string>('');
+
+  useEffect(() => {
+    const loadBranch = async () => {
+      try {
+        const userId = await AsyncStorage.getItem('userId');
+        if (!userId) return;
+        const profile = await getUserProfile(userId);
+        if (profile) {
+          const pretty = getPrettyBranchName(Number(profile.branch));
+          setBranchName(pretty || String(profile.branch));
+        }
+      } catch {}
+    };
+    loadBranch();
+  }, []);
+
   const handleLogout = async () => {
     await AsyncStorage.removeItem('userId');
     router.replace('../auth/auth-login');
@@ -18,14 +37,14 @@ export default function AdminDashboard() {
       <LinearGradient colors={['#0D0D0D', '#1A1A1A', '#0D0D0D']} style={styles.background} />
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View>
-            <Text style={styles.pageTitle}>Admin Dashboard</Text>
-            <View style={styles.titleDivider} />
-          </View>
-
-          <TouchableOpacity style={styles.iconButton} onPress={handleLogout}>
+          <TouchableOpacity style={styles.headerAction} onPress={handleLogout}>
             <LogOut size={22} color="#C89A5B" />
           </TouchableOpacity>
+          <View style={styles.titleWrap}>
+            <Text style={styles.pageTitle}>Admin Dashboard</Text>
+            <Text style={styles.pageSubtitle}>{branchName ? `${branchName} Branch` : ' '}</Text>
+            <View style={styles.titleDivider} />
+          </View>
         </View>
 
         <View style={styles.cardsGrid}>
@@ -82,10 +101,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 24,
-    flexDirection: 'row', 
-    justifyContent: 'space-between',
-    alignItems: 'center', 
+    alignItems: 'center',
+    position: 'relative',
   },
+  headerAction: { position: 'absolute', right: 20, top: 60, padding: 5 },
+  titleWrap: { alignItems: 'center', width: '100%' },
   pageTitle: {
     fontSize: 32,
     fontFamily: 'PlayfairDisplay-Bold',
@@ -94,6 +114,13 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(200, 154, 91, 0.4)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
+  },
+  pageSubtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: 'rgba(255, 255, 255, 0.8)',
+    letterSpacing: 0.3,
   },
   titleDivider: {
     height: 1,
@@ -115,8 +142,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(200, 154, 91, 0.5)',
     shadowColor: '#C89A5B',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
+    elevation: 4,
   },
   halfCard: { flex: 1, minHeight: 140 },
   cardPressed: {
@@ -125,7 +153,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     transform: [{ scale: 0.98 }],
   },
-  cardBlur: { flex: 1, padding: 20, justifyContent: 'flex-start', alignItems: 'flex-start' },
-  cardLabel: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white', lineHeight: 22, letterSpacing: 0.3 },
+  cardBlur: { flex: 1, padding: 20, justifyContent: 'center', alignItems: 'center' },
+  cardLabel: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white', lineHeight: 22, letterSpacing: 0.3, textAlign: 'center' },
   iconButton: { padding: 5 },
 });
