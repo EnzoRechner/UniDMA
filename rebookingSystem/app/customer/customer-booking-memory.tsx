@@ -1,5 +1,5 @@
-import { memo, type FC } from 'react';
-import { Dimensions, View } from 'react-native';
+import { memo, type FC, useEffect, useRef } from 'react';
+import { Animated, Dimensions, Easing, Pressable } from 'react-native';
 import { ReservationDetails, UserProfile } from '../lib/types';
 import BookingWidgetComponent from './customer-booking-widget-component';
 
@@ -14,6 +14,8 @@ interface Props {
   userProfile: UserProfile;
   onConfirm: (newBookingId?: string) => void;
   realBookingsCount: number; // --- ADDED PROP ---
+  isEditMode?: boolean;
+  onLongPress?: () => void;
 }
 
 const MemoizedBookingItem: FC<Props> = ({ 
@@ -22,18 +24,59 @@ const MemoizedBookingItem: FC<Props> = ({
   activeIndex, 
   userProfile, 
   onConfirm, 
-  realBookingsCount // --- ADDED PROP ---
+  realBookingsCount, // --- ADDED PROP ---
+  isEditMode = false,
+  onLongPress,
 }) => {
+  const rotate = useRef(new Animated.Value(0)).current;
+  const jiggleY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let animation: Animated.CompositeAnimation | null = null;
+    if (isEditMode) {
+      animation = Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(rotate, { toValue: 0.7, duration: 220, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+            Animated.timing(jiggleY, { toValue: -6, duration: 220, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          ]),
+          Animated.parallel([
+            Animated.timing(rotate, { toValue: -0.7, duration: 240, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+            Animated.timing(jiggleY, { toValue: 6, duration: 240, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          ]),
+          Animated.parallel([
+            Animated.timing(rotate, { toValue: 0, duration: 200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+            Animated.timing(jiggleY, { toValue: 0, duration: 200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          ]),
+        ])
+      );
+      animation.start();
+    } else {
+      rotate.stopAnimation();
+      rotate.setValue(0);
+      jiggleY.stopAnimation();
+      jiggleY.setValue(0);
+    }
+    return () => {
+      if (animation) animation.stop();
+    };
+  }, [isEditMode, rotate, jiggleY]);
+
+  const rotation = rotate.interpolate({ inputRange: [-1, 0, 1], outputRange: ['-1.2deg', '0deg', '1.2deg'] });
+
   return (
-    <View style={{ width: WIDGET_WIDTH, marginHorizontal: WIDGET_SPACING / 2 }}>
-      <BookingWidgetComponent
-        booking={item.id ? (item as ReservationDetails) : undefined}
-        userProfile={userProfile}
-        isActive={index === activeIndex}
-        onConfirm={onConfirm}
-        realBookingsCount={realBookingsCount} // --- PASS PROP ---
-      />
-    </View>
+  <Animated.View style={{ width: WIDGET_WIDTH, marginHorizontal: WIDGET_SPACING / 2, transform: [ { translateY: isEditMode ? jiggleY : 0 }, { rotate: isEditMode ? rotation as any : '0deg' } ] }}>
+      <Pressable onLongPress={onLongPress} delayLongPress={250}>
+        <BookingWidgetComponent
+          booking={item.id ? (item as ReservationDetails) : undefined}
+          userProfile={userProfile}
+          isActive={index === activeIndex}
+          onConfirm={onConfirm}
+          realBookingsCount={realBookingsCount} // --- PASS PROP ---
+          isEditMode={isEditMode}
+        />
+      </Pressable>
+    </Animated.View>
   );
 };
 

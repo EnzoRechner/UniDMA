@@ -50,8 +50,9 @@ const CustomerPage: FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
   const [pendingScrollToBookingId, setPendingScrollToBookingId] = useState<string | null>(null);
-  const scrollAnimationInProgress = useRef(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [showDeleteTip, setShowDeleteTip] = useState(false);
 
   const setupWidgets = useCallback((realBookings: ReservationDetails[], scrollToId?: string) => {
     const newBookingPlaceholder = { id: null };
@@ -59,13 +60,16 @@ const CustomerPage: FC = () => {
     const sortedBookings = realBookings.sort((a, b) => 
       a.dateOfArrival.toMillis() - b.dateOfArrival.toMillis()
     );
-    // New booking placeholder at the end
-    setWidgets([...sortedBookings, newBookingPlaceholder]);
+    // Only include the new booking placeholder if under max of 5
+    const withOptionalPlaceholder = sortedBookings.length < 5
+      ? [...sortedBookings, newBookingPlaceholder]
+      : [...sortedBookings];
+    setWidgets(withOptionalPlaceholder);
     
     // If we need to scroll to a specific booking, do it after widgets update
     if (scrollToId) {
       console.log('Attempting to scroll to booking:', scrollToId);
-      const index = sortedBookings.findIndex(b => b.id === scrollToId);
+  const index = sortedBookings.findIndex(b => b.id === scrollToId);
       console.log('Found at index:', index);
       console.log('Total bookings:', sortedBookings.length);
       
@@ -87,21 +91,18 @@ const CustomerPage: FC = () => {
   }, []);
 
   const scrollToNewBooking = useCallback(() => {
-    if (flatListRef.current && widgets.length > 0) {
+    if (!flatListRef.current || widgets.length === 0) return;
+    // Only scroll if the last item is the 'new booking' placeholder
+    const lastItem = widgets[widgets.length - 1];
+    if ((lastItem as any).id === null) {
       const newBookingIndex = widgets.length - 1;
-      
-      // --- MODIFICATION: Use scrollToOffset for reliability ---
       const offset = newBookingIndex * SNAP_INTERVAL;
-
       setTimeout(() => {
-        flatListRef.current?.scrollToOffset({ 
-          offset, 
-          animated: true
-        });
+        flatListRef.current?.scrollToOffset({ offset, animated: true });
         setActiveIndex(newBookingIndex);
       }, 100);
     }
-  }, [widgets.length]);
+  }, [widgets]);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -152,6 +153,20 @@ const CustomerPage: FC = () => {
     };
   }, [router, setupWidgets, pendingScrollToBookingId]);
 
+  // Show the delete tip only once per install (first time user hits 5 bookings)
+  useEffect(() => {
+    const syncTip = async () => {
+      const count = widgets.filter(w => (w as any).id !== null).length;
+      if (count >= 5) {
+        const shownOnce = await AsyncStorage.getItem('deleteTipShownOnce');
+        setShowDeleteTip(shownOnce !== 'true');
+      } else {
+        setShowDeleteTip(false);
+      }
+    };
+    syncTip();
+  }, [widgets]);
+
   // Scroll to "Make New Booking" only on initial load
   const hasScrolledToNew = useRef(false);
   
@@ -177,23 +192,25 @@ const CustomerPage: FC = () => {
   }, []);
 
   const renderWidgetItem = useCallback(({ item, index }: { item: ReservationDetails | { id: null }, index: number }) => {
-    // --- MODIFICATION: Calculate real bookings count ---
-    // The 'widgets' array includes the 'new booking' placeholder, so subtract 1
-    const realBookingsCount = widgets.length > 0 ? widgets.length - 1 : 0;
+    // Calculate count of real bookings only
+    const realBookingsCount = widgets.filter(w => (w as any).id !== null).length;
 
     return (
       <MemoizedBookingItem
-          item={item} 
-          index={index} 
-          activeIndex={activeIndex} 
+          item={item}
+          index={index}
+          activeIndex={activeIndex}
           userProfile={user!}
           onConfirm={handleBookingConfirm}
-          // --- MODIFICATION: Pass the count down ---
           realBookingsCount={realBookingsCount}
+          isEditMode={isEditMode}
+          onLongPress={() => setIsEditMode(true)}
       />
     );
-  // --- MODIFICATION: Add widgets.length to dependency array ---
-  }, [activeIndex, user, handleBookingConfirm, widgets.length]);
+  }, [activeIndex, user, handleBookingConfirm, widgets, isEditMode]);
+
+  const realBookingsCount = useCallback(() => widgets.filter(w => (w as any).id !== null).length, [widgets]);
+
 
   const getItemLayout = useCallback((_: any, index: number) => ({
     length: SNAP_INTERVAL,
@@ -243,32 +260,64 @@ const CustomerPage: FC = () => {
                   </TouchableOpacity>
               </View>
             </View>
-            
+            {realBookingsCount() >= 5 && showDeleteTip && (
+              <View style={[styles.tipCard, { marginTop: 8 }] }>
+                <Text style={styles.tipText}>
+                  You’ve reached the maximum of 5 bookings. Long‑press a reservation to enter edit mode, then tap the red X to delete. Tap “Done” to finish.
+                </Text>
+                <TouchableOpacity 
+                  onPress={async () => {
+                    setShowDeleteTip(false);
+                    await AsyncStorage.setItem('deleteTipShownOnce', 'true');
+                  }} 
+                  style={styles.tipClose}
+                >
+                  <Text style={{ color: '#0D0D0D', fontWeight: '800' }}>Got it</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             <Animated.View style={[styles.widgetScrollContainer, { opacity: fadeAnim }]}>
               <FlatList
-                  ref={flatListRef}
-                  data={widgets}
-                  renderItem={renderWidgetItem}
-                  keyExtractor={(item, index) => item.id || `new-booking-${index}`}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.scrollViewContent}
-                  snapToInterval={SNAP_INTERVAL}
-                  decelerationRate="fast"
-                  disableIntervalMomentum={true}
-                  getItemLayout={getItemLayout}
-                  onScrollToIndexFailed={handleScrollToIndexFailed}
-                  onScroll={(e) => {
-                    const newIndex = Math.round(e.nativeEvent.contentOffset.x / SNAP_INTERVAL);
-                    setActiveIndex(newIndex);
-                  }}
-                  scrollEventThrottle={16}
-                  removeClippedSubviews={false}
-                  initialNumToRender={3}
-                  maxToRenderPerBatch={3}
-                  windowSize={5}
+                ref={flatListRef}
+                data={widgets}
+                renderItem={renderWidgetItem}
+                keyExtractor={(item, index) => (item as any).id || `new-booking-${index}`}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.scrollViewContent}
+                snapToInterval={SNAP_INTERVAL}
+                decelerationRate="fast"
+                disableIntervalMomentum={true}
+                getItemLayout={getItemLayout}
+                onScrollToIndexFailed={handleScrollToIndexFailed}
+                onScroll={(e) => {
+                  const newIndex = Math.round(e.nativeEvent.contentOffset.x / SNAP_INTERVAL);
+                  setActiveIndex(newIndex);
+                }}
+                scrollEventThrottle={16}
+                removeClippedSubviews={false}
+                initialNumToRender={3}
+                maxToRenderPerBatch={3}
+                windowSize={5}
               />
             </Animated.View>
+
+            {isEditMode && (
+              <View style={{ alignItems: 'center', marginBottom: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setIsEditMode(false)}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 18,
+                    backgroundColor: 'rgba(200, 154, 91, 0.9)'
+                  }}
+                >
+                  <Text style={{ color: '#0D0D0D', fontWeight: '700' }}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            )}
             
             <View style={styles.dotContainer}>
                 {widgets.map((widget, index) => {
@@ -309,11 +358,14 @@ const styles = StyleSheet.create({
     iconButton: { padding: 5 },
     title: { fontSize: 28, fontFamily: 'PlayfairDisplay-Bold', color: '#C89A5B' },
     subtitle: { fontSize: 16, color: 'rgba(255, 255, 255, 0.8)' },
-    widgetScrollContainer: { height: 540 },
+  widgetScrollContainer: { height: 620 },
     scrollViewContent: { paddingHorizontal: (windowWidth - WIDGET_WIDTH) / 2 - (WIDGET_SPACING / 2), alignItems: 'center' },
     dotContainer: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 10, marginBottom: 20 },
     dot: { width: 8, height: 8, borderRadius: 4, marginHorizontal: 4 },
     activeDot: { backgroundColor: '#C89A5B', width: 24 },
+  tipCard: { backgroundColor: 'rgba(200, 154, 91, 0.12)', borderRadius: 12, marginHorizontal: 20, marginBottom: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(200, 154, 91, 0.35)' },
+  tipText: { color: 'rgba(255,255,255,0.9)', fontSize: 13, lineHeight: 18 },
+  tipClose: { alignSelf: 'flex-start', marginTop: 10, backgroundColor: '#C89A5B', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
     card: { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: 16, padding: 20, marginHorizontal: 20, marginBottom: 15, borderWidth: 1, borderColor: 'rgba(200, 154, 91, 0.2)' },
     cardTitle: { fontSize: 18, fontWeight: 'bold', color: 'white', marginBottom: 5 },
     cardSubtitle: { fontSize: 14, color: 'rgba(255, 255, 255, 0.7)' },
