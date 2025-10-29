@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons'; 
+import { Ionicons } from '@react-native-vector-icons/ionicons'; 
 // import LinearGradient from 'react-native-linear-gradient'; 
 
 interface SuccessModalProps {

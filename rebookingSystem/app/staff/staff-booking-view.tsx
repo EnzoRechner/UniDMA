@@ -23,8 +23,14 @@ import { fetchUserData } from '../services/customer-service';
 import { onSnapshotStaffBookings, updateReservationStatus } from '../services/staff-service';
 import { modalService } from '../services/modal-Service';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
+// Enable LayoutAnimation only on the old architecture; it's a no-op (and warns) on Fabric
+const isFabric = (global as any)?.nativeFabricUIManager != null;
+if (
+    Platform.OS === 'android' &&
+    UIManager.setLayoutAnimationEnabledExperimental &&
+    !isFabric
+) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 const SectionHeader: React.FC<{
