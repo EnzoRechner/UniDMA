@@ -32,6 +32,10 @@ import { db } from '../services/firebase-initilisation';
 import { UserProfile } from '../lib/types';
 import { modalService } from '../services/modal-Service';
 
+
+
+
+
 const profileStats = [
   { icon: Calendar, label: 'Bookings', value: '24', color: '#C89A5B' },
   { icon: Heart, label: 'Favorite', value: 'Paarl', color: '#EF4444' },

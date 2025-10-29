@@ -38,7 +38,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
   // Branch form fields
   const [branchCoord, setBranchCoord] = useState<Coordinates | null>(null);
   const [branchAddress, setBranchAddress] = useState("");
-  const [branchCapacity, setBranchCapacity] = useState(0);
+  const [branchCapacity, setBranchCapacity] = useState<number | "">("");
   const [branchName, setBranchName] = useState("");
   const [branchRestaurant, setBranchRestaurant] = useState<RestaurantId>(0 as RestaurantId);
   const [branchOpen, setBranchOpen] = useState(false);
@@ -307,11 +307,19 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
             />
             <TextInput
               style={styles.input}
-              placeholder="Capacity"
+              placeholder="Capacity (cannot add more than 80)"
               placeholderTextColor="#aaa"
               keyboardType="numeric"
+              //limit amount
               value={branchCapacity ? branchCapacity.toString() : ""}
-              onChangeText={(t) => setBranchCapacity(Number(t))}
+              onChangeText={(t) => {
+                const num = Number(t);
+                if (!isNaN(num) && num <= 80) {
+                  setBranchCapacity(num);
+                } else if (t === "") {           
+                  setBranchCapacity("");
+                }
+              }}
             />
             
 

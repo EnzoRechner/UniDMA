@@ -36,6 +36,8 @@ const BranchListScreen = () =>{
       }
     };
     
+      
+
     loadData();
   }, [router]);
 
