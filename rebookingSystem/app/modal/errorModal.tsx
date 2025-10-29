@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: 'rgba(0, 0, 0, 0.3)', // Semi-transparent dark background
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.8)', // Red border for error
+    borderColor: '#ef4444cc', // Red border for error
     padding: 30,
     alignItems: 'center',
     shadowColor: '#EF4444',

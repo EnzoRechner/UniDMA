@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Timestamp, collection, doc, setDoc } from 'firebase/firestore';
-import { Building, Calendar, Clock, Edit, MessageSquare, Tag, Trash2, Users } from 'lucide-react-native';
+import { Building, Calendar, Clock, Edit, MessageSquare, Tag, Trash2, Users, X } from 'lucide-react-native';
 import { useEffect, useMemo, useState, type FC } from 'react';
 import { ActivityIndicator, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ReservationDetails, UserProfile } from '../lib/types';
@@ -45,6 +45,7 @@ interface BookingWidgetComponentProps {
   isActive: boolean;
   onConfirm: (newBookingId?: string) => void;
   realBookingsCount: number; // Prop to receive the count
+  isEditMode?: boolean;
 }
 
 const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({ 
@@ -52,7 +53,8 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   userProfile, 
   isActive, 
   onConfirm,
-  realBookingsCount // --- MODIFICATION: Destructure the prop ---
+  realBookingsCount, // --- MODIFICATION: Destructure the prop ---
+  isEditMode = false,
 }) => {
   const isNewBooking = !booking;
   const [isEditing, setIsEditing] = useState(false);
@@ -141,7 +143,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
       const newBookingData = createBookingData(newId);
       await setDoc(newDocRef, newBookingData);
       onConfirm(newId);
-    } catch (error: any) {
+  } catch {
       modalService.showError('Booking Failed', 'There was a problem creating your booking. Please try again.');
     } finally { setLoading(false); }
   };
@@ -165,7 +167,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
         setIsEditing(false);
         setShowOptions(false);
         onConfirm(newId);
-    } catch (error: any) {
+  } catch {
         modalService.showError('Update Failed', "There was a problem updating your booking. Please try again.");
     } finally {
         setLoading(false);
@@ -194,7 +196,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
         // Optional: Provide success feedback
         modalService.showSuccess('Success', 'Booking has been successfully deleted.'); 
 
-    } catch (error: any) {
+  } catch {
         // Use the centralized error modal for reporting failure
         modalService.showError('Error', 'Could not delete the booking.');
     } finally {
@@ -261,7 +263,16 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   const isFormVisible = isNewBooking || isEditing;
 
   return (
-    <View style={[styles.widgetContainer, { opacity: isActive ? 1 : 0.7, transform: [{ scale: isActive ? 1 : 0.95 }] }]}>
+    <View style={[styles.widgetContainer, { opacity: isActive ? 1 : 0.7, transform: [{ scale: isActive ? 1 : 0.95 }] }]}> 
+      {isEditMode && !!booking && (
+        <TouchableOpacity
+          onPress={handleDeleteBooking}
+          style={styles.deleteBadge}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <X size={16} color="#0D0D0D" />
+        </TouchableOpacity>
+      )}
       <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
         <View style={styles.content}>
           <Text style={styles.title}>
@@ -394,6 +405,20 @@ const styles = StyleSheet.create({
     modalListItemText: { color: 'white', fontSize: 16,},
   infoBanner: { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.4)', borderWidth: 1, borderRadius: 8, padding: 10 },
   infoBannerText: { color: '#FCA5A5', fontSize: 13, fontWeight: '600' },
+  deleteBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(13,13,13,0.4)'
+  },
 });
 
 export default BookingWidgetComponent;
