@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { LogOut, Settings } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState, type FC } from 'react';
@@ -244,7 +243,7 @@ const CustomerPage: FC = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
-        <LinearGradient colors={['#0D0D0D', '#1A1A1A']} style={styles.background} />
+        
         <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
               <View>
@@ -350,7 +349,7 @@ const CustomerPage: FC = () => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#000000', paddingTop: 0},
+    container: { flex: 1, backgroundColor: 'transparent', paddingTop: 0},
     background: { position: 'absolute', left: 0, right: 0, top: 0, height: '100%' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0D0D0D' },
     header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
