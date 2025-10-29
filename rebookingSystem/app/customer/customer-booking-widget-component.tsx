@@ -1,14 +1,12 @@
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { Timestamp, collection, doc, setDoc } from 'firebase/firestore';
-import { Building, Calendar, Clock, Edit, MessageSquare, Tag, Trash2, Users, X } from 'lucide-react-native';
+import { Timestamp } from 'firebase/firestore';
+import { Building, Calendar, Clock, Edit, MessageSquare, Tag, Trash2, Users } from 'lucide-react-native';
 import { useEffect, useMemo, useState, type FC } from 'react';
-import { ActivityIndicator, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ReservationDetails, UserProfile } from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
-import { cancelReservation } from '../services/customer-service';
-import { db } from '../services/firebase-initilisation';
-import { modalService } from '../services/modal-Service';
+import { addReservation, cancelReservation } from '../services/customer-service';
 import CustomWheelPicker from './customer-wheel';
 
 const branchMap: { [key in BranchId]: string } = {
@@ -38,24 +36,12 @@ const generatePickerData = () => {
     return { dates, dateLabels, hours, minutes, periods, seats };
 };
 
-// --- MODIFICATION: Updated props interface ---
-interface BookingWidgetComponentProps {
+const BookingWidgetComponent: FC<{
   booking?: ReservationDetails;
   userProfile: UserProfile;
   isActive: boolean;
-  onConfirm: (newBookingId?: string) => void;
-  realBookingsCount: number; // Prop to receive the count
-  isEditMode?: boolean;
-}
-
-const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({ 
-  booking, 
-  userProfile, 
-  isActive, 
-  onConfirm,
-  realBookingsCount, // --- MODIFICATION: Destructure the prop ---
-  isEditMode = false,
-}) => {
+  onConfirm: () => void;
+}> = ({ booking, userProfile, isActive, onConfirm }) => {
   const isNewBooking = !booking;
   const [isEditing, setIsEditing] = useState(false);
   const [bookingName, setBookingName] = useState('My Booking');
@@ -87,9 +73,10 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
 
   const isRebookable = useMemo(() => {
     if (!booking) return false;
-    if (booking.status === 5) return true;
+    if (booking.status === 5) return true; // paused bookings should be rebookable after unpause
     if (booking.status !== 2) return false;
     const reason = (booking.rejectionReason || '').toLowerCase();
+    // Show CTA specifically for rebook-related rejections (e.g., unpause cleanup)
     return /(rebook|unpause|paused|resume|resumed)/.test(reason);
   }, [booking]);
 
@@ -104,76 +91,53 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   };
   const statusInfo = getStatusStyle(booking?.status);
 
-  const createBookingData = (newId: string) => {
-    return {
-      userId: userProfile.userId,
-      branch: branch,
-      dateOfArrival: Timestamp.fromDate(date),
-      guests: seats,
-      message: message,
-      bookingName: bookingName,
-      seat: "Any",
-      nagName: userProfile.nagName,
-      
-      id: newId,
-      status: 0,
-      createdAt: Timestamp.now(),
-      restaurant: userProfile.restaurant || 0,
-    };
-  };
-
   const handleCreateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    // --- MODIFICATION: Booking limit check ---
-    if (realBookingsCount >= 5) {
-      modalService.showError(
-        'Booking Limit Reached',
-        'Error please delete a booking to making a new booking.'
-      );
-      return; // Stop the function
-    }
-    // --- End of modification ---
-
-    if (!userProfile?.userId) return modalService.showError('Error', 'Could not find User ID.');
+    if (!userProfile?.userId) return Alert.alert('Error', 'Could not find User ID.');
     setLoading(true);
     try {
-      const newDocRef = doc(collection(db, 'nagbookings'));
-      const newId = newDocRef.id;
-      const newBookingData = createBookingData(newId);
-      await setDoc(newDocRef, newBookingData);
-      onConfirm(newId);
-  } catch {
-      modalService.showError('Booking Failed', 'There was a problem creating your booking. Please try again.');
+      const newBookingData = {
+        dateOfArrival: Timestamp.fromDate(date),
+        guests: seats, branch: branch, message: message,
+        userId: userProfile.userId, bookingName: bookingName, seat: "Any",
+        nagName: userProfile.nagName,
+      };
+      await addReservation(newBookingData as any);
+      onConfirm();
+    } catch (error: any) {
+      Alert.alert('Booking Failed', error.message || 'An error occurred.');
     } finally { setLoading(false); }
   };
 
   const handleUpdateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (!booking?.id) {
-        modalService.showError('Error', 'Cannot update a booking without an ID.');
+        Alert.alert('Error', 'Cannot update a booking without an ID.');
         return;
     }
     const bookingIdToUpdate = booking.id;
     setLoading(true);
     try {
         await cancelReservation(bookingIdToUpdate);
-        
-        const newDocRef = doc(collection(db, 'nagbookings'));
-        const newId = newDocRef.id;
-        const newBookingData = createBookingData(newId);
-        await setDoc(newDocRef, newBookingData);
-
+        const newBookingData = {
+            dateOfArrival: Timestamp.fromDate(date),
+            guests: seats, branch: branch, message: message,
+            userId: userProfile.userId, bookingName: bookingName, seat: "Any",
+            restaurant: booking.restaurant,
+            nagName: userProfile.nagName,
+        };
+        await addReservation(newBookingData as any);
         setIsEditing(false);
         setShowOptions(false);
-        onConfirm(newId);
-  } catch {
-        modalService.showError('Update Failed', "There was a problem updating your booking. Please try again.");
+        onConfirm();
+    } catch (error: any) {
+        Alert.alert('Update Failed', error.message);
     } finally {
         setLoading(false);
     }
   };
 
+  // Ensure edit form opens with the original booking details prefilled before rendering
   const startEditingFromBooking = () => {
     if (!booking) return;
     setDate(booking.dateOfArrival.toDate());
@@ -185,40 +149,33 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
     setShowOptions(false);
   };
 
-  const cancelBookingLogic = async (bookingIdToDelete: string) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    setLoading(true);
-
-    try {
-        // Assuming cancelReservation handles the API call to update the status to cancelled/deleted
-        await cancelReservation(bookingIdToDelete);
-        
-        // Optional: Provide success feedback
-        modalService.showSuccess('Success', 'Booking has been successfully deleted.'); 
-
-  } catch {
-        // Use the centralized error modal for reporting failure
-        modalService.showError('Error', 'Could not delete the booking.');
-    } finally {
-        setLoading(false);
-        // Hide options menu regardless of success/failure
-        setShowOptions(false); 
-    }
-};
-
   const handleDeleteBooking = async () => {
     if (!booking?.id) {
-        modalService.showError('Error', 'Cannot delete a booking without an ID.');
+        Alert.alert('Error', 'Cannot delete a booking without an ID.');
         return;
     }
     const bookingIdToDelete = booking.id;
-
-    modalService.showConfirm(
-        'Delete Booking', 
-        'Are you sure you want to delete this booking? This action cannot be undone.',
-        () => cancelBookingLogic(bookingIdToDelete), 
-        'Yes, Delete Booking', 
-        'No'
+    Alert.alert(
+        'Delete Booking', 'Are you sure you want to cancel this booking?',
+        [
+            { text: 'No', style: 'cancel' },
+            {
+                text: 'Yes, Cancel Booking',
+                style: 'destructive',
+                onPress: async () => {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                    setLoading(true);
+          try {
+            await cancelReservation(bookingIdToDelete);
+          } catch {
+                        Alert.alert('Error', 'Could not cancel the booking.');
+                    } finally {
+                        setLoading(false);
+                        setShowOptions(false);
+                    }
+                },
+            },
+        ]
     );
   };
 
@@ -263,16 +220,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   const isFormVisible = isNewBooking || isEditing;
 
   return (
-    <View style={[styles.widgetContainer, { opacity: isActive ? 1 : 0.7, transform: [{ scale: isActive ? 1 : 0.95 }] }]}> 
-      {isEditMode && !!booking && (
-        <TouchableOpacity
-          onPress={handleDeleteBooking}
-          style={styles.deleteBadge}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <X size={16} color="#0D0D0D" />
-        </TouchableOpacity>
-      )}
+    <View style={[styles.widgetContainer, { opacity: isActive ? 1 : 0.7, transform: [{ scale: isActive ? 1 : 0.95 }] }]}>
       <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
         <View style={styles.content}>
           <Text style={styles.title}>
@@ -405,20 +353,7 @@ const styles = StyleSheet.create({
     modalListItemText: { color: 'white', fontSize: 16,},
   infoBanner: { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.4)', borderWidth: 1, borderRadius: 8, padding: 10 },
   infoBannerText: { color: '#FCA5A5', fontSize: 13, fontWeight: '600' },
-  deleteBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 10,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(13,13,13,0.4)'
-  },
 });
 
 export default BookingWidgetComponent;
+

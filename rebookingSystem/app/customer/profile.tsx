@@ -1,36 +1,35 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { doc, updateDoc } from 'firebase/firestore';
-import {
-  Bell,
-  Calendar,
-  ChevronRight,
-  Edit3,
-  Heart,
-  LogOut,
-  PersonStandingIcon,
-  User,
-} from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { fetchUserData } from '../services/customer-service';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { 
+  User, 
+  Calendar, 
+  Heart, 
+  Bell, 
+  ChevronRight,
+  Edit3,
+  LogOut,
+  PersonStandingIcon,
+} from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase-initilisation';
+import { fetchUserData } from '../services/customer-service';
 //import NotificationSettingsModal from '../services/notification-settings';
 import { UserProfile } from '../lib/types';
-import { modalService } from '../services/modal-Service';
 
 const profileStats = [
   { icon: Calendar, label: 'Bookings', value: '24', color: '#C89A5B' },
@@ -72,7 +71,7 @@ export default function ProfileScreen() {
         setProfile(p);
         setNameInput(p.nagName || '');
       } catch (e: any) {
-        modalService.showError('Error', e?.message || 'Failed to load profile');
+        Alert.alert('Error', e?.message || 'Failed to load profile');
         await AsyncStorage.removeItem('userId');
         router.replace('/auth/auth-login');
       } finally {
@@ -86,40 +85,39 @@ export default function ProfileScreen() {
     if (!userId) return;
     const newName = nameInput.trim();
     if (!newName) {
-      modalService.showError('Validation', 'Please enter a valid name');
+      Alert.alert('Validation', 'Please enter a valid name');
       return;
     }
     try {
       await updateDoc(doc(db, 'rebooking-accounts', userId), { nagName: newName });
       setProfile((prev) => (prev ? { ...prev, nagName: newName } : prev));
       setIsEditingName(false);
-      modalService.showSuccess('Saved', 'Your display name has been updated');
+      Alert.alert('Saved', 'Your display name has been updated');
     } catch (e: any) {
-      modalService.showError('Error', 'Failed to update name');
+      Alert.alert('Error', e?.message || 'Failed to update name');
     }
   };
 
   const handleLogout = () => {
-      // Only run on confirmation
-      const signOutLogic = async () => {
-          try {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Sign Out', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
               await AsyncStorage.removeItem('userId');
-              await AsyncStorage.removeItem('userRole');
-
               router.replace('/auth/auth-login');
-              
-          } catch (error: any) {
-              modalService.showError('Error', 'Failed to sign out. Please try closing and reopening the app.');
+            } catch {
+              Alert.alert('Error', 'Failed to sign out');
+            }
           }
-      };
-
-      modalService.showConfirm(
-          'Sign Out',
-          'Are you sure you want to sign out?',
-          signOutLogic, // Function to execute if the user presses 'Sign Out'
-          'Sign Out',
-          'Cancel'
-      );
+        }
+      ]
+    );
   };
 
   const renderStatCard = (stat: typeof profileStats[0], index: number) => (
@@ -134,48 +132,41 @@ export default function ProfileScreen() {
     </View>
   );
 
-  const handlePasswordResetAction = async () => {
-    try {
-        await AsyncStorage.removeItem('userId');
-        await AsyncStorage.removeItem('userRole');
-        router.replace('/auth/auth-update-login');
-        
-    } catch {
-        modalService.showError('Error', 'Failed to sign out for password reset. Please try again.');
-    }
-};
-
   const renderMenuItem = (item: any) => (
     <TouchableOpacity
-        key={item.label}
-        style={styles.menuItem}
-        onPress={() => {
-            if (item.label === 'Notifications') {
-                setNotificationModalVisible(true);
-            } else if (item.label === 'Personal Info') {
-                setIsEditingName(true);
-            } else if (item.label === 'Password Reset') {
-
-                modalService.showConfirm(
-                    'To Reset Your Password', 
-                    'You will be signed out and sent to our password reset page. Do you wish to continue?',
-                    handlePasswordResetAction, // Function to execute on 'Continue'
-                    'Continue',
-                    'Cancel'
-                );
-            } 
-        }}
+      key={item.label}
+      style={styles.menuItem}
+      onPress={() => {
+        if (item.label === 'Notifications') {
+          setNotificationModalVisible(true);
+        } else if (item.label === 'Personal Info') {
+          setIsEditingName(true);
+        } else if (item.label === 'Password Reset') {
+            Alert.alert('To reset your password','You will be signed out and sent to our password reset page', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Continue', style: 'destructive', onPress: async () => {                  
+                    try {
+                    await AsyncStorage.removeItem('userId');
+                    router.replace('/auth/auth-update-login');
+                    } catch {
+                    Alert.alert('Error', 'Failed to sign out');
+                    }
+          }
+        }
+      ]);
+    }                  
+      }}
     >
       <View style={styles.menuItemLeft}>
-            <View style={styles.menuItemIcon}>
-                <item.icon size={20} color="#C89A5B" />
-            </View>
-            <View style={styles.menuItemText}>
-                <Text style={styles.menuItemLabel}>{item.label}</Text>
-                <Text style={styles.menuItemSubtitle}>{item.subtitle}</Text>
-            </View>
+        <View style={styles.menuItemIcon}>
+          <item.icon size={20} color="#C89A5B" />
         </View>
-        <ChevronRight size={16} color="rgba(200, 154, 91, 0.6)" />
+        <View style={styles.menuItemText}>
+          <Text style={styles.menuItemLabel}>{item.label}</Text>
+          <Text style={styles.menuItemSubtitle}>{item.subtitle}</Text>
+        </View>
+      </View>
+      <ChevronRight size={16} color="rgba(200, 154, 91, 0.6)" />
     </TouchableOpacity>
   );
 
@@ -210,6 +201,7 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text style={styles.title}>Profile</Text>
@@ -234,6 +226,7 @@ export default function ProfileScreen() {
           <Text style={styles.subtitle}>Member Profile</Text>
         </View>
 
+        {/* Profile Card */}
         <BlurView intensity={25} tint="dark" style={styles.profileCard}>
           <View style={styles.profileContent}>
             <View style={styles.profileInfo}>
@@ -266,6 +259,7 @@ export default function ProfileScreen() {
           </View>
         </BlurView>
 
+        {/* Stats */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Activity</Text>
           <View style={styles.statsContainer}>
@@ -273,8 +267,10 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Menu Sections */}
         {menuSections.map(renderMenuSection)}
 
+        {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <BlurView intensity={25} tint="dark" style={styles.logoutButtonBlur}>
             <LogOut size={20} color="#EF4444" />
@@ -285,6 +281,11 @@ export default function ProfileScreen() {
         <View style={styles.bottomSpacer} />
       </ScrollView>
       )}
+
+      {/* <NotificationSettingsModal
+        visible={notificationModalVisible}
+        onClose={() => setNotificationModalVisible(false)}
+      /> */}
     </SafeAreaView>
   );
 }
@@ -640,3 +641,4 @@ const styles = StyleSheet.create({
     height: 20,
   },
 });
+

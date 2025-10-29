@@ -1,8 +1,8 @@
-import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
-import { type FC } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useRef, type FC } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { FlatList } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 
 const ITEM_HEIGHT = 40;
 const VISIBLE_ITEMS = 3;
