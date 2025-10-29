@@ -1,5 +1,6 @@
-import { memo, type FC, useEffect, useRef } from 'react';
-import { Animated, Dimensions, Easing, Pressable } from 'react-native';
+import { memo, useEffect, useRef, type FC } from 'react';
+import { Animated, Dimensions, Easing } from 'react-native';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 import { ReservationDetails, UserProfile } from '../lib/types';
 import BookingWidgetComponent from './customer-booking-widget-component';
 
@@ -66,7 +67,7 @@ const MemoizedBookingItem: FC<Props> = ({
 
   return (
   <Animated.View style={{ width: WIDGET_WIDTH, marginHorizontal: WIDGET_SPACING / 2, transform: [ { translateY: isEditMode ? jiggleY : 0 }, { rotate: isEditMode ? rotation as any : '0deg' } ] }}>
-      <Pressable onLongPress={onLongPress} delayLongPress={250}>
+      <TouchableOpacity onLongPress={onLongPress} delayLongPress={250} activeOpacity={1}>
         <BookingWidgetComponent
           booking={item.id ? (item as ReservationDetails) : undefined}
           userProfile={userProfile}
@@ -75,7 +76,7 @@ const MemoizedBookingItem: FC<Props> = ({
           realBookingsCount={realBookingsCount} // --- PASS PROP ---
           isEditMode={isEditMode}
         />
-      </Pressable>
+      </TouchableOpacity>
     </Animated.View>
   );
 };

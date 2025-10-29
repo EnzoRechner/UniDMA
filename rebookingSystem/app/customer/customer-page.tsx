@@ -68,10 +68,10 @@ const CustomerPage: FC = () => {
     // If we need to scroll to a specific booking, do it after widgets update
     if (scrollToId) {
       console.log('Attempting to scroll to booking:', scrollToId);
-  const index = sortedBookings.findIndex(b => b.id === scrollToId);
+  const index = withOptionalPlaceholder.findIndex(b => (b as any).id === scrollToId);
       console.log('Found at index:', index);
-      console.log('Total bookings:', sortedBookings.length);
-      
+      console.log('Total bookings:', withOptionalPlaceholder.length);
+
       if (index > -1) {
         // --- MODIFICATION: Use scrollToOffset for reliability ---
         const offset = index * SNAP_INTERVAL;
@@ -84,7 +84,7 @@ const CustomerPage: FC = () => {
           setActiveIndex(index);
         }, 500); // Increased timeout to ensure FlatList is ready
       } else {
-        console.log('Booking not found in sorted list');
+        console.log('Booking not found in widget list');
       }
     }
   }, []);

@@ -20,6 +20,7 @@ const CustomWheelPicker: FC<WheelPickerProps> = ({ data, onSelect, initialValue,
   return (
     <View style={[styles.container, { width }]}>
       <FlatList
+        key={initialValue}
         data={data}
         keyExtractor={(item) => item}
         renderItem={({ item }) => (
