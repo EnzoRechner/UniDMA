@@ -227,6 +227,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   const handleBranchSelect = (selectedBranchId: BranchId) => { setTempBranch(selectedBranchId); };
   
   const handleDatePartChange = (part: 'date' | 'hour' | 'minute' | 'period', value: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
     const newDate = new Date(date);
     switch (part) {
         case 'date':
