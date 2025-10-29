@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Dark semi-transparent overlay remains
+    backgroundColor: 'rgba(0, 0, 0, 0.9)', // Dark semi-transparent overlay remains
   },
   successModalContent: {
     width: '85%',
