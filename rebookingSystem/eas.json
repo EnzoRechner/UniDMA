@@ -3,28 +3,26 @@
     "version": ">= 16.25.0",
     "appVersionSource": "remote"
   },
+  "workingDirectory": "rebookingSystem",
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "workingDirectory": "rebookingSystem"
+      }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "workingDirectory": "rebookingSystem"
+      }
     },
     "production": {
       "distribution": "store",
       "android": {
         "buildType": "app-bundle"
-      },
-      "workingDirectory": "rebookingSystem"
+      }
     }
   }
 }
