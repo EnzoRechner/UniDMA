@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons'; 
+import { Ionicons } from '@react-native-vector-icons/ionicons'; 
 
 interface ConfirmModalProps {
   isVisible: boolean;
@@ -60,7 +60,7 @@ const confirmStyles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
   },
   modalContent: {
     width: '85%',
@@ -102,18 +102,20 @@ const confirmStyles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
     backgroundColor: 'transparent',
   },
   cancelText: {
-    fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'rgba(255, 255, 255, 0.8)', textAlign: 'center'
   },
   confirmButton: {
     flex: 1,
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
     // Using a destructive red color for the confirmation button (like the Alert.alert 'destructive' style)
     backgroundColor: '#DC2626', 
     shadowColor: '#DC2626',
@@ -122,7 +124,7 @@ const confirmStyles = StyleSheet.create({
     shadowRadius: 8,
   },
   confirmText: {
-    fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white',
+    fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white', textAlign: 'center'
   },
 });
 

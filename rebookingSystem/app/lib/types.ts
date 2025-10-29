@@ -45,19 +45,24 @@ export interface Branch {
   capacity?: number;
   open?: string; // e.g., "09:00"
 }
-export interface BranchDetails {  
-  id: string; // The Firestore document ID
-  //Bid: BranchId;
-  Coord: GeolocationCoordinates; 
+// Lightweight coordinate type for Expo/React Native usage
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
+export interface BranchDetails {
+  id: string; // Firestore document ID
+  Coord?: Coordinates; // Geographic coordinates of the branch
   address: string;
   capacity: number;
   name: string;
   open: boolean;
-  restaurant: RestaurantId;
-  pauseBookings: boolean;
+  restaurant: RestaurantId; // numeric enum id
+  branchCode?: number; // optional numeric branch code used for filtering
+  pauseBookings?: boolean;
   pauseReason?: string;
   pauseUntil?: Timestamp;
-
 }
 
 export default {};

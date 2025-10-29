@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons'; 
+import { Ionicons } from '@react-native-vector-icons/ionicons'; 
 // import LinearGradient from 'react-native-linear-gradient'; 
 
 interface SuccessModalProps {
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Dark semi-transparent overlay remains
+    backgroundColor: 'rgba(0, 0, 0, 0.9)', // Dark semi-transparent overlay remains
   },
   successModalContent: {
     width: '85%',

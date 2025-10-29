@@ -15,33 +15,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { collection, getDocs, updateDoc, doc, onSnapshot, where, query } from "firebase/firestore";
 import { db } from "../services/firebase-initilisation";
 import { BlurView } from "expo-blur";
+import type { RestaurantId } from "../lib/typesConst";
 import { addBranch } from "../services/admin-service";
-import {UserProfile} from "../lib/types";
+import { UserProfile, BranchDetails, Coordinates } from "../lib/types";
 import { fetchUserData} from '../services/customer-service';
 import { modalService } from '../services/modal-Service';
 //import * as Location from 'expo-location';
 import * as Location from 'expo-location';
-// --- Firestore Type ---
-
-
-export interface BranchDetails {
-  id: string;
-  Coord: GeolocationCoordinates;
-  address: string;
-  capacity: number;
-  name: string;
-  open: boolean;
-  restaurant: RestaurantId;
-  pauseBookings: boolean;
-}
-
+// Props for the widget; currently only `open` influences the style
 interface BranchWidgetProps {
-  userProfile: UserProfile;
   open?: boolean;
-  onConfirm: () => void;
 }
 
-const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
+const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
   const [branches, setBranches] = useState<BranchDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPopup, setShowPopup] = useState(false);
@@ -49,12 +35,12 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   // Branch form fields
-  const [branchCoord, setBranchCoord] = useState<GeolocationCoordinates | null>(null);
+  const [branchCoord, setBranchCoord] = useState<Coordinates | null>(null);
   const [branchAddress, setBranchAddress] = useState("");
-  const [branchCapacity, setBranchCapacity] = useState(0);
+  const [branchCapacity, setBranchCapacity] = useState<number | "">("");
   const [branchName, setBranchName] = useState("");
+  const [branchRestaurant, setBranchRestaurant] = useState<RestaurantId>(0 as RestaurantId);
   const [branchOpen, setBranchOpen] = useState(false);
-  const [branchRestaurant, setBranchRestaurant] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   // ---------------------------
   // Updated handleAddBranch
@@ -100,7 +86,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
       });
 
       setErrorMsg(null);
-    } catch (err) {
+    } catch {
       modalService.showError('Location error:', 'cannot find the location');
       setErrorMsg('Error getting location');
     }
@@ -108,54 +94,48 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 
 
   const handleAddBranch = async () => {
-  if (
-    !branchName ||
-    !branchAddress ||
-    !branchCoord
-  ) {
-    modalService.showError(
-      "Missing Info",
-      "Please fill in all required fields including coordinates."
-    );
-    return;
-  }
+    if (!branchName || !branchAddress || !branchCoord) {
+      modalService.showError(
+        "Missing Info",
+        "Please fill in all required fields including coordinates."
+      );
+      return;
+    }
 
-  setLoading(true);
-  try {
-    // Fetch existing branches to determine next branch number
-    const snapshot = await getDocs(collection(db, "Branch"));
-    const branchNumber = snapshot.size + 1; // e.g., 1, 2, 3
-    const branchCode = branchNumber; // numeric branch code
+    setLoading(true);
+    try {
+      // Fetch existing branches to determine next branch number
+      const snapshot = await getDocs(collection(db, "Branch"));
+      const branchNumber = snapshot.size + 1; // e.g., 1, 2, 3
+      const branchCode = branchNumber; // numeric branch code
 
-    const newBranch: Omit<BranchDetails, "id"> & { branchCode: number } = {
-      Coord: branchCoord, // now using actual coordinates
-      address: branchAddress,
-      capacity: branchCapacity,
-      name: branchName,
-      open: branchOpen, // now using the open status from modal
-      restaurant: branchRestaurant,
-      pauseBookings: false,
-      branchCode,
-    };
+      const newBranch: Omit<BranchDetails, "id"> = {
+        Coord: branchCoord,
+        address: branchAddress,
+        capacity: branchCapacity,
+        name: branchName,
+        open: branchOpen,
+        restaurant: branchRestaurant,
+        branchCode,
+      };
 
-    await addBranch(newBranch);
-    modalService.showSuccess("✅ Success", `Branch #${branchCode} added successfully!`);
+      await addBranch(newBranch);
+      modalService.showSuccess("✅ Success", `Branch #${branchCode} added successfully!`);
 
-    // Close modal and reset form
-    setShowPopup(false);
-    setBranchAddress("");
-    setBranchCapacity(0);
-    setBranchName("");
-    setBranchRestaurant(0);
-    setBranchCoord(null);
-    setBranchOpen(false);
-
-  } catch (error) {
-    modalService.showError("Error", "Failed to add new branch.");
-  } finally {
-    setLoading(false);
-  }
-};
+      // Close modal and reset form
+      setShowPopup(false);
+      setBranchAddress("");
+      setBranchCapacity(0);
+      setBranchName("");
+      setBranchRestaurant(0 as RestaurantId);
+      setBranchCoord(null);
+      setBranchOpen(false);
+    } catch {
+      modalService.showError("Error", "Failed to add new branch.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
 //This updates the branch list in real-time 
 // when changes occur in Firestore they get displayed immediately
@@ -181,10 +161,10 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
 
   setLoading(true);
   const unsubscribe = onSnapshot(q, (snapshot) => {
-    const branchList = snapshot.docs.map((doc) => ({
-  id: doc.id,
-  ...(doc.data() as Omit<BranchDetails, "id">),
-}));
+    const branchList: BranchDetails[] = snapshot.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as Omit<BranchDetails, "id">),
+    }));
 
   // loadBranches function
   //Currently filter is accting weird if you open branch locations it will filter 
@@ -220,24 +200,24 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
   const handleUpdateBranch = async () => {
     if (!selectedBranch) return;
 
-  try {
-    const ref = doc(db, "Branch", selectedBranch.id);
-    await updateDoc(ref, {
-      name: branchName,
-      address: branchAddress,
-      capacity: branchCapacity,     
-      restaurant: user?.restaurant,
-      open: branchOpen,
-      Coord: branchCoord,
-    });
+    try {
+      const ref = doc(db, "Branch", selectedBranch.id);
+      await updateDoc(ref, {
+        name: branchName,
+        address: branchAddress,
+        capacity: branchCapacity,
+        restaurant: (user?.restaurant ?? branchRestaurant) as RestaurantId,
+        open: branchOpen,
+        Coord: branchCoord ?? undefined,
+      });
 
-    console.log("Branch updated successfully");
-    setShowPopup(false);
-    setSelectedBranch(null);
-  } catch (error) {
-    modalService.showError("Branch Error: ", "Error updating branch:");
-  }
-};
+      console.log("Branch updated successfully");
+      setShowPopup(false);
+      setSelectedBranch(null);
+    } catch {
+      modalService.showError("Branch Error", "Error updating branch");
+    }
+  };
 
 
   if (loading) {
@@ -252,7 +232,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
     <View
       style={[
         styles.widgetContainer,
-        { opacity: open ? 1 : 0.7, transform: [{ scale: open ? 1 : 0.95 }] },
+        { opacity: open ?? true ? 1 : 0.7, transform: [{ scale: open ?? true ? 1 : 0.95 }] },
       ]}
     >
       <BlurView intensity={25} tint="dark" style={styles.cardBlur}>
@@ -277,7 +257,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
                 setBranchCapacity(item.capacity);
                 setBranchRestaurant((user?.restaurant ?? 0) as RestaurantId);
                 setBranchOpen(item.open);
-                setBranchCoord(item.Coord || null);
+                setBranchCoord(item.Coord ?? null);
                 setIsEditing(true);
                 setShowPopup(true);
 
@@ -353,11 +333,19 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
             />
             <TextInput
               style={styles.input}
-              placeholder="Capacity"
+              placeholder="Capacity (cannot add more than 80)"
               placeholderTextColor="#aaa"
               keyboardType="numeric"
+              //limit amount
               value={branchCapacity ? branchCapacity.toString() : ""}
-              onChangeText={(t) => setBranchCapacity(Number(t))}
+              onChangeText={(t) => {
+                const num = Number(t);
+                if (!isNaN(num) && num <= 80) {
+                  setBranchCapacity(num);
+                } else if (t === "") {           
+                  setBranchCapacity("");
+                }
+              }}
             />
             
 
@@ -410,7 +398,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open, onConfirm }) => {
                 setBranchCoord({
                   latitude: parts[0],
                   longitude: parts[1],
-                } as GeolocationCoordinates);
+                });
               } else {
                 setBranchCoord(null); // invalid input
               }

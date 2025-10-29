@@ -1,6 +1,5 @@
-import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { type FC } from 'react';
+import { type FC, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { FlatList } from 'react-native-gesture-handler';
 
@@ -15,11 +14,24 @@ interface WheelPickerProps {
 }
 
 const CustomWheelPicker: FC<WheelPickerProps> = ({ data, onSelect, initialValue, width = 60 }) => {
+  const flatListRef = useRef<FlatList>(null);
   const initialIndex = data.indexOf(initialValue);
+useEffect(() => {
+    const newIndex = data.indexOf(initialValue);
+    if (newIndex !== -1 && flatListRef.current) {
+      // This snaps the list to the new initialValue (e.g., on "Edit")
+      // without an animation, so the user doesn't see it.
+      flatListRef.current.scrollToIndex({
+        index: newIndex,
+        animated: false,
+      });
+    }
+  }, [initialValue, data]); // Re-run if the initialValue changes
 
   return (
     <View style={[styles.container, { width }]}>
       <FlatList
+        ref={flatListRef}
         data={data}
         keyExtractor={(item) => item}
         renderItem={({ item }) => (
@@ -37,7 +49,7 @@ const CustomWheelPicker: FC<WheelPickerProps> = ({ data, onSelect, initialValue,
           index,
         })}
         onMomentumScrollEnd={(event) => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           const index = Math.round(event.nativeEvent.contentOffset.y / ITEM_HEIGHT);
           if (data[index]) {
             onSelect(data[index]);
@@ -48,7 +60,7 @@ const CustomWheelPicker: FC<WheelPickerProps> = ({ data, onSelect, initialValue,
         }}
       />
       <LinearGradient
-        colors={['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 1)']}
+        colors={['rgba(27, 27, 27, 0.4)', 'rgba(13, 13, 13, 0)', 'rgba(27, 27, 27, 0.4)']}
         style={styles.gradientOverlay}
         pointerEvents="none"
       />

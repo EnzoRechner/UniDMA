@@ -69,7 +69,7 @@ const LoginScreen = () => {
 
       // Regular customer 
       router.replace('../customer/customer-page');
-    } catch (error: any) {
+    } catch {
       modalService.showError('Login Failed', 'Your email/password is incorrect.');
     } finally {
       setLoading(false);
@@ -78,12 +78,11 @@ const LoginScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#0D0D0D', '#1A1A1A', '#0D0D0D']} style={styles.background} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <BlurView intensity={120} tint="dark" style={styles.logoBlur}>
+              <BlurView intensity={80} tint="dark" style={styles.logoBlur}>
                 <Image source={require('../../assets/images/icon.png')} style={styles.logoImage} resizeMode="contain" />
               </BlurView>
             </View>
@@ -91,13 +90,13 @@ const LoginScreen = () => {
             <Text style={styles.subtitle}>Kroeg • Eetsaal</Text>
           </View>
 
-          <BlurView intensity={120} tint="dark" style={styles.formContainer}>
+          <BlurView intensity={80} tint="dark" style={styles.formContainer}>
             <View style={styles.form}>
               <Text style={styles.formTitle}>Welcome Back</Text>
               <Text style={styles.formSubtitle}>Sign in to your account</Text>
 
               <View style={styles.inputContainer}>
-                <BlurView intensity={120} tint="dark" style={styles.inputBlur}>
+                <BlurView intensity={80} tint="dark" style={styles.inputBlur}>
                   <Mail size={20} color="#C89A5B" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
@@ -112,7 +111,7 @@ const LoginScreen = () => {
               </View>
 
               <View style={styles.inputContainer}>
-                <BlurView intensity={120} tint="dark" style={styles.inputBlur}>
+                <BlurView intensity={80} tint="dark" style={styles.inputBlur}>
                   <Lock size={20} color="#C89A5B" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
@@ -167,8 +166,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     shadowColor: '#C89A5B',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
   },
   logoBlur: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   logoImage: { width: 180, height: 180 },
@@ -191,8 +190,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(200, 154, 91, 0.8)',
     shadowColor: '#C89A5B',
     shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.6,
-    shadowRadius: 24,
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
   },
   form: { padding: 30 },
   formTitle: {
@@ -228,8 +227,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     shadowColor: '#C89A5B',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
   },
   authButtonGradient: { paddingVertical: 16, alignItems: 'center' },
   authButtonText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white' },

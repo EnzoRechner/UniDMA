@@ -14,8 +14,8 @@ const StaffDashboard = () => {
   }
 
   const handleBack = () => {
-    // This method tells React Navigation to go back to the previous screen in the stack.
-    router.back();
+    // For admins, ensure we land on the Admin Dashboard instead of any prior screen in history
+    router.replace('/admin/admin-dashboard-page');
   };
 
   const [userRole, setUserRole] = React.useState<number | null>(null);

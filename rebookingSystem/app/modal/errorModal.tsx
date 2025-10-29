@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 // Assuming you are using a library for icons like 'react-native-vector-icons'
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 // Assuming you have a LinearGradient component, replace with a simple View if not
 // import LinearGradient from 'react-native-linear-gradient'; 
 
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Dark semi-transparent overlay
+    backgroundColor: 'rgba(0, 0, 0, 0.9)', // Dark semi-transparent overlay
   },
   errorModalContent: {
     width: '85%', // Slightly wider than the 80% from the previous example for better message display
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: 'rgba(0, 0, 0, 0.3)', // Semi-transparent dark background
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.8)', // Red border for error
+    borderColor: '#ef4444cc', // Red border for error
     padding: 30,
     alignItems: 'center',
     shadowColor: '#EF4444',

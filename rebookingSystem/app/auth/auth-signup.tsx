@@ -98,25 +98,24 @@ const SignupScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#0D0D0D', '#1A1A1A', '#0D0D0D']} style={styles.background} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <BlurView intensity={120} tint="dark" style={styles.logoBlur}>
+              <BlurView intensity={80} tint="dark" style={styles.logoBlur}>
                 <Image source={require('../../assets/images/icon.png')} style={styles.logoImage} resizeMode="contain" />
               </BlurView>
             </View>
             <Text style={styles.title}>Die Nag Uil</Text>
           </View>
 
-          <BlurView intensity={120} tint="dark" style={styles.formContainer}>
+          <BlurView intensity={80} tint="dark" style={styles.formContainer}>
             <View style={styles.form}>
               <Text style={styles.formTitle}>Join The Experience</Text>
               <Text style={styles.formSubtitle}>Create your account for reservations</Text>
 
               <View style={styles.inputContainer}>
-                <BlurView intensity={120} tint="dark" style={styles.inputBlur}>
+                <BlurView intensity={80} tint="dark" style={styles.inputBlur}>
                   <User size={20} color="#C89A5B" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
@@ -130,7 +129,7 @@ const SignupScreen = () => {
               </View>
 
               <View style={styles.inputContainer}>
-                <BlurView intensity={120} tint="dark" style={styles.inputBlur}>
+                <BlurView intensity={80} tint="dark" style={styles.inputBlur}>
                   <Mail size={20} color="#C89A5B" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
@@ -145,7 +144,7 @@ const SignupScreen = () => {
               </View>
 
               <View style={styles.inputContainer}>
-                <BlurView intensity={120} tint="dark" style={styles.inputBlur}>
+                <BlurView intensity={80} tint="dark" style={styles.inputBlur}>
                   <Lock size={20} color="#C89A5B" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
@@ -249,7 +248,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     width: 80, height: 80, borderRadius: 40, overflow: 'hidden', backgroundColor: 'rgba(0, 0, 0, 0.2)',
     borderWidth: 1, borderColor: 'rgba(200, 154, 91, 0.8)', marginBottom: 20, shadowColor: '#C89A5B',
-    shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.6, shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.35, shadowRadius: 12,
   },
   logoBlur: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   logoImage: { width: 180, height: 180 },
@@ -260,7 +259,7 @@ const styles = StyleSheet.create({
   formContainer: {
     borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(0, 0, 0, 0.2)', borderWidth: 1,
     borderColor: 'rgba(200, 154, 91, 0.8)', shadowColor: '#C89A5B', shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.6, shadowRadius: 24,
+    shadowOpacity: 0.35, shadowRadius: 14,
   },
   form: { padding: 30 },
   formTitle: {
@@ -327,7 +326,7 @@ const styles = StyleSheet.create({
   picker: { flex: 1, color: 'white', height: 56 },
   authButton: {
     borderRadius: 16, overflow: 'hidden', marginTop: 10, marginBottom: 20, shadowColor: '#C89A5B',
-    shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 10,
   },
   authButtonGradient: { paddingVertical: 16, alignItems: 'center' },
   authButtonText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white' },

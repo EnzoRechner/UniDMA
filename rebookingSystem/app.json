@@ -24,6 +24,10 @@
       "package": "com.rebookingSystem",
       "googleServicesFile": "./google-services.json"
     },
+    "androidNavigationBar": {
+      "backgroundColor": "#0D0D0D",
+      "barStyle": "light-content"
+    },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
