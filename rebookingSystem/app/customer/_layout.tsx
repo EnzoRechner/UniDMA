@@ -1,22 +1,11 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Stack } from 'expo-router';
 import { Platform, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import * as NavigationBar from 'expo-navigation-bar';
 import RootWrapper from '../modal/RootWrapper';
 
 export default function AuthenticatedLayout() {
-  useEffect(() => {
-    const setupSystemUI = async () => {
-      try {
-        if (Platform.OS === 'android') {
-          await NavigationBar.setButtonStyleAsync('light');
-        }
-      } catch {}
-    };
-    setupSystemUI();
-  }, []);
   return (
     <RootWrapper>
       <View style={{ flex: 1 }}>
