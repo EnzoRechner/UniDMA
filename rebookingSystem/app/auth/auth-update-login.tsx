@@ -19,31 +19,33 @@ const UpdateLoginScreen = () => {
   const router = useRouter();
 
   const handlePassword = async () => {
-    await sendPasswordResetEmail(auth, EmailAdd)
-    .then(() => {
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, EmailAdd);
       modalService.showSuccess(
         'Password Reset Email Sent 😲',
         'A password reset email has been sent to your email address. Please check your inbox.'
       );
       router.replace('../auth/auth-login');
-    })
-    .catch((error) => console.log(error.message));{
-      //Alert.alert('Error', error.message);
-    };
+    } catch (e: any) {
+      console.log(e?.message ?? e);
+      modalService.showError('Error', 'Failed to send password reset email.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#0D0D0D', '#1A1A1A', '#0D0D0D']} style={styles.background} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <BlurView intensity={120} tint="dark" style={styles.formContainer}>
+          <BlurView intensity={80} tint="dark" style={styles.formContainer}>
             <View style={styles.form}>
               <Text style={styles.formTitle}>Password Reset</Text>
               <Text style={styles.formSubtitle}>Did you forget your password?</Text>
 
               <View style={styles.inputContainer}>
-                <BlurView intensity={120} tint="dark" style={styles.inputBlur}>
+                <BlurView intensity={80} tint="dark" style={styles.inputBlur}>
                   <Lock size={20} color="#C89A5B" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
@@ -77,10 +79,10 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
     scrollContent: { flexGrow: 1, paddingHorizontal: 20, justifyContent: 'center' },
-    formContainer: {
+  formContainer: {
         borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(0, 0, 0, 0.2)', borderWidth: 1,
         borderColor: 'rgba(200, 154, 91, 0.8)', shadowColor: '#C89A5B', shadowOffset: { width: 0, height: 16 },
-        shadowOpacity: 0.6, shadowRadius: 24,
+    shadowOpacity: 0.35, shadowRadius: 14,
     },
     form: { padding: 30 },
     formTitle: {
@@ -98,9 +100,9 @@ const styles = StyleSheet.create({
     },
     inputIcon: { marginLeft: 16 },
     input: { flex: 1, height: 56, paddingHorizontal: 16, fontSize: 16, fontFamily: 'Inter-Regular', color: 'white' },
-    authButton: {
+  authButton: {
         borderRadius: 16, overflow: 'hidden', marginBottom: 20, shadowColor: '#C89A5B',
-        shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 10,
     },
     authButtonGradient: { paddingVertical: 16, alignItems: 'center' },
     authButtonText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white' },

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 // Assuming you are using a library for icons like 'react-native-vector-icons'
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 // Assuming you have a LinearGradient component, replace with a simple View if not
 // import LinearGradient from 'react-native-linear-gradient'; 
 
