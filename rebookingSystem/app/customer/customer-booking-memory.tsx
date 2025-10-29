@@ -13,9 +13,17 @@ interface Props {
   activeIndex: number;
   userProfile: UserProfile;
   onConfirm: (newBookingId?: string) => void;
+  realBookingsCount: number; // --- ADDED PROP ---
 }
 
-const MemoizedBookingItem: FC<Props> = ({ item, index, activeIndex, userProfile, onConfirm }) => {
+const MemoizedBookingItem: FC<Props> = ({ 
+  item, 
+  index, 
+  activeIndex, 
+  userProfile, 
+  onConfirm, 
+  realBookingsCount // --- ADDED PROP ---
+}) => {
   return (
     <View style={{ width: WIDGET_WIDTH, marginHorizontal: WIDGET_SPACING / 2 }}>
       <BookingWidgetComponent
@@ -23,6 +31,7 @@ const MemoizedBookingItem: FC<Props> = ({ item, index, activeIndex, userProfile,
         userProfile={userProfile}
         isActive={index === activeIndex}
         onConfirm={onConfirm}
+        realBookingsCount={realBookingsCount} // --- PASS PROP ---
       />
     </View>
   );

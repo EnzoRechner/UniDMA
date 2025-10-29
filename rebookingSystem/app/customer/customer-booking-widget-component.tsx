@@ -8,8 +8,8 @@ import { ReservationDetails, UserProfile } from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
 import { cancelReservation } from '../services/customer-service';
 import { db } from '../services/firebase-initilisation';
-import CustomWheelPicker from './customer-wheel';
 import { modalService } from '../services/modal-Service';
+import CustomWheelPicker from './customer-wheel';
 
 const branchMap: { [key in BranchId]: string } = {
   [BRANCHES.PAARL]: 'Paarl',
@@ -38,12 +38,22 @@ const generatePickerData = () => {
     return { dates, dateLabels, hours, minutes, periods, seats };
 };
 
-const BookingWidgetComponent: FC<{
+// --- MODIFICATION: Updated props interface ---
+interface BookingWidgetComponentProps {
   booking?: ReservationDetails;
   userProfile: UserProfile;
   isActive: boolean;
   onConfirm: (newBookingId?: string) => void;
-}> = ({ booking, userProfile, isActive, onConfirm }) => {
+  realBookingsCount: number; // Prop to receive the count
+}
+
+const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({ 
+  booking, 
+  userProfile, 
+  isActive, 
+  onConfirm,
+  realBookingsCount // --- MODIFICATION: Destructure the prop ---
+}) => {
   const isNewBooking = !booking;
   const [isEditing, setIsEditing] = useState(false);
   const [bookingName, setBookingName] = useState('My Booking');
@@ -112,6 +122,17 @@ const BookingWidgetComponent: FC<{
 
   const handleCreateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // --- MODIFICATION: Booking limit check ---
+    if (realBookingsCount >= 5) {
+      modalService.showError(
+        'Booking Limit Reached',
+        'Error please delete a booking to making a new booking.'
+      );
+      return; // Stop the function
+    }
+    // --- End of modification ---
+
     if (!userProfile?.userId) return modalService.showError('Error', 'Could not find User ID.');
     setLoading(true);
     try {

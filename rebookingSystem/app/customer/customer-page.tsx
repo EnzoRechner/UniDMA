@@ -5,6 +5,7 @@ import { LogOut, Settings } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState, type FC } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
   StyleSheet,
   Text,
@@ -16,8 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ReservationDetails, UserProfile } from '../lib/types';
 import { fetchUserData, getReservationsRealtime } from '../services/customer-service';
-import MemoizedBookingItem from './customer-booking-memory';
 import { modalService } from '../services/modal-Service';
+import MemoizedBookingItem from './customer-booking-memory';
 
 const { width: windowWidth } = Dimensions.get('window');
 const WIDGET_WIDTH = windowWidth * 0.9;
@@ -36,6 +37,7 @@ const getDotColorByStatus = (status: ReservationDetails['status'] | undefined): 
         case 2: return '#EF4444'; // Rejected
         case 3: return '#3B82F6'; // Completed
         case 4: return '#EF4444'; // Cancelled
+        case 5: return '#C89A5B'; // Rebookable
         default: return 'rgba(255, 255, 255, 0.4)'; // Default
     }
 };
@@ -47,13 +49,59 @@ const CustomerPage: FC = () => {
   const [widgets, setWidgets] = useState<(ReservationDetails | { id: null })[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [pendingNewBookingId, setPendingNewBookingId] = useState<string | null>(null);
+  const [pendingScrollToBookingId, setPendingScrollToBookingId] = useState<string | null>(null);
+  const scrollAnimationInProgress = useRef(false);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  const setupWidgets = useCallback((realBookings: ReservationDetails[]) => {
+  const setupWidgets = useCallback((realBookings: ReservationDetails[], scrollToId?: string) => {
     const newBookingPlaceholder = { id: null };
-    const sortedBookings = realBookings.sort((a, b) => a.dateOfArrival.toMillis() - b.dateOfArrival.toMillis());
+    // Sort by date ascending (earliest first, latest last)
+    const sortedBookings = realBookings.sort((a, b) => 
+      a.dateOfArrival.toMillis() - b.dateOfArrival.toMillis()
+    );
+    // New booking placeholder at the end
     setWidgets([...sortedBookings, newBookingPlaceholder]);
+    
+    // If we need to scroll to a specific booking, do it after widgets update
+    if (scrollToId) {
+      console.log('Attempting to scroll to booking:', scrollToId);
+      const index = sortedBookings.findIndex(b => b.id === scrollToId);
+      console.log('Found at index:', index);
+      console.log('Total bookings:', sortedBookings.length);
+      
+      if (index > -1) {
+        // --- MODIFICATION: Use scrollToOffset for reliability ---
+        const offset = index * SNAP_INTERVAL;
+        setTimeout(() => {
+          console.log('Scrolling to offset:', offset);
+          flatListRef.current?.scrollToOffset({ 
+            offset, 
+            animated: true
+          });
+          setActiveIndex(index);
+        }, 500); // Increased timeout to ensure FlatList is ready
+      } else {
+        console.log('Booking not found in sorted list');
+      }
+    }
   }, []);
+
+  const scrollToNewBooking = useCallback(() => {
+    if (flatListRef.current && widgets.length > 0) {
+      const newBookingIndex = widgets.length - 1;
+      
+      // --- MODIFICATION: Use scrollToOffset for reliability ---
+      const offset = newBookingIndex * SNAP_INTERVAL;
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ 
+          offset, 
+          animated: true
+        });
+        setActiveIndex(newBookingIndex);
+      }, 100);
+    }
+  }, [widgets.length]);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -71,21 +119,22 @@ const CustomerPage: FC = () => {
         setUser(userData);
 
         unsubscribe = getReservationsRealtime(userId, (fetchedBookings) => {
-          setupWidgets(fetchedBookings);
-          setLoading(false);
-
-          if (pendingNewBookingId) {
-            const sortedList = fetchedBookings.sort((a, b) => a.dateOfArrival.toMillis() - b.dateOfArrival.toMillis());
-            const finalIndex = sortedList.findIndex(b => b.id === pendingNewBookingId);
-            
-            if (finalIndex > -1) {
-              setTimeout(() => {
-                flatListRef.current?.scrollToIndex({ index: finalIndex, animated: true });
-                setActiveIndex(finalIndex);
-              }, 250);
-            }
-            setPendingNewBookingId(null);
+          // Check if we have a pending scroll target
+          const scrollTarget = pendingScrollToBookingId;
+          
+          if (scrollTarget) {
+            console.log('Looking for booking ID:', scrollTarget);
+            console.log('Available bookings:', fetchedBookings.map(b => ({ id: b.id, date: b.dateOfArrival.toDate() })));
           }
+          
+          setupWidgets(fetchedBookings, scrollTarget || undefined);
+          
+          // Clear the pending scroll after it's been handled
+          if (scrollTarget) {
+            setPendingScrollToBookingId(null);
+          }
+          
+          setLoading(false);
         });
       } catch (error: any) {
         setLoading(false);
@@ -101,7 +150,17 @@ const CustomerPage: FC = () => {
     return () => {
         unsubscribe();
     };
-  }, [router, setupWidgets, pendingNewBookingId]);
+  }, [router, setupWidgets, pendingScrollToBookingId]);
+
+  // Scroll to "Make New Booking" only on initial load
+  const hasScrolledToNew = useRef(false);
+  
+  useEffect(() => {
+    if (!loading && widgets.length > 0 && !hasScrolledToNew.current) {
+      scrollToNewBooking();
+      hasScrolledToNew.current = true;
+    }
+  }, [loading, widgets.length, scrollToNewBooking]);
   
   const handleLogout = async () => {
       await AsyncStorage.removeItem('userId');
@@ -109,20 +168,53 @@ const CustomerPage: FC = () => {
       router.replace('/auth/auth-login');
   }
 
-  const renderWidgetItem = useCallback(({ item, index }: { item: ReservationDetails | { id: null }, index: number }) => (
-    <MemoizedBookingItem
-        item={item} index={index} activeIndex={activeIndex} userProfile={user!}
-        onConfirm={(newBookingId?: string) => {
-          if (newBookingId) {
-            setPendingNewBookingId(newBookingId);
-          } else {
-            setTimeout(() => {
-              flatListRef.current?.scrollToIndex({ index: 0, animated: true });
-            }, 500);
-          }
-        }}
-    />
-  ), [activeIndex, user]);
+  const handleBookingConfirm = useCallback((newBookingId?: string) => {
+    if (newBookingId) {
+      console.log('Booking confirmed with ID:', newBookingId);
+      // Set the booking ID we want to scroll to
+      setPendingScrollToBookingId(newBookingId);
+    }
+  }, []);
+
+  const renderWidgetItem = useCallback(({ item, index }: { item: ReservationDetails | { id: null }, index: number }) => {
+    // --- MODIFICATION: Calculate real bookings count ---
+    // The 'widgets' array includes the 'new booking' placeholder, so subtract 1
+    const realBookingsCount = widgets.length > 0 ? widgets.length - 1 : 0;
+
+    return (
+      <MemoizedBookingItem
+          item={item} 
+          index={index} 
+          activeIndex={activeIndex} 
+          userProfile={user!}
+          onConfirm={handleBookingConfirm}
+          // --- MODIFICATION: Pass the count down ---
+          realBookingsCount={realBookingsCount}
+      />
+    );
+  // --- MODIFICATION: Add widgets.length to dependency array ---
+  }, [activeIndex, user, handleBookingConfirm, widgets.length]);
+
+  const getItemLayout = useCallback((_: any, index: number) => ({
+    length: SNAP_INTERVAL,
+    offset: SNAP_INTERVAL * index,
+    index,
+  }), []);
+
+  const handleScrollToIndexFailed = useCallback((info: any) => {
+    // Fallback: scroll to offset manually
+    const offset = info.index * SNAP_INTERVAL;
+    flatListRef.current?.scrollToOffset({ offset, animated: true });
+    
+    // Try again after a delay
+    setTimeout(() => {
+      // --- MODIFICATION: Use scrollToOffset here too ---
+      flatListRef.current?.scrollToOffset({ 
+        offset, 
+        animated: true,
+      });
+    }, 100);
+  }, []);
 
   if (loading || !user) {
     return (
@@ -136,34 +228,47 @@ const CustomerPage: FC = () => {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
         <LinearGradient colors={['#0D0D0D', '#1A1A1A']} style={styles.background} />
-        <ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
               <View>
                 <Text style={styles.title}>Die Nag Uil</Text>
                 <Text style={styles.subtitle}>Good evening, {user?.nagName}</Text>
               </View>
               <View style={styles.headerIcons}>
-                  <TouchableOpacity style={styles.iconButton} onPress={() => router.push("../customer/profile")}><Settings size={22} color="#C89A5B" /></TouchableOpacity>
-                  <TouchableOpacity style={styles.iconButton} onPress={handleLogout}><LogOut size={22} color="#C89A5B" /></TouchableOpacity>
+                  <TouchableOpacity style={styles.iconButton} onPress={() => router.push("../customer/profile")}>
+                    <Settings size={22} color="#C89A5B" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.iconButton} onPress={handleLogout}>
+                    <LogOut size={22} color="#C89A5B" />
+                  </TouchableOpacity>
               </View>
             </View>
             
-            <View style={styles.widgetScrollContainer}>
+            <Animated.View style={[styles.widgetScrollContainer, { opacity: fadeAnim }]}>
               <FlatList
                   ref={flatListRef}
                   data={widgets}
                   renderItem={renderWidgetItem}
-                  keyExtractor={(item) => item.id || 'new-booking'}
+                  keyExtractor={(item, index) => item.id || `new-booking-${index}`}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.scrollViewContent}
                   snapToInterval={SNAP_INTERVAL}
-                  decelerationRate="normal"
+                  decelerationRate="fast"
                   disableIntervalMomentum={true}
-                  onScroll={(e) => setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / SNAP_INTERVAL))}
+                  getItemLayout={getItemLayout}
+                  onScrollToIndexFailed={handleScrollToIndexFailed}
+                  onScroll={(e) => {
+                    const newIndex = Math.round(e.nativeEvent.contentOffset.x / SNAP_INTERVAL);
+                    setActiveIndex(newIndex);
+                  }}
                   scrollEventThrottle={16}
+                  removeClippedSubviews={false}
+                  initialNumToRender={3}
+                  maxToRenderPerBatch={3}
+                  windowSize={5}
               />
-            </View>
+            </Animated.View>
             
             <View style={styles.dotContainer}>
                 {widgets.map((widget, index) => {
@@ -171,7 +276,14 @@ const CustomerPage: FC = () => {
                     const isActiveDot = index === activeIndex;
                     const finalColor = isActiveDot ? styles.activeDot.backgroundColor : statusColor;
                     return (
-                        <View key={index} style={[ styles.dot, { backgroundColor: finalColor }]} />
+                        <View 
+                          key={`${widget.id || 'new'}-${index}`} 
+                          style={[
+                            styles.dot, 
+                            { backgroundColor: finalColor },
+                            isActiveDot && styles.activeDot
+                          ]} 
+                        />
                     );
                 })}
             </View>
@@ -190,7 +302,7 @@ const CustomerPage: FC = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#000000', paddingTop: 0},
-    background: { position: 'absolute', left: 0, right: 0, top: 0, height: '0%' },
+    background: { position: 'absolute', left: 0, right: 0, top: 0, height: '100%' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0D0D0D' },
     header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     headerIcons: { flexDirection: 'row', gap: 15 },
@@ -201,7 +313,7 @@ const styles = StyleSheet.create({
     scrollViewContent: { paddingHorizontal: (windowWidth - WIDGET_WIDTH) / 2 - (WIDGET_SPACING / 2), alignItems: 'center' },
     dotContainer: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 10, marginBottom: 20 },
     dot: { width: 8, height: 8, borderRadius: 4, marginHorizontal: 4 },
-    activeDot: { backgroundColor: '#C89A5B' },
+    activeDot: { backgroundColor: '#C89A5B', width: 24 },
     card: { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: 16, padding: 20, marginHorizontal: 20, marginBottom: 15, borderWidth: 1, borderColor: 'rgba(200, 154, 91, 0.2)' },
     cardTitle: { fontSize: 18, fontWeight: 'bold', color: 'white', marginBottom: 5 },
     cardSubtitle: { fontSize: 14, color: 'rgba(255, 255, 255, 0.7)' },
