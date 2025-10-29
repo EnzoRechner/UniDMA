@@ -3,7 +3,6 @@
     "version": ">= 16.25.0",
     "appVersionSource": "remote"
   },
-  "workingDirectory": "rebookingSystem",
   "build": {
     "development": {
       "developmentClient": true,
@@ -26,3 +25,4 @@
     }
   }
 }
+
