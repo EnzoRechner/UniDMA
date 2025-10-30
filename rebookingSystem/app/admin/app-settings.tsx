@@ -50,7 +50,7 @@ export default function BranchSettingsScreen() {
         }
         setBranchCode(profile.branch);
       } catch (e) {
-        console.error('Init app settings error:', e);
+        console.log('Init app settings error:', e);
         router.replace('/');
       }
     };
@@ -116,7 +116,7 @@ export default function BranchSettingsScreen() {
         setPauseReason('');
         setPauseUntilText('');
       }
-    } catch (error) {
+    } catch {
       modalService.showError('Error', 'Failed to load branch settings');
     } finally {
       setLoading(false);
@@ -208,8 +208,8 @@ export default function BranchSettingsScreen() {
               `${cancelledCount} pending reservation${cancelledCount !== 1 ? 's' : ''} have been cancelled.`
           );
       } catch (error: any) {
-          console.error('Error cancelling reservations:', error);
-          modalService.showError('Error', error.message || 'Failed to cancel pending reservations');
+          console.log('Error cancelling reservations:', error);
+          modalService.showError('Error', 'Failed to cancel pending reservations');
       } finally {
           setSaving(false);
       }

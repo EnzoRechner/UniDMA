@@ -16,7 +16,6 @@ import {
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -98,7 +97,7 @@ export default function ProfileScreen() {
       setProfile((prev) => (prev ? { ...prev, nagName: newName } : prev));
       setIsEditingName(false);
       modalService.showSuccess('Saved', 'Your display name has been updated');
-    } catch (e: any) {
+    } catch {
       modalService.showError('Error', 'Failed to update name');
     }
   };
@@ -112,7 +111,7 @@ export default function ProfileScreen() {
 
               router.replace('/auth/auth-login');
               
-          } catch (error: any) {
+          } catch {
               modalService.showError('Error', 'Failed to sign out. Please try closing and reopening the app.');
           }
       };

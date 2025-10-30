@@ -69,7 +69,6 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   const pickerData = useMemo(() => generatePickerData(), []);
   const [tempSeats, setTempSeats] = useState(seats.toString());
   const [tempBranch, setTempBranch] = useState<BranchId>(branch);
-  const [branchStatus, setBranchStatus] = useState<true | false>(); // New state for branch open/closed status true -> open, false -> closed
 
   useEffect(() => {
     if (isEditing && booking) {
@@ -83,7 +82,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
         now.setHours(19, 0, 0, 0);
         setDate(now);
     }
-  }, [isEditing, booking, isNewBooking, branchStatus]);
+  }, [isEditing, booking, isNewBooking]);
 
   const checkBranchStatus = async () => {
         // Check to see if the branch is opnen/closed
@@ -171,7 +170,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
       onConfirm(newBookingData);
   // --- FIX: Add error logging ---
   } catch (error) { 
-      console.error("Booking creation failed:", error); // <-- This will show the real error
+      console.log("Booking creation failed:", error); // <-- This will show the real error
       modalService.showError('Booking Failed', 'There was a problem creating your booking. Please try again.');
     } finally { setLoading(false); }
   };
@@ -212,7 +211,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
         onConfirm(newBookingData);
   // --- FIX: Add error logging ---
   } catch (error) {
-        console.error("Booking update failed:", error); // <-- This will show the real error
+        console.log("Booking update failed:", error); // <-- This will show the real error
         modalService.showError('Update Failed', "There was a problem updating your booking. Please try again.");
     } finally {
         setLoading(false);
