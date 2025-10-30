@@ -4,9 +4,9 @@ import { Timestamp, collection, doc, setDoc } from 'firebase/firestore';
 import { Building, Calendar, Clock, Edit, MessageSquare, Tag, Trash2, Users, X } from 'lucide-react-native';
 import { useEffect, useMemo, useState, type FC } from 'react';
 import { ActivityIndicator, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { ReservationDetails, UserProfile } from '../lib/types';
+import { BranchDetails, ReservationDetails, UserProfile } from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
-import { cancelReservation } from '../services/customer-service';
+import { cancelReservation, getBranchDetails } from '../services/customer-service';
 import { db } from '../services/firebase-initilisation';
 import { modalService } from '../services/modal-Service';
 import CustomWheelPicker from './customer-wheel';
@@ -69,6 +69,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   const pickerData = useMemo(() => generatePickerData(), []);
   const [tempSeats, setTempSeats] = useState(seats.toString());
   const [tempBranch, setTempBranch] = useState<BranchId>(branch);
+  const [branchStatus, setBranchStatus] = useState<true | false>(); // New state for branch open/closed status true -> open, false -> closed
 
   useEffect(() => {
     if (isEditing && booking) {
@@ -76,13 +77,24 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
         setSeats(booking.guests);
         setBranch(booking.branch as unknown as BranchId);
         setMessage(booking.message || '');
-        setBookingName(booking.bookingName);
+        setBookingName(booking.bookingName);        
     } else if (isNewBooking) {
         const now = new Date();
         now.setHours(19, 0, 0, 0);
         setDate(now);
     }
-  }, [isEditing, booking, isNewBooking]);
+  }, [isEditing, booking, isNewBooking, branchStatus]);
+
+  const checkBranchStatus = async () => {
+        // Check to see if the branch is opnen/closed
+        const branchDetails = await getBranchDetails(branch) as BranchDetails;
+
+        if (!branchDetails || typeof branchDetails === 'string' || branchDetails.restaurant === null || branchDetails.restaurant === undefined) {
+            throw new Error("Invalid branch code or missing restaurant details.");
+        }
+
+        return branchDetails.open;
+  }
 
   const isRebookable = useMemo(() => {
     if (!booking) return false;
@@ -139,6 +151,22 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
       const newDocRef = doc(collection(db, 'nagbookings'));
       const newId = newDocRef.id;
       const newBookingData = createBookingData(newId);
+  
+      const currentBranchStatus = await checkBranchStatus();
+
+      // This is for await
+      if (!currentBranchStatus || currentBranchStatus === null || currentBranchStatus === undefined) {
+          modalService.showError('Branch Closed', 'The selected branch is currently closed. Please choose a different branch.');
+          setLoading(false);
+          return;
+      }
+      
+      if (currentBranchStatus !== true) {
+          modalService.showError('Branch Closed', 'The selected branch is currently closed. Please choose a different branch.');
+          setLoading(false);
+          return;
+      }
+
       await setDoc(newDocRef, newBookingData);
       onConfirm(newBookingData);
   // --- FIX: Add error logging ---
@@ -157,6 +185,21 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
     const bookingIdToUpdate = booking.id;
     setLoading(true);
     try {
+        const currentBranchStatus = await checkBranchStatus();
+
+        // This is for await
+        if (!currentBranchStatus || currentBranchStatus === null || currentBranchStatus === undefined) {
+            modalService.showError('Branch Closed', 'The selected branch is currently closed. Please choose a different branch.');
+            setLoading(false);
+            return;
+        }
+        // This is for closed
+        if (currentBranchStatus !== true) {
+            modalService.showError('Branch Closed', 'The selected branch is currently closed. Please choose a different branch.');
+            setLoading(false);
+            return;
+        }
+
         await cancelReservation(bookingIdToUpdate);
         
         const newDocRef = doc(collection(db, 'nagbookings'));

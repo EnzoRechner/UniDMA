@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase-initilisation';
 import { getBranchSettings } from '../../utils/firestore';
-import { ReservationDetails, UserProfile } from '../lib/types';
+import { BranchDetails, ReservationDetails, UserProfile } from '../lib/types';
 
 /**
  * Generates a unique random 6-digit string ID for a new booking.
@@ -73,24 +73,31 @@ export const addReservation = async (
       }
     }
 
-    let restaurant = null;
+    let branchDetails = null;
     if (reservationData.restaurant === undefined) {
-      restaurant = await getBranchDetails(reservationData.branch);
+      branchDetails = await getBranchDetails(reservationData.branch) as BranchDetails;
     } else {
-      restaurant = reservationData.restaurant;
+      branchDetails = reservationData.restaurant;
     }
-    
-    if (restaurant === null || restaurant === undefined) {
+
+    if (
+      !branchDetails ||
+      typeof branchDetails === 'string' ||
+      typeof branchDetails === 'number' ||
+      branchDetails.restaurant === null ||
+      branchDetails.restaurant === undefined
+    ) {
         throw new Error("Invalid branch code or missing restaurant details.");
     }  
 
+    const res = branchDetails.restaurant;
     const newBookingId = await generateUniqueBookingId();
     const docRef = doc(db, 'nagbookings', newBookingId);
 
     await setDoc(docRef, {
       ...reservationData,
       id: newBookingId,
-      restaurant: restaurant,
+      restaurant: res,
       status: 0, // Default to 'pending'
       createdAt: Timestamp.now(),
     });
@@ -101,7 +108,7 @@ export const addReservation = async (
   }
 };
 
-export const getBranchDetails = async (branchId: number) : Promise<number | null> => {
+export const getBranchDetails = async (branchId: number) : Promise<BranchDetails | null> => {
   try {
     // Get the collection
     const branchCollectionRef = collection(db, 'Branch');
@@ -120,7 +127,7 @@ export const getBranchDetails = async (branchId: number) : Promise<number | null
     const branchDoc = querySnapshot.docs[0];       
 
     // Return the restaurant name
-    return branchDoc.data().restaurant 
+    return branchDoc.data() as BranchDetails
   } catch (error) {
       console.log("Error fetching branch data by branchCode:", error);
       throw error;
