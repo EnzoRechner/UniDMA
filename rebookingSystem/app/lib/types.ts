@@ -31,7 +31,7 @@ export interface ReservationDetails {
   userId?: string; // The ID of the user who made the reservation
   bookingName: string; // Name of the booking
   nagName?: string; // Name of the user who made the reservation
-  restaurant?: string; // Restaurant associated with the reservation
+  restaurant?: number; // Restaurant associated with the reservation
   rejectionReason?: string; // Reason for rejection, if applicable
   seat: string; // The location of the seat area
 }
