@@ -116,7 +116,7 @@ export const getBranchDetails = async (branchId: number) : Promise<number | null
         // No branch found with that branchCode
         return null;
     }
-
+    
     const branchDoc = querySnapshot.docs[0];       
 
     // Return the restaurant name

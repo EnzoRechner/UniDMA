@@ -38,7 +38,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
   // Branch form fields
   const [branchCoord, setBranchCoord] = useState<Coordinates | null>(null);
   const [branchAddress, setBranchAddress] = useState("");
-  const [branchCapacity, setBranchCapacity] = useState<number | "">("");
+  const [branchCapacity, setBranchCapacity] = useState<number>(0);
   const [branchName, setBranchName] = useState("");
   const [branchRestaurant, setBranchRestaurant] = useState<RestaurantId>(0 as RestaurantId);
   const [branchOpen, setBranchOpen] = useState(false);
@@ -118,6 +118,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
         open: branchOpen,
         restaurant: branchRestaurant,
         branchCode,
+        
       };
 
       await addBranch(newBranch);
@@ -131,6 +132,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
       setBranchRestaurant(0 as RestaurantId);
       setBranchCoord(null);
       setBranchOpen(false);
+      
     } catch {
       modalService.showError("Error", "Failed to add new branch.");
     } finally {
@@ -231,6 +233,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
                 setBranchCapacity(item.capacity);
                 setBranchRestaurant((user?.restaurant ?? 0) as RestaurantId);
                 setBranchOpen(item.open);
+                
                 setBranchCoord(item.Coord ?? null);
                 setIsEditing(true);
                 setShowPopup(true);
@@ -259,7 +262,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
                 setBranchAddress("");
                 setBranchCapacity(0);
                 setBranchRestaurant((user?.restaurant ?? 0) as RestaurantId);
-                setBranchOpen(false);
+                setBranchOpen(false);                
                 setBranchCoord(null);
                 setSelectedBranch(null);
                 if (user?.role === 3){
@@ -317,7 +320,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
                 if (!isNaN(num) && num <= 80) {
                   setBranchCapacity(num);
                 } else if (t === "") {           
-                  setBranchCapacity("");
+                  setBranchCapacity(0);
                 }
               }}
             />
