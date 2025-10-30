@@ -2,18 +2,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { collection, doc, getDocs, query, where, Timestamp, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { Calendar, Mail, Undo2, User, UserMinus, UserPlus, Lock, Eye, EyeOff, ShieldPlus, ShieldMinus } from 'lucide-react-native';
+import { deleteApp, FirebaseApp, initializeApp } from 'firebase/app';
+import { createUserWithEmailAndPassword, getReactNativePersistence, initializeAuth, updateProfile } from 'firebase/auth';
+import { collection, deleteDoc, doc, getDocs, onSnapshot, query, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { Calendar, Eye, EyeOff, Lock, Mail, ShieldMinus, ShieldPlus, Undo2, User, UserMinus, UserPlus } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserProfile } from '../lib/types';
-import { getPrettyBranchName, ROLES, BRANCHES } from '../lib/typesConst';
+import { getPrettyBranchName, ROLES } from '../lib/typesConst';
 import { getUserProfile } from '../services/auth-service';
 import { db, firebaseConfig } from '../services/firebase-initilisation';
 import { modalService } from '../services/modal-Service';
-import { initializeApp, deleteApp, FirebaseApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
 export default function StaffManagementScreen() {
   const router = useRouter();
@@ -31,9 +31,16 @@ export default function StaffManagementScreen() {
   const [branchPickerOpen, setBranchPickerOpen] = useState(false);
   const [branchChangeModalOpen, setBranchChangeModalOpen] = useState(false);
   const [userToReassign, setUserToReassign] = useState<UserProfile | null>(null);
+  const [branches, setBranches] = useState<{ code: number; name: string }[]>([]);
 
   // Derived pretty branch name
-  const prettyBranch = useMemo(() => (branchCode != null ? getPrettyBranchName(Number(branchCode)) : ''), [branchCode]);
+  const prettyBranch = useMemo(() => {
+    if (branchCode == null) return '';
+    const found = branches.find(b => Number(b.code) === Number(branchCode));
+    if (found) return found.name;
+    // Fallback to static pretty names (legacy constants)
+    return getPrettyBranchName(Number(branchCode)) || String(branchCode);
+  }, [branchCode, branches]);
 
   useEffect(() => {
     const init = async () => {
@@ -55,14 +62,27 @@ export default function StaffManagementScreen() {
           return;
         }
         try { setUserRole(profile.role as any); } catch {}
-        // Super admins don't belong to a single branch; pick a default working context
+        // Super admins don't belong to a single branch; default branch will be set after branches load
         if (profile.role === 3) {
           setActiveType('ADMIN');
-          const firstBranch = Number(Object.values(BRANCHES)[0]);
-          setBranchCode(firstBranch);
         } else {
           setBranchCode((profile as any).branch);
         }
+        // Subscribe to branches for dynamic listing
+        const unsub = onSnapshot(collection(db, 'Branch'), (snap) => {
+          const list = snap.docs
+            .map(d => d.data() as any)
+            .filter(b => typeof b.branchCode === 'number')
+            .map(b => ({ code: b.branchCode as number, name: String(b.name || b.branchCode) }));
+          // Sort by code ascending for consistency
+          list.sort((a, b) => a.code - b.code);
+          setBranches(list);
+          // If super admin and no branch selected yet, pick first available dynamically
+          if (profile.role === 3 && list.length > 0) {
+            setBranchCode(prev => (prev == null ? list[0].code : prev));
+          }
+        });
+        return () => { try { unsub(); } catch {} };
       } catch (e) {
         console.log('Init staff management error:', e);
         router.replace('/');
@@ -215,8 +235,9 @@ export default function StaffManagementScreen() {
   const reassignUserBranch = async (newBranch: number) => {
     if (!userToReassign) return;
     try {
-      await updateDoc(doc(db, 'rebooking-accounts', userToReassign.userId), { branch: newBranch as any });
-      modalService.showSuccess('Branch Updated', `${userToReassign.nagName} is now assigned to ${getPrettyBranchName(newBranch)}.`);
+  await updateDoc(doc(db, 'rebooking-accounts', userToReassign.userId), { branch: newBranch as any });
+  const newName = branches.find(b => b.code === newBranch)?.name || getPrettyBranchName(newBranch) || String(newBranch);
+  modalService.showSuccess('Branch Updated', `${userToReassign.nagName} is now assigned to ${newName}.`);
       setBranchChangeModalOpen(false);
       setUserToReassign(null);
       if (branchCode != null) {
@@ -439,17 +460,21 @@ export default function StaffManagementScreen() {
             <View style={[styles.modalCenter, { justifyContent: 'center' }]}> 
               <BlurView intensity={40} tint="dark" style={[styles.modalCard, { maxWidth: 420 }]}> 
                 <Text style={styles.modalTitle}>Select Branch</Text>
-                {Object.values(BRANCHES).map((id) => (
-                  <TouchableOpacity
-                    key={String(id)}
-                    style={[styles.branchItem, Number(branchCode) === Number(id) && styles.branchItemActive]}
-                    onPress={() => { setBranchCode(Number(id)); setBranchPickerOpen(false); }}
-                  >
-                    <Text style={[styles.branchItemText, Number(branchCode) === Number(id) && styles.branchItemTextActive]}>
-                      {getPrettyBranchName(Number(id))}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {branches.length === 0 ? (
+                  <Text style={styles.branchItemText}>No branches available</Text>
+                ) : (
+                  branches.map(({ code, name }) => (
+                    <TouchableOpacity
+                      key={String(code)}
+                      style={[styles.branchItem, Number(branchCode) === Number(code) && styles.branchItemActive]}
+                      onPress={() => { setBranchCode(Number(code)); setBranchPickerOpen(false); }}
+                    >
+                      <Text style={[styles.branchItemText, Number(branchCode) === Number(code) && styles.branchItemTextActive]}>
+                        {name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                )}
                 <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
                   <TouchableOpacity style={[styles.modalButton, { flex: 1 }]} onPress={() => setBranchPickerOpen(false)}>
                     <LinearGradient colors={["#6B7280", "#4B5563"]} style={styles.modalButtonGradient}>
@@ -697,17 +722,21 @@ export default function StaffManagementScreen() {
           <View style={[styles.modalCenter, { justifyContent: 'center' }]}> 
             <BlurView intensity={40} tint="dark" style={[styles.modalCard, { maxWidth: 420 }]}> 
               <Text style={styles.modalTitle}>Select Branch</Text>
-              {Object.values(BRANCHES).map((id) => (
-                <TouchableOpacity
-                  key={String(id)}
-                  style={[styles.branchItem, Number(branchCode) === Number(id) && styles.branchItemActive]}
-                  onPress={() => { setBranchCode(Number(id)); setBranchPickerOpen(false); }}
-                >
-                  <Text style={[styles.branchItemText, Number(branchCode) === Number(id) && styles.branchItemTextActive]}>
-                    {getPrettyBranchName(Number(id))}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {branches.length === 0 ? (
+                <Text style={styles.branchItemText}>No branches available</Text>
+              ) : (
+                branches.map(({ code, name }) => (
+                  <TouchableOpacity
+                    key={String(code)}
+                    style={[styles.branchItem, Number(branchCode) === Number(code) && styles.branchItemActive]}
+                    onPress={() => { setBranchCode(Number(code)); setBranchPickerOpen(false); }}
+                  >
+                    <Text style={[styles.branchItemText, Number(branchCode) === Number(code) && styles.branchItemTextActive]}>
+                      {name}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
               <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
                 <TouchableOpacity style={[styles.modalButton, { flex: 1 }]} onPress={() => setBranchPickerOpen(false)}>
                   <LinearGradient colors={["#6B7280", "#4B5563"]} style={styles.modalButtonGradient}>
@@ -731,17 +760,21 @@ export default function StaffManagementScreen() {
             <BlurView intensity={40} tint="dark" style={[styles.modalCard, { maxWidth: 420 }]}> 
               <Text style={styles.modalTitle}>Reassign {userToReassign?.nagName || 'User'}</Text>
               <Text style={styles.modalSubtitle}>Choose a new branch</Text>
-              {Object.values(BRANCHES).map((id) => (
-                <TouchableOpacity
-                  key={String(id)}
-                  style={[styles.branchItem]}
-                  onPress={() => reassignUserBranch(Number(id))}
-                >
-                  <Text style={[styles.branchItemText]}>
-                    {getPrettyBranchName(Number(id))}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {branches.length === 0 ? (
+                <Text style={styles.branchItemText}>No branches available</Text>
+              ) : (
+                branches.map(({ code, name }) => (
+                  <TouchableOpacity
+                    key={String(code)}
+                    style={[styles.branchItem]}
+                    onPress={() => reassignUserBranch(Number(code))}
+                  >
+                    <Text style={[styles.branchItemText]}>
+                      {name}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
               <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
                 <TouchableOpacity style={[styles.modalButton, { flex: 1 }]} onPress={() => setBranchChangeModalOpen(false)}>
                   <LinearGradient colors={["#6B7280", "#4B5563"]} style={styles.modalButtonGradient}>
