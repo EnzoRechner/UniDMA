@@ -48,16 +48,15 @@ const CustomerPage: FC = () => {
   const [widgets, setWidgets] = useState<(ReservationDetails | { id: null })[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [pendingScrollToBookingId, setPendingScrollToBookingId] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [isEditMode, setIsEditMode] = useState(false);
   const [showDeleteTip, setShowDeleteTip] = useState(false);
 
-  const setupWidgets = useCallback((realBookings: ReservationDetails[], scrollToId?: string) => {
+  const setupWidgets = useCallback((realBookings: ReservationDetails[]) => {
     const newBookingPlaceholder = { id: null };
     // Sort by date ascending (earliest first, latest last)
     const sortedBookings = realBookings.sort((a, b) => 
-      a.dateOfArrival.toMillis() - b.dateOfArrival.toMillis()
+      b.dateOfArrival.toMillis() - a.dateOfArrival.toMillis()
     );
     // Only include the new booking placeholder if under max of 5
     const withOptionalPlaceholder = sortedBookings.length < 5
@@ -65,29 +64,8 @@ const CustomerPage: FC = () => {
       : [...sortedBookings];
     setWidgets(withOptionalPlaceholder);
     
-    // If we need to scroll to a specific booking, do it after widgets update
-    if (scrollToId) {
-      console.log('Attempting to scroll to booking:', scrollToId);
-  const index = withOptionalPlaceholder.findIndex(b => (b as any).id === scrollToId);
-      console.log('Found at index:', index);
-      console.log('Total bookings:', withOptionalPlaceholder.length);
-
-      if (index > -1) {
-        // --- MODIFICATION: Use scrollToOffset for reliability ---
-        const offset = index * SNAP_INTERVAL;
-        setTimeout(() => {
-          console.log('Scrolling to offset:', offset);
-          flatListRef.current?.scrollToOffset({ 
-            offset, 
-            animated: true
-          });
-          setActiveIndex(index);
-        }, 500); // Increased timeout to ensure FlatList is ready
-      } else {
-        console.log('Booking not found in widget list');
-      }
-    }
-  }, []);
+    // --- FIX: The closing brace for setupWidgets was missing ---
+  }, []); 
 
   const scrollToNewBooking = useCallback(() => {
     if (!flatListRef.current || widgets.length === 0) return;
@@ -119,21 +97,7 @@ const CustomerPage: FC = () => {
         setUser(userData);
 
         unsubscribe = getReservationsRealtime(userId, (fetchedBookings) => {
-          // Check if we have a pending scroll target
-          const scrollTarget = pendingScrollToBookingId;
-          
-          if (scrollTarget) {
-            console.log('Looking for booking ID:', scrollTarget);
-            console.log('Available bookings:', fetchedBookings.map(b => ({ id: b.id, date: b.dateOfArrival.toDate() })));
-          }
-          
-          setupWidgets(fetchedBookings, scrollTarget || undefined);
-          
-          // Clear the pending scroll after it's been handled
-          if (scrollTarget) {
-            setPendingScrollToBookingId(null);
-          }
-          
+          setupWidgets(fetchedBookings);          
           setLoading(false);
         });
       } catch (error: any) {
@@ -150,7 +114,7 @@ const CustomerPage: FC = () => {
     return () => {
         unsubscribe();
     };
-  }, [router, setupWidgets, pendingScrollToBookingId]);
+  }, [router, setupWidgets]);
 
   // Show the delete tip only once per install (first time user hits 5 bookings)
   useEffect(() => {
@@ -182,13 +146,46 @@ const CustomerPage: FC = () => {
       router.replace('/auth/auth-login');
   }
 
-  const handleBookingConfirm = useCallback((newBookingId?: string) => {
-    if (newBookingId) {
-      console.log('Booking confirmed with ID:', newBookingId);
-      // Set the booking ID we want to scroll to
-      setPendingScrollToBookingId(newBookingId);
+  // --- FIX: This is the optimistic update logic ---
+  const handleBookingConfirm = useCallback((newBookingData?: ReservationDetails) => {
+    // We only run this logic if a new booking was actually created/updated
+    if (newBookingData) {
+      setWidgets(currentWidgets => {
+        // 1. Get all *other* real bookings, filtering out any old version of this one
+        const realBookings = currentWidgets.filter(w => 
+          (w as any).id !== null && (w as any).id !== newBookingData.id
+        ) as ReservationDetails[];
+        
+        // 2. Add the new one
+        const updatedBookings = [...realBookings, newBookingData];
+        
+        // 3. Re-sort
+        const sortedBookings = updatedBookings.sort((a, b) => 
+          b.dateOfArrival.toMillis() - a.dateOfArrival.toMillis()
+        );
+        
+        // 4. Re-add the placeholder if needed
+        const withOptionalPlaceholder = sortedBookings.length < 5
+          ? [...sortedBookings, { id: null }]
+          : [...sortedBookings];
+          
+        // 5. Find the index of the newly created booking
+        const newIndex = withOptionalPlaceholder.findIndex(b => (b as any).id === newBookingData.id);
+        
+        // 6. Scroll to it immediately
+        if (newIndex > -1 && flatListRef.current) {
+          const offset = newIndex * SNAP_INTERVAL;
+          setTimeout(() => {
+            flatListRef.current?.scrollToOffset({ offset, animated: true });
+            setActiveIndex(newIndex);
+          }, 100); // 100ms delay to ensure state is set before scroll
+        }
+        
+        // 7. Return the new state for the FlatList
+        return withOptionalPlaceholder;
+      });
     }
-  }, []);
+  }, []); // No dependencies needed
 
   const renderWidgetItem = useCallback(({ item, index }: { item: ReservationDetails | { id: null }, index: number }) => {
     // Calculate count of real bookings only

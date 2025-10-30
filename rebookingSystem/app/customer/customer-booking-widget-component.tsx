@@ -38,13 +38,12 @@ const generatePickerData = () => {
     return { dates, dateLabels, hours, minutes, periods, seats };
 };
 
-// --- MODIFICATION: Updated props interface ---
 interface BookingWidgetComponentProps {
   booking?: ReservationDetails;
   userProfile: UserProfile;
   isActive: boolean;
-  onConfirm: (newBookingId?: string) => void;
-  realBookingsCount: number; // Prop to receive the count
+  onConfirm: (newBookingData?: ReservationDetails) => void;
+  realBookingsCount: number;
   isEditMode?: boolean;
 }
 
@@ -53,7 +52,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   userProfile, 
   isActive, 
   onConfirm,
-  realBookingsCount, // --- MODIFICATION: Destructure the prop ---
+  realBookingsCount,
   isEditMode = false,
 }) => {
   const isNewBooking = !booking;
@@ -104,16 +103,17 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   };
   const statusInfo = getStatusStyle(booking?.status);
 
-  const createBookingData = (newId: string) => {
+  const createBookingData = (newId: string): ReservationDetails => {
     return {
       userId: userProfile.userId,
       branch: branch,
       dateOfArrival: Timestamp.fromDate(date),
       guests: seats,
-      message: message,
-      bookingName: bookingName,
+      // --- FIX: Add fallbacks to prevent 'undefined' ---
+      message: message || '', 
+      bookingName: bookingName || 'My Booking',
       seat: "Any",
-      nagName: userProfile.nagName,
+      nagName: userProfile.nagName || 'Guest User', // Using default from profile screen
       
       id: newId,
       status: 0,
@@ -125,15 +125,13 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   const handleCreateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // --- MODIFICATION: Booking limit check ---
     if (realBookingsCount >= 5) {
       modalService.showError(
         'Booking Limit Reached',
         'Error please delete a booking to making a new booking.'
       );
-      return; // Stop the function
+      return;
     }
-    // --- End of modification ---
 
     if (!userProfile?.userId) return modalService.showError('Error', 'Could not find User ID.');
     setLoading(true);
@@ -142,8 +140,10 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
       const newId = newDocRef.id;
       const newBookingData = createBookingData(newId);
       await setDoc(newDocRef, newBookingData);
-      onConfirm(newId);
-  } catch {
+      onConfirm(newBookingData);
+  // --- FIX: Add error logging ---
+  } catch (error) { 
+      console.error("Booking creation failed:", error); // <-- This will show the real error
       modalService.showError('Booking Failed', 'There was a problem creating your booking. Please try again.');
     } finally { setLoading(false); }
   };
@@ -166,8 +166,10 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
 
         setIsEditing(false);
         setShowOptions(false);
-        onConfirm(newId);
-  } catch {
+        onConfirm(newBookingData);
+  // --- FIX: Add error logging ---
+  } catch (error) {
+        console.error("Booking update failed:", error); // <-- This will show the real error
         modalService.showError('Update Failed', "There was a problem updating your booking. Please try again.");
     } finally {
         setLoading(false);
@@ -190,18 +192,12 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
     setLoading(true);
 
     try {
-        // Assuming cancelReservation handles the API call to update the status to cancelled/deleted
         await cancelReservation(bookingIdToDelete);
-        
-        // Optional: Provide success feedback
         modalService.showSuccess('Success', 'Booking has been successfully deleted.'); 
-
   } catch {
-        // Use the centralized error modal for reporting failure
         modalService.showError('Error', 'Could not delete the booking.');
     } finally {
         setLoading(false);
-        // Hide options menu regardless of success/failure
         setShowOptions(false); 
     }
 };
