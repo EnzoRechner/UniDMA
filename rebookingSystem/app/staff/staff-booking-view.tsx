@@ -22,6 +22,7 @@ import { ReservationDetails } from '../lib/types';
 import { fetchUserData } from '../services/customer-service';
 import { onSnapshotStaffBookings, updateReservationStatus } from '../services/staff-service';
 import { modalService } from '../services/modal-Service';
+import { BRANCHES, getPrettyBranchName } from '../lib/typesConst';
 
 // Enable LayoutAnimation only on the old architecture; it's a no-op (and warns) on Fabric
 const isFabric = (global as any)?.nativeFabricUIManager != null;
@@ -60,6 +61,8 @@ const BookingView = () => {
     const [pendingLoading, setPendingLoading] = useState(true);
     const [confirmedLoading, setConfirmedLoading] = useState(true);
     const [cancelledLoading, setCancelledLoading] = useState(true);
+    const [userRole, setUserRole] = useState<number | null>(null);
+    const [selectedBranch, setSelectedBranch] = useState<number | 'ALL'>('ALL');
 
     const unsubscribesRef = useRef<(() => void)[]>([]);
     // Rejection modal state
@@ -114,6 +117,11 @@ const BookingView = () => {
                 const userData = await fetchUserData(staffId);
                 if (!userData) throw new Error('Could not find user profile.');
                 userData.userId = staffId;
+                // set role for UI filters
+                try {
+                  const roleString = await AsyncStorage.getItem('userRole');
+                  if (roleString) setUserRole(parseInt(roleString, 10));
+                } catch {}
             } catch (error) {
                  console.log('Error', error);
                  await AsyncStorage.removeItem('userId');
@@ -137,6 +145,11 @@ const BookingView = () => {
             currentUnsubs.forEach(unsubscribe => unsubscribe());
         }
     }, []);
+
+    // Derived lists based on selectedBranch (only when role 3 and branch filter is active)
+    const filteredPending = selectedBranch === 'ALL' ? bookings : bookings.filter(b => Number(b.branch) === Number(selectedBranch));
+    const filteredConfirmed = selectedBranch === 'ALL' ? confirmedBooking : confirmedBooking.filter(b => Number(b.branch) === Number(selectedBranch));
+    const filteredCancelled = selectedBranch === 'ALL' ? cancelledBooking : cancelledBooking.filter(b => Number(b.branch) === Number(selectedBranch));
 
     const handleStatusUpdate = async (id: string, status: 1 | 2, reason: string) => {
         try {
@@ -318,9 +331,34 @@ const BookingView = () => {
                 </View>
             </Modal>
 
+            {/* Branch filter for Super Admins */}
+            {userRole === 3 && (
+              <View style={styles.branchFilterRow}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <TouchableOpacity
+                    onPress={() => setSelectedBranch('ALL')}
+                    style={[styles.branchChip, selectedBranch === 'ALL' && styles.branchChipActive]}
+                  >
+                    <Text style={[styles.branchChipText, selectedBranch === 'ALL' && styles.branchChipTextActive]}>All</Text>
+                  </TouchableOpacity>
+                  {Object.values(BRANCHES).map((id) => (
+                    <TouchableOpacity
+                      key={String(id)}
+                      onPress={() => setSelectedBranch(Number(id))}
+                      style={[styles.branchChip, selectedBranch === Number(id) && styles.branchChipActive]}
+                    >
+                      <Text style={[styles.branchChipText, selectedBranch === Number(id) && styles.branchChipTextActive]}>
+                        {getPrettyBranchName(Number(id))}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
             <SectionHeader
                 title="Pending"
-                count={bookings.length}
+                count={filteredPending.length}
                 isExpanded={expandedSections.pending}
                 onPress={() => toggleSection('pending')}
                 color="#F59E0B"
@@ -331,7 +369,7 @@ const BookingView = () => {
                         <SectionLoading />
                     ) : (
                         <FlatList
-                            data={bookings}
+                            data={filteredPending}
                             renderItem={renderPendingItem}
                             keyExtractor={(item) => item.id!.toString()}
                             ListEmptyComponent={<ListEmptyComponent text="No pending bookings." />}
@@ -343,7 +381,7 @@ const BookingView = () => {
             
             <SectionHeader
                 title="Confirmed"
-                count={confirmedBooking.length}
+                count={filteredConfirmed.length}
                 isExpanded={expandedSections.confirmed}
                 onPress={() => toggleSection('confirmed')}
                 color="#10B981"
@@ -354,7 +392,7 @@ const BookingView = () => {
                         <SectionLoading />
                     ) : (
                         <FlatList
-                            data={confirmedBooking}
+                            data={filteredConfirmed}
                             renderItem={renderConfirmedItem}
                             keyExtractor={(item) => item.id!.toString()}
                             ListEmptyComponent={<ListEmptyComponent text="No confirmed bookings." />}
@@ -366,7 +404,7 @@ const BookingView = () => {
 
             <SectionHeader
                 title="Cancelled / Rejected"
-                count={cancelledBooking.length}
+                count={filteredCancelled.length}
                 isExpanded={expandedSections.cancelled}
                 onPress={() => toggleSection('cancelled')}
                 color="#EF4444"
@@ -377,7 +415,7 @@ const BookingView = () => {
                         <SectionLoading />
                     ) : (
                         <FlatList
-                            data={cancelledBooking}
+                            data={filteredCancelled}
                             renderItem={renderCancelledItem}
                             keyExtractor={(item) => item.id!.toString()}
                             ListEmptyComponent={<ListEmptyComponent text="No cancelled bookings." />}
@@ -598,6 +636,30 @@ const styles = StyleSheet.create({
     emptyText: {
         color: '#a1a1aa',
         fontSize: 14,
+    },
+    branchFilterRow: {
+        paddingHorizontal: 10,
+        paddingTop: 6,
+    },
+    branchChip: {
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(200, 154, 91, 0.4)',
+        marginRight: 8,
+        backgroundColor: 'rgba(0,0,0,0.2)'
+    },
+    branchChipActive: {
+        backgroundColor: 'rgba(200, 154, 91, 0.2)',
+        borderColor: 'rgba(200, 154, 91, 0.8)'
+    },
+    branchChipText: {
+        color: 'rgba(255,255,255,0.9)'
+    },
+    branchChipTextActive: {
+        color: '#C89A5B',
+        fontWeight: '700'
     },
     authButton: {
       borderRadius: 16, overflow: 'hidden', marginTop: 10, marginBottom: 20, shadowColor: '#C89A5B',

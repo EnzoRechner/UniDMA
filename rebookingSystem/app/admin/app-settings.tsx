@@ -16,14 +16,17 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cancelAllPendingReservations, getBranchSettings, pauseAllUpcomingReservations, rejectAllPausedUpcomingReservations, updateBranchSettings } from '../../utils/firestore';
-import { getPrettyBranchName } from '../lib/typesConst';
+import { BRANCHES, getPrettyBranchName } from '../lib/typesConst';
 
 export default function BranchSettingsScreen() {
   const router = useRouter();
   const [branchCode, setBranchCode] = useState<number | string | null>(null);
+  const [userRole, setUserRole] = useState<number | null>(null);
+  const [branchPickerOpen, setBranchPickerOpen] = useState(false);
   const [pauseBookings, setPauseBookings] = useState(false);
   const [pauseReason, setPauseReason] = useState('');
   const [pauseUntilText, setPauseUntilText] = useState(''); // Format: YYYY-MM-DD HH:mm (24h)
@@ -43,12 +46,19 @@ export default function BranchSettingsScreen() {
           router.replace('/auth/auth-login');
           return;
         }
-        // Allow admins (role 2) to manage branch settings for their assigned branch
-        if (profile.role !== 2) {
+        // Allow admins (role 2) and super admins (role 3) to manage settings
+        if (profile.role !== 2 && profile.role !== 3) {
           router.replace('../staff/staff-dashboard');
           return;
         }
-        setBranchCode(profile.branch);
+        setUserRole(profile.role as any);
+        // Super admins don't have a fixed branch; pick a default working context
+        if (profile.role === 3) {
+          const firstBranch = Number(Object.values(BRANCHES)[0]);
+          setBranchCode(firstBranch);
+        } else {
+          setBranchCode((profile as any).branch);
+        }
       } catch (e) {
         console.error('Init app settings error:', e);
         router.replace('/');
@@ -116,7 +126,7 @@ export default function BranchSettingsScreen() {
         setPauseReason('');
         setPauseUntilText('');
       }
-    } catch (error) {
+    } catch {
       modalService.showError('Error', 'Failed to load branch settings');
     } finally {
       setLoading(false);
@@ -259,6 +269,15 @@ export default function BranchSettingsScreen() {
             <Text style={styles.headerSubtitle}>
               Manage {getPrettyBranchName(Number(branchCode)) || String(branchCode)} branch configuration
             </Text>
+            {userRole === 3 && (
+              <View style={{ marginTop: 8 }}>
+                <TouchableOpacity style={{ borderRadius: 12, overflow: 'hidden', alignSelf: 'flex-start' }} onPress={() => setBranchPickerOpen(true)}>
+                  <LinearGradient colors={["#3B82F6", "#1D4ED8"]} style={{ paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white' }}>Change Branch</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
           <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
             <Undo2 size={22} color="#C89A5B" /> 
@@ -367,6 +386,31 @@ export default function BranchSettingsScreen() {
           </View>
         </View>
       </ScrollView>
+      {/* Branch Picker Modal for Super Admins */}
+      <Modal
+        visible={branchPickerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setBranchPickerOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <BlurView intensity={40} tint="dark" style={{ width: '100%', borderRadius: 20, overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1, borderColor: 'rgba(200,154,91,0.5)', padding: 20 }}>
+            <Text style={{ fontSize: 20, fontFamily: 'PlayfairDisplay-Bold', color: '#C89A5B', marginBottom: 6, textAlign: 'center' }}>Select Branch</Text>
+            {Object.values(BRANCHES).map((id) => (
+              <TouchableOpacity key={String(id)} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }} onPress={() => { setBranchCode(Number(id)); setBranchPickerOpen(false); }}>
+                <Text style={{ color: 'white', fontSize: 16, textAlign: 'center' }}>{getPrettyBranchName(Number(id))}</Text>
+              </TouchableOpacity>
+            ))}
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+              <TouchableOpacity style={{ flex: 1, borderRadius: 12, overflow: 'hidden' }} onPress={() => setBranchPickerOpen(false)}>
+                <LinearGradient colors={["#6B7280", "#4B5563"]} style={{ paddingVertical: 14, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white' }}>Close</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </BlurView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

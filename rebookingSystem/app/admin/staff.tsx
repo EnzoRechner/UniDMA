@@ -2,13 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { collection, doc, getDocs, query, where, Timestamp, setDoc, deleteDoc } from 'firebase/firestore';
-import { Calendar, Mail, Undo2, User, UserMinus, UserPlus, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { collection, doc, getDocs, query, where, Timestamp, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { Calendar, Mail, Undo2, User, UserMinus, UserPlus, Lock, Eye, EyeOff, ShieldPlus, ShieldMinus } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserProfile } from '../lib/types';
-import { getPrettyBranchName, ROLES } from '../lib/typesConst';
+import { getPrettyBranchName, ROLES, BRANCHES } from '../lib/typesConst';
 import { getUserProfile } from '../services/auth-service';
 import { db, firebaseConfig } from '../services/firebase-initilisation';
 import { modalService } from '../services/modal-Service';
@@ -18,7 +18,7 @@ import { initializeAuth, getReactNativePersistence, createUserWithEmailAndPasswo
 export default function StaffManagementScreen() {
   const router = useRouter();
   const [branchCode, setBranchCode] = useState<number | string | null>(null);
-  const [staffList, setStaffList] = useState<UserProfile[]>([]);
+  const [profilesList, setProfilesList] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddVisible, setIsAddVisible] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -26,6 +26,11 @@ export default function StaffManagementScreen() {
   const [newNagName, setNewNagName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [userRole, setUserRole] = useState<number | null>(null);
+  const [activeType, setActiveType] = useState<'STAFF' | 'ADMIN'>('STAFF');
+  const [branchPickerOpen, setBranchPickerOpen] = useState(false);
+  const [branchChangeModalOpen, setBranchChangeModalOpen] = useState(false);
+  const [userToReassign, setUserToReassign] = useState<UserProfile | null>(null);
 
   // Derived pretty branch name
   const prettyBranch = useMemo(() => (branchCode != null ? getPrettyBranchName(Number(branchCode)) : ''), [branchCode]);
@@ -44,11 +49,20 @@ export default function StaffManagementScreen() {
           router.replace('/auth/auth-login');
           return;
         }
-        if (profile.role !== 2) {
+        // Allow both ADMIN (2) and SUPER_ADMIN (3) to access this page
+        if (profile.role !== 2 && profile.role !== 3) {
           router.replace('../staff/staff-dashboard');
           return;
         }
-        setBranchCode(profile.branch);
+        try { setUserRole(profile.role as any); } catch {}
+        // Super admins don't belong to a single branch; pick a default working context
+        if (profile.role === 3) {
+          setActiveType('ADMIN');
+          const firstBranch = Number(Object.values(BRANCHES)[0]);
+          setBranchCode(firstBranch);
+        } else {
+          setBranchCode((profile as any).branch);
+        }
       } catch (e) {
         console.error('Init staff management error:', e);
         router.replace('/');
@@ -59,18 +73,18 @@ export default function StaffManagementScreen() {
     init();
   }, [router]);
 
-  const fetchStaffForBranch = async (branch: number | string) => {
+  const fetchProfilesForBranch = async (branch: number | string, roleFilter: number) => {
     try {
       setLoading(true);
       // Try numeric branch match first, then fallback to string
-      let q1 = query(collection(db, 'rebooking-accounts'), where('role', '==', 1), where('branch', '==', Number(branch)));
+      let q1 = query(collection(db, 'rebooking-accounts'), where('role', '==', roleFilter), where('branch', '==', Number(branch)));
       let snap = await getDocs(q1);
       if (snap.empty) {
-        const q2 = query(collection(db, 'rebooking-accounts'), where('role', '==', 1), where('branch', '==', String(branch)));
+        const q2 = query(collection(db, 'rebooking-accounts'), where('role', '==', roleFilter), where('branch', '==', String(branch)));
         snap = await getDocs(q2);
       }
       const results: UserProfile[] = snap.docs.map((d) => ({ ...(d.data() as UserProfile) }));
-      setStaffList(results);
+      setProfilesList(results);
     } catch (error) {
       console.error('Error fetching staff profiles:', error);
       modalService.showError('Error', 'Failed to load staff information');
@@ -81,9 +95,10 @@ export default function StaffManagementScreen() {
 
   useEffect(() => {
     if (branchCode != null) {
-      fetchStaffForBranch(branchCode);
+      const roleFilter = activeType === 'STAFF' ? ROLES.STAFF : ROLES.ADMIN;
+      fetchProfilesForBranch(branchCode, roleFilter);
     }
-  }, [branchCode]);
+  }, [branchCode, activeType]);
 
   // Format dates as dd-mm-yyyy
   const two = (n: number) => String(n).padStart(2, '0');
@@ -118,8 +133,8 @@ export default function StaffManagementScreen() {
     return { level: 'very strong', color: '#059669' } as const;
   };
 
-  // ---- Staff creation using secondary Firebase app to preserve admin session ----
-  const createStaffAccount = async (email: string, password: string, nagName: string, branch: number) => {
+  // ---- Account creation (staff/admin) using secondary Firebase app to preserve admin session ----
+  const createAccount = async (email: string, password: string, nagName: string, branch: number, role: number) => {
     let secondaryApp: FirebaseApp | null = null;
     try {
       secondaryApp = initializeApp(firebaseConfig, 'secondary-app');
@@ -130,7 +145,7 @@ export default function StaffManagementScreen() {
       const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
       try { await updateProfile(cred.user, { displayName: nagName }); } catch {}
 
-      // Create the staff profile document (document id = uid; store same id in userId as per types)
+      // Create the profile document (document id = uid; store same id in userId as per types)
       const uid = cred.user.uid;
       const profile: UserProfile = {
         userId: uid,
@@ -138,7 +153,7 @@ export default function StaffManagementScreen() {
         email,
         branch: branch as any,
         restaurant: 0,
-        role: ROLES.STAFF,
+        role: role as any,
         createdAt: Timestamp.now(),
       };
       await setDoc(doc(db, 'rebooking-accounts', uid), profile as any);
@@ -161,30 +176,56 @@ export default function StaffManagementScreen() {
     }
   };
 
-  const handleRemoveStaff = (userId: string) => {
+  const handleRemoveAccount = (userId: string, email?: string, roleLabel?: string) => {
       // Run if confirmed
       const removeStaffLogic = async () => {
           try {
               await deleteDoc(doc(db, 'rebooking-accounts', userId));
-              modalService.showSuccess('Success', `Staff account deleted: ${userId}.`);
-              if (branchCode != null) fetchStaffForBranch(branchCode);
+              modalService.showSuccess('Success', `${roleLabel || 'Account'} deleted: ${email ?? userId}.`);
+              if (branchCode != null) {
+                const roleFilter = activeType === 'STAFF' ? ROLES.STAFF : ROLES.ADMIN;
+                fetchProfilesForBranch(branchCode, roleFilter);
+              }
               
       } catch {
-        modalService.showError('Error', 'Failed to remove staff privileges.');
+        modalService.showError('Error', 'Failed to remove account.');
       }
       };
 
       modalService.showConfirm(
-          'Remove Staff', 
-          'This will remove staff privileges for this user. This action cannot be undone. Continue?',
+          `Remove ${roleLabel || 'Account'}`, 
+          'This will remove this user. This action cannot be undone. Continue?',
           removeStaffLogic, // Function to execute if the user confirms
-          'Remove Staff',
+          'Remove',
           'Cancel'
       );
   };
 
   const handleAddStaff = () => {
     setIsAddVisible(true);
+  };
+
+  // Super Admin: open per-user branch change modal
+  const openChangeBranchForUser = (user: UserProfile) => {
+    setUserToReassign(user);
+    setBranchChangeModalOpen(true);
+  };
+
+  // Super Admin: reassign user's branch
+  const reassignUserBranch = async (newBranch: number) => {
+    if (!userToReassign) return;
+    try {
+      await updateDoc(doc(db, 'rebooking-accounts', userToReassign.userId), { branch: newBranch as any });
+      modalService.showSuccess('Branch Updated', `${userToReassign.nagName} is now assigned to ${getPrettyBranchName(newBranch)}.`);
+      setBranchChangeModalOpen(false);
+      setUserToReassign(null);
+      if (branchCode != null) {
+        const roleFilter = activeType === 'STAFF' ? ROLES.STAFF : ROLES.ADMIN;
+        await fetchProfilesForBranch(branchCode, roleFilter);
+      }
+    } catch (e: any) {
+      modalService.showError('Update Failed', e?.message || 'Could not change branch.');
+    }
   };
 
   const handleCreateStaff = async () => {
@@ -208,16 +249,17 @@ export default function StaffManagementScreen() {
 
     setCreating(true);
     try {
-      await createStaffAccount(newEmail.trim(), newPassword, newNagName.trim(), Number(branchCode));
-      modalService.showSuccess('Success', 'Staff account created successfully');
+      const roleToCreate = activeType === 'ADMIN' ? ROLES.ADMIN : ROLES.STAFF;
+      await createAccount(newEmail.trim(), newPassword, newNagName.trim(), Number(branchCode), roleToCreate);
+      modalService.showSuccess('Success', `${activeType === 'ADMIN' ? 'Admin' : 'Staff'} account created successfully`);
       setIsAddVisible(false);
       setNewEmail('');
       setNewPassword('');
       setNewNagName('');
       // Refresh list
-      await fetchStaffForBranch(branchCode);
+      await fetchProfilesForBranch(branchCode, roleToCreate);
     } catch (err: any) {
-      modalService.showError('Create Staff Failed', err?.message || 'An unknown error occurred.');
+      modalService.showError('Create Account Failed', err?.message || 'An unknown error occurred.');
     } finally {
       setCreating(false);
     }
@@ -248,18 +290,25 @@ export default function StaffManagementScreen() {
     );
   }
 
-  if (staffList.length === 0) {
+  if (profilesList.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
         <LinearGradient colors={['#0D0D0D', '#1A1A1A', '#0D0D0D']} style={styles.background} />
         <View style={styles.emptyContainer}>
           <User size={64} color="rgba(200, 154, 91, 0.3)" />
-          <Text style={styles.emptyTitle}>No Staff Found</Text>
-          <Text style={styles.emptySubtitle}>No staff member is assigned to this branch</Text>
+          <Text style={styles.emptyTitle}>No {activeType === 'ADMIN' ? 'Admins' : 'Staff'} Found</Text>
+          <Text style={styles.emptySubtitle}>No {activeType === 'ADMIN' ? 'admin account' : 'staff member'} is assigned to this branch</Text>
+          {userRole === 3 && (
+            <TouchableOpacity style={[styles.actionButton, { marginTop: 12 }]} onPress={() => setBranchPickerOpen(true)}>
+              <LinearGradient colors={["#3B82F6", "#1D4ED8"]} style={styles.actionButtonGradient}>
+                <Text style={styles.actionButtonText}>Change Branch</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.actionButton} onPress={handleAddStaff}>
             <LinearGradient colors={['#10B981', '#059669']} style={styles.actionButtonGradient}>
-              <UserPlus size={18} color="white" />
-              <Text style={styles.actionButtonText}>Add Staff</Text>
+              {activeType === 'ADMIN' ? <ShieldPlus size={18} color="white" /> : <UserPlus size={18} color="white" />}
+              <Text style={styles.actionButtonText}>Add {activeType === 'ADMIN' ? 'Admin' : 'Staff'}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -275,8 +324,8 @@ export default function StaffManagementScreen() {
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
               <View style={styles.modalCenter}>
                 <BlurView intensity={40} tint="dark" style={styles.modalCard}>
-                  <Text style={styles.modalTitle}>Add Staff Member</Text>
-                  <Text style={styles.modalSubtitle}>Create a staff account for {prettyBranch || String(branchCode)}</Text>
+                  <Text style={styles.modalTitle}>Add {activeType === 'ADMIN' ? 'Admin' : 'Staff'} Account</Text>
+                  <Text style={styles.modalSubtitle}>Create a {activeType === 'ADMIN' ? 'branch admin' : 'staff'} account for {prettyBranch || String(branchCode)}</Text>
 
                   {/* Nag Name */}
                   <View style={styles.modalInputContainer}>
@@ -378,6 +427,40 @@ export default function StaffManagementScreen() {
             </KeyboardAvoidingView>
           </View>
         </Modal>
+
+        {/* Branch Picker Modal for Super Admins (rendered here so it works in empty state too) */}
+        <Modal
+          visible={branchPickerOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setBranchPickerOpen(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCenter, { justifyContent: 'center' }]}> 
+              <BlurView intensity={40} tint="dark" style={[styles.modalCard, { maxWidth: 420 }]}> 
+                <Text style={styles.modalTitle}>Select Branch</Text>
+                {Object.values(BRANCHES).map((id) => (
+                  <TouchableOpacity
+                    key={String(id)}
+                    style={[styles.branchItem, Number(branchCode) === Number(id) && styles.branchItemActive]}
+                    onPress={() => { setBranchCode(Number(id)); setBranchPickerOpen(false); }}
+                  >
+                    <Text style={[styles.branchItemText, Number(branchCode) === Number(id) && styles.branchItemTextActive]}>
+                      {getPrettyBranchName(Number(id))}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                  <TouchableOpacity style={[styles.modalButton, { flex: 1 }]} onPress={() => setBranchPickerOpen(false)}>
+                    <LinearGradient colors={["#6B7280", "#4B5563"]} style={styles.modalButtonGradient}>
+                      <Text style={styles.modalButtonText}>Close</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </BlurView>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -389,19 +472,38 @@ export default function StaffManagementScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerTitle}>Staff Management</Text>
-            <Text style={styles.headerSubtitle}>Manage {prettyBranch || String(branchCode)} branch staff</Text>
+            <Text style={styles.headerTitle}>User Management</Text>
+            <Text style={styles.headerSubtitle}>Manage {prettyBranch || String(branchCode)} branch {activeType === 'ADMIN' ? 'admins' : 'staff'}</Text>
+            {userRole === 3 && (
+              <View style={{ marginTop: 8 }}>
+                <TouchableOpacity style={[styles.actionButton, { alignSelf: 'flex-start' }]} onPress={() => setBranchPickerOpen(true)}>
+                  <LinearGradient colors={["#3B82F6", "#1D4ED8"]} style={styles.actionButtonGradient}>
+                    <Text style={styles.actionButtonText}>Change Branch</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
           <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
             <Undo2 size={22} color="#C89A5B" /> 
           </TouchableOpacity>
         </View>
-        {staffList.map((staff) => (
+        {userRole === 3 && (
+          <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 16 }}>
+            <TouchableOpacity onPress={() => setActiveType('ADMIN')} style={[styles.togglePill, activeType === 'ADMIN' && styles.togglePillActive]}>
+              <Text style={[styles.togglePillText, activeType === 'ADMIN' && styles.togglePillTextActive]}>Admins</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setActiveType('STAFF')} style={[styles.togglePill, activeType === 'STAFF' && styles.togglePillActive]}>
+              <Text style={[styles.togglePillText, activeType === 'STAFF' && styles.togglePillTextActive]}>Staff</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+  {profilesList.map((staff) => (
           <View key={staff.userId} style={styles.profileCard}>
             <BlurView intensity={30} tint="dark" style={styles.profileCardBlur}>
 
               <Text style={styles.staffName}>{staff.nagName}</Text>
-              <Text style={styles.staffRole}>Branch Staff Member</Text>
+              <Text style={styles.staffRole}>{activeType === 'ADMIN' ? 'Branch Admin' : 'Branch Staff Member'}</Text>
 
               <View style={styles.divider} />
 
@@ -429,12 +531,19 @@ export default function StaffManagementScreen() {
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.actionButton} onPress={() => handleRemoveStaff(staff.userId)}>
+              <TouchableOpacity style={styles.actionButton} onPress={() => handleRemoveAccount(staff.userId, staff.email, activeType === 'ADMIN' ? 'Admin' : 'Staff')}>
                 <LinearGradient colors={['#EF4444', '#DC2626']} style={styles.actionButtonGradient}>
-                  <UserMinus size={18} color="white" />
-                  <Text style={styles.actionButtonText}>Remove Staff</Text>
+                  {activeType === 'ADMIN' ? <ShieldMinus size={18} color="white" /> : <UserMinus size={18} color="white" />}
+                  <Text style={styles.actionButtonText}>Remove {activeType === 'ADMIN' ? 'Admin' : 'Staff'}</Text>
                 </LinearGradient>
               </TouchableOpacity>
+              {userRole === 3 && (
+                <TouchableOpacity style={[styles.actionButton, { marginTop: 8 }]} onPress={() => openChangeBranchForUser(staff)}>
+                  <LinearGradient colors={["#3B82F6", "#1D4ED8"]} style={styles.actionButtonGradient}>
+                    <Text style={styles.actionButtonText}>Change Branch</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
             </BlurView>
           </View>
         ))}
@@ -448,15 +557,15 @@ export default function StaffManagementScreen() {
                 <View style={styles.controlInfo}>
                   <UserPlus size={24} color="#10B981" />
                   <View style={styles.controlTextContainer}>
-                    <Text style={styles.controlTitle}>Add Staff Member</Text>
-                    <Text style={styles.controlSubtitle}>Create a new staff account for this branch</Text>
+                    <Text style={styles.controlTitle}>Add {activeType === 'ADMIN' ? 'Admin' : 'Staff'} Account</Text>
+                    <Text style={styles.controlSubtitle}>Create a new {activeType === 'ADMIN' ? 'branch admin' : 'staff'} account for this branch</Text>
                   </View>
                 </View>
               </View>
 
               <TouchableOpacity style={styles.toggleButton} onPress={handleAddStaff}>
                 <LinearGradient colors={['#10B981', '#059669']} style={styles.toggleButtonGradient}>
-                  <Text style={styles.toggleButtonText}>Add Staff</Text>
+                  <Text style={styles.toggleButtonText}>Add {activeType === 'ADMIN' ? 'Admin' : 'Staff'}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </BlurView>
@@ -474,8 +583,8 @@ export default function StaffManagementScreen() {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
             <View style={styles.modalCenter}>
               <BlurView intensity={40} tint="dark" style={styles.modalCard}>
-                <Text style={styles.modalTitle}>Add Staff Member</Text>
-                <Text style={styles.modalSubtitle}>Create a staff account for {prettyBranch || String(branchCode)}</Text>
+                <Text style={styles.modalTitle}>Add {activeType === 'ADMIN' ? 'Admin' : 'Staff'} Account</Text>
+                <Text style={styles.modalSubtitle}>Create a {activeType === 'ADMIN' ? 'branch admin' : 'staff'} account for {prettyBranch || String(branchCode)}</Text>
 
                 {/* Nag Name */}
                 <View style={styles.modalInputContainer}>
@@ -577,6 +686,73 @@ export default function StaffManagementScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+      {/* Branch Picker Modal for Super Admins */}
+      <Modal
+        visible={branchPickerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setBranchPickerOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCenter, { justifyContent: 'center' }]}> 
+            <BlurView intensity={40} tint="dark" style={[styles.modalCard, { maxWidth: 420 }]}> 
+              <Text style={styles.modalTitle}>Select Branch</Text>
+              {Object.values(BRANCHES).map((id) => (
+                <TouchableOpacity
+                  key={String(id)}
+                  style={[styles.branchItem, Number(branchCode) === Number(id) && styles.branchItemActive]}
+                  onPress={() => { setBranchCode(Number(id)); setBranchPickerOpen(false); }}
+                >
+                  <Text style={[styles.branchItemText, Number(branchCode) === Number(id) && styles.branchItemTextActive]}>
+                    {getPrettyBranchName(Number(id))}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                <TouchableOpacity style={[styles.modalButton, { flex: 1 }]} onPress={() => setBranchPickerOpen(false)}>
+                  <LinearGradient colors={["#6B7280", "#4B5563"]} style={styles.modalButtonGradient}>
+                    <Text style={styles.modalButtonText}>Close</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </BlurView>
+          </View>
+        </View>
+      </Modal>
+      {/* Per-user Branch Reassignment Modal */}
+      <Modal
+        visible={branchChangeModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setBranchChangeModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCenter, { justifyContent: 'center' }]}> 
+            <BlurView intensity={40} tint="dark" style={[styles.modalCard, { maxWidth: 420 }]}> 
+              <Text style={styles.modalTitle}>Reassign {userToReassign?.nagName || 'User'}</Text>
+              <Text style={styles.modalSubtitle}>Choose a new branch</Text>
+              {Object.values(BRANCHES).map((id) => (
+                <TouchableOpacity
+                  key={String(id)}
+                  style={[styles.branchItem]}
+                  onPress={() => reassignUserBranch(Number(id))}
+                >
+                  <Text style={[styles.branchItemText]}>
+                    {getPrettyBranchName(Number(id))}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                <TouchableOpacity style={[styles.modalButton, { flex: 1 }]} onPress={() => setBranchChangeModalOpen(false)}>
+                  <LinearGradient colors={["#6B7280", "#4B5563"]} style={styles.modalButtonGradient}>
+                    <Text style={styles.modalButtonText}>Close</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </BlurView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -635,6 +811,10 @@ const styles = StyleSheet.create({
   toggleButton: { borderRadius: 12, overflow: 'hidden' },
   toggleButtonGradient: { paddingVertical: 14, alignItems: 'center' },
   toggleButtonText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: 'white' },
+  togglePill: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(200,154,91,0.4)', backgroundColor: 'rgba(0,0,0,0.2)' },
+  togglePillActive: { backgroundColor: 'rgba(200,154,91,0.2)', borderColor: 'rgba(200,154,91,0.8)' },
+  togglePillText: { color: 'rgba(255,255,255,0.9)' },
+  togglePillTextActive: { color: '#C89A5B', fontFamily: 'Inter-SemiBold' },
 
   activitySection: { paddingHorizontal: 20, marginBottom: 100 },
   activityCard: { borderRadius: 16, overflow: 'hidden', backgroundColor: 'rgba(0, 0, 0, 0.2)', borderWidth: 1, borderColor: 'rgba(200, 154, 91, 0.3)' },
@@ -665,4 +845,8 @@ const styles = StyleSheet.create({
   requirementsTitle: { fontSize: 12, fontFamily: 'Inter-SemiBold', color: '#C89A5B', marginBottom: 6 },
   requirementItem: { fontSize: 11, fontFamily: 'Inter-Regular', color: 'rgba(255, 255, 255, 0.6)', marginBottom: 2 },
   requirementMet: { color: '#10B981' },
+  branchItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
+  branchItemActive: { backgroundColor: 'rgba(200,154,91,0.2)' },
+  branchItemText: { color: 'white', fontSize: 16 },
+  branchItemTextActive: { color: '#C89A5B', fontWeight: '700' },
 });

@@ -12,6 +12,7 @@ import { getPrettyBranchName } from '../lib/typesConst';
 export default function AdminDashboard() {
   const router = useRouter();
   const [branchName, setBranchName] = useState<string>('');
+  const [userRole, setUserRole] = useState<number | null>(null);
 
   useEffect(() => {
     const loadBranch = async () => {
@@ -20,8 +21,15 @@ export default function AdminDashboard() {
         if (!userId) return;
         const profile = await getUserProfile(userId);
         if (profile) {
-          const pretty = getPrettyBranchName(Number(profile.branch));
-          setBranchName(pretty || String(profile.branch));
+          setUserRole((profile as any).role);
+          if ((profile as any).role === 3) {
+            // Super admin oversees the entire restaurant
+            setBranchName('Die Nag Uil');
+          } else {
+            const rawBranch = (profile as any).branch;
+            const pretty = typeof rawBranch === 'number' ? getPrettyBranchName(Number(rawBranch)) : undefined;
+            setBranchName(pretty || (rawBranch != null ? String(rawBranch) : ''));
+          }
         }
       } catch {}
     };
@@ -42,7 +50,9 @@ export default function AdminDashboard() {
           </TouchableOpacity>
           <View style={styles.titleWrap}>
             <Text style={styles.pageTitle}>Admin Dashboard</Text>
-            <Text style={styles.pageSubtitle}>{branchName ? `${branchName} Branch` : ' '}</Text>
+            <Text style={styles.pageSubtitle}>
+              {branchName ? (userRole === 3 ? branchName : `${branchName} Branch`) : ' '}
+            </Text>
             <View style={styles.titleDivider} />
           </View>
         </View>

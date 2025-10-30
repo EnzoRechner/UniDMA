@@ -11,7 +11,7 @@ export interface UserProfile {
   email: string; // Unique email identifier
   DOB?: string; // Date of Birth but only needed in loyalty program
   role: RoleId; // 0: customer, 1: staff, 2: admin, 3: super admin
-  branch: BranchId; // Branch assigned (for staff/admin) or most frequented (for customers) (don't need to keep it seperated)
+  branch?: BranchId; // Optional: Branch assigned (for staff/admin/customers). Super admins (role 3) have no branch.
   restaurant?: RestaurantId // Restaurant associated with the Admin 
   preferredSeating?: string; // e.g., "indoor", "outdoor", "window", etc.
 }

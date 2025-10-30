@@ -217,25 +217,8 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text style={styles.title}>Profile</Text>
-            <TouchableOpacity style={styles.editButton}>
-              <BlurView intensity={20} tint="dark" style={styles.editButtonBlur}>
-                <Edit3 size={16} color="#C89A5B" />
-              </BlurView>
-            </TouchableOpacity>
+           
           </View>
-          
-          <View style={styles.logoContainer}>
-            <BlurView intensity={30} tint="dark" style={styles.logoBlur}>
-              <Image 
-                source={require('../../assets/images/icon.png')} 
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </BlurView>
-          </View>
-          
-          <Text style={styles.restaurantName}>Die Nag Uil</Text>
-          <Text style={styles.subtitle}>Member Profile</Text>
         </View>
 
         <BlurView intensity={25} tint="dark" style={styles.profileCard}>
@@ -260,9 +243,6 @@ export default function ProfileScreen() {
               ) : (
                 <View style={styles.nameRow}>
                   <Text style={styles.profileName}>{profile?.nagName || 'Guest User'}</Text>
-                  <TouchableOpacity style={styles.inlineEditButton} onPress={() => setIsEditingName(true)}>
-                    <Edit3 size={16} color="#C89A5B" />
-                  </TouchableOpacity>
                 </View>
               )}
               <Text style={styles.profileEmail}>{profile?.email || 'No email'}</Text>
