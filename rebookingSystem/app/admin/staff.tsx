@@ -84,7 +84,7 @@ export default function StaffManagementScreen() {
         });
         return () => { try { unsub(); } catch {} };
       } catch (e) {
-        console.error('Init staff management error:', e);
+        console.log('Init staff management error:', e);
         router.replace('/');
       } finally {
         setLoading(false);
@@ -106,7 +106,7 @@ export default function StaffManagementScreen() {
       const results: UserProfile[] = snap.docs.map((d) => ({ ...(d.data() as UserProfile) }));
       setProfilesList(results);
     } catch (error) {
-      console.error('Error fetching staff profiles:', error);
+      console.log('Error fetching staff profiles:', error);
       modalService.showError('Error', 'Failed to load staff information');
     } finally {
       setLoading(false);
