@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
-import { Calendar, Check, ChevronDown, ChevronUp, MessageSquare, Users, X } from 'lucide-react-native';
+import { Calendar, Check, ChevronDown, ChevronUp, MessageSquare, User, Users, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -70,7 +70,8 @@ const BookingView = () => {
     const [rejectReason, setRejectReason] = useState('');
     const [rejectSubmitting, setRejectSubmitting] = useState(false);
     const [selectedReservation, setSelectedReservation] = useState<ReservationDetails | null>(null);
-    
+    const [User, setUser] = useState<any>({});
+
     const [expandedSections, setExpandedSections] = useState({
         pending: true,
         confirmed: false,
@@ -119,8 +120,9 @@ const BookingView = () => {
                 userData.userId = staffId;
                 // set role for UI filters
                 try {
-                  const roleString = await AsyncStorage.getItem('userRole');
-                  if (roleString) setUserRole(parseInt(roleString, 10));
+                    setUser(userData);
+                    const roleString = await AsyncStorage.getItem('userRole');
+                    if (roleString) setUserRole(parseInt(roleString, 10));
                 } catch {}
             } catch (error) {
                  console.log('Error', error);
@@ -332,28 +334,52 @@ const BookingView = () => {
             </Modal>
 
             {/* Branch filter for Super Admins */}
+            {/* Conditional rendering based on userRole */}
             {userRole === 3 && (
-              <View style={styles.branchFilterRow}>
+            // --- Full Branch Filter (for Admin/Role 3) ---
+            <View style={styles.branchFilterRow}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <TouchableOpacity
+                {/* 'All' Chip */}
+                <TouchableOpacity
                     onPress={() => setSelectedBranch('ALL')}
                     style={[styles.branchChip, selectedBranch === 'ALL' && styles.branchChipActive]}
-                  >
+                >
                     <Text style={[styles.branchChipText, selectedBranch === 'ALL' && styles.branchChipTextActive]}>All</Text>
-                  </TouchableOpacity>
-                  {Object.values(BRANCHES).map((id) => (
+                </TouchableOpacity>
+                
+                {/* Individual Branch Chips */}
+                {Object.values(BRANCHES).map((id) => (
                     <TouchableOpacity
-                      key={String(id)}
-                      onPress={() => setSelectedBranch(Number(id))}
-                      style={[styles.branchChip, selectedBranch === Number(id) && styles.branchChipActive]}
+                    key={String(id)}
+                    onPress={() => setSelectedBranch(Number(id))}
+                    style={[styles.branchChip, selectedBranch === Number(id) && styles.branchChipActive]}
                     >
-                      <Text style={[styles.branchChipText, selectedBranch === Number(id) && styles.branchChipTextActive]}>
+                    <Text style={[styles.branchChipText, selectedBranch === Number(id) && styles.branchChipTextActive]}>
                         {getPrettyBranchName(Number(id))}
-                      </Text>
+                    </Text>
                     </TouchableOpacity>
-                  ))}
+                ))}
                 </ScrollView>
-              </View>
+            </View>
+            )}
+
+            {userRole === 1 && (
+            // --- Single Branch Chip (for User/Role 1) ---
+            <View style={styles.branchFilterRow}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <TouchableOpacity
+                    // Use userBranchId to select this branch
+                    onPress={() => setSelectedBranch(User.branch)} 
+                    // Always appear 'active' since this is the only option, or match the state logic
+                    style={[styles.branchChip, selectedBranch === Number(User.branch) && styles.branchChipActive]} 
+                >
+                    <Text style={[styles.branchChipText, selectedBranch === Number(User.branch) && styles.branchChipTextActive]}>
+                    {/* Display the user's branch name */}
+                    {getPrettyBranchName(Number(User.branch))}
+                    </Text>
+                </TouchableOpacity>
+                </ScrollView>
+            </View>
             )}
 
             <SectionHeader
