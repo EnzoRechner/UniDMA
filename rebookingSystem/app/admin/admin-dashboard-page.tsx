@@ -2,30 +2,60 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { LogOut } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getUserProfile } from '../services/auth-service';
 import { getPrettyBranchName } from '../lib/typesConst';
+import { getUserProfile } from '../services/auth-service';
+import { db } from '../services/firebase-initilisation';
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [branchName, setBranchName] = useState<string>('');
+  const [userRole, setUserRole] = useState<number | null>(null);
 
   useEffect(() => {
+    let unsub: undefined | (() => void);
     const loadBranch = async () => {
       try {
         const userId = await AsyncStorage.getItem('userId');
         if (!userId) return;
         const profile = await getUserProfile(userId);
-        if (profile) {
-          const pretty = getPrettyBranchName(Number(profile.branch));
-          setBranchName(pretty || String(profile.branch));
+        if (!profile) return;
+        const role = (profile as any).role as number | null;
+        setUserRole(role);
+        if (role === 3) {
+          // Super admin oversees the entire restaurant
+          setBranchName('Die Nag Uil');
+          return;
         }
-      } catch {}
+        const rawBranch = (profile as any).branch;
+        const code = typeof rawBranch === 'number' ? rawBranch : Number(rawBranch);
+        if (Number.isFinite(code)) {
+          const q = query(collection(db, 'Branch'), where('branchCode', '==', code));
+          unsub = onSnapshot(q, (snap) => {
+            const doc = snap.docs[0];
+            const liveName = doc?.data()?.name as string | undefined;
+            if (liveName && typeof liveName === 'string') {
+              setBranchName(liveName);
+            } else {
+              const pretty = getPrettyBranchName(code);
+              setBranchName(pretty || String(code));
+            }
+          });
+        } else {
+          // Fallback if code is not numeric
+          const pretty = typeof rawBranch === 'number' ? getPrettyBranchName(Number(rawBranch)) : undefined;
+          setBranchName(pretty || (rawBranch != null ? String(rawBranch) : ''));
+        }
+      } catch {
+        // Ignore and keep existing subtitle
+      }
     };
     loadBranch();
+    return () => { try { if (unsub) unsub(); } catch {} };
   }, []);
 
   const handleLogout = async () => {
@@ -42,7 +72,9 @@ export default function AdminDashboard() {
           </TouchableOpacity>
           <View style={styles.titleWrap}>
             <Text style={styles.pageTitle}>Admin Dashboard</Text>
-            <Text style={styles.pageSubtitle}>{branchName ? `${branchName} Branch` : ' '}</Text>
+            <Text style={styles.pageSubtitle}>
+              {branchName ? (userRole === 3 ? branchName : `${branchName} Branch`) : ' '}
+            </Text>
             <View style={styles.titleDivider} />
           </View>
         </View>

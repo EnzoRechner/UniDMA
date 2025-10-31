@@ -13,8 +13,9 @@ interface Props {
   index: number;
   activeIndex: number;
   userProfile: UserProfile;
-  onConfirm: (newBookingId?: string) => void;
-  realBookingsCount: number; // --- ADDED PROP ---
+  // --- FIX: Changed prop name for clarity ---
+  onConfirm: (newBookingData?: ReservationDetails) => void;
+  realBookingsCount: number;
   isEditMode?: boolean;
   onLongPress?: () => void;
 }
@@ -25,7 +26,7 @@ const MemoizedBookingItem: FC<Props> = ({
   activeIndex, 
   userProfile, 
   onConfirm, 
-  realBookingsCount, // --- ADDED PROP ---
+  realBookingsCount,
   isEditMode = false,
   onLongPress,
 }) => {
@@ -73,7 +74,7 @@ const MemoizedBookingItem: FC<Props> = ({
           userProfile={userProfile}
           isActive={index === activeIndex}
           onConfirm={onConfirm}
-          realBookingsCount={realBookingsCount} // --- PASS PROP ---
+          realBookingsCount={realBookingsCount}
           isEditMode={isEditMode}
         />
       </TouchableOpacity>

@@ -16,7 +16,6 @@ import {
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -31,6 +30,10 @@ import { db } from '../services/firebase-initilisation';
 //import NotificationSettingsModal from '../services/notification-settings';
 import { UserProfile } from '../lib/types';
 import { modalService } from '../services/modal-Service';
+
+
+
+
 
 const profileStats = [
   { icon: Calendar, label: 'Bookings', value: '24', color: '#C89A5B' },
@@ -94,7 +97,7 @@ export default function ProfileScreen() {
       setProfile((prev) => (prev ? { ...prev, nagName: newName } : prev));
       setIsEditingName(false);
       modalService.showSuccess('Saved', 'Your display name has been updated');
-    } catch (e: any) {
+    } catch {
       modalService.showError('Error', 'Failed to update name');
     }
   };
@@ -108,7 +111,7 @@ export default function ProfileScreen() {
 
               router.replace('/auth/auth-login');
               
-          } catch (error: any) {
+          } catch {
               modalService.showError('Error', 'Failed to sign out. Please try closing and reopening the app.');
           }
       };
@@ -213,25 +216,8 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text style={styles.title}>Profile</Text>
-            <TouchableOpacity style={styles.editButton}>
-              <BlurView intensity={20} tint="dark" style={styles.editButtonBlur}>
-                <Edit3 size={16} color="#C89A5B" />
-              </BlurView>
-            </TouchableOpacity>
+           
           </View>
-          
-          <View style={styles.logoContainer}>
-            <BlurView intensity={30} tint="dark" style={styles.logoBlur}>
-              <Image 
-                source={require('../../assets/images/icon.png')} 
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </BlurView>
-          </View>
-          
-          <Text style={styles.restaurantName}>Die Nag Uil</Text>
-          <Text style={styles.subtitle}>Member Profile</Text>
         </View>
 
         <BlurView intensity={25} tint="dark" style={styles.profileCard}>
@@ -256,9 +242,6 @@ export default function ProfileScreen() {
               ) : (
                 <View style={styles.nameRow}>
                   <Text style={styles.profileName}>{profile?.nagName || 'Guest User'}</Text>
-                  <TouchableOpacity style={styles.inlineEditButton} onPress={() => setIsEditingName(true)}>
-                    <Edit3 size={16} color="#C89A5B" />
-                  </TouchableOpacity>
                 </View>
               )}
               <Text style={styles.profileEmail}>{profile?.email || 'No email'}</Text>

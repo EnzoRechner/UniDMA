@@ -4,9 +4,9 @@ import { Timestamp, collection, doc, setDoc } from 'firebase/firestore';
 import { Building, Calendar, Clock, Edit, MessageSquare, Tag, Trash2, Users, X } from 'lucide-react-native';
 import { useEffect, useMemo, useState, type FC } from 'react';
 import { ActivityIndicator, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { ReservationDetails, UserProfile } from '../lib/types';
+import { BranchDetails, ReservationDetails, UserProfile } from '../lib/types';
 import { BRANCHES, BranchId } from '../lib/typesConst';
-import { cancelReservation } from '../services/customer-service';
+import { cancelReservation, getBranchDetails } from '../services/customer-service';
 import { db } from '../services/firebase-initilisation';
 import { modalService } from '../services/modal-Service';
 import CustomWheelPicker from './customer-wheel';
@@ -38,13 +38,12 @@ const generatePickerData = () => {
     return { dates, dateLabels, hours, minutes, periods, seats };
 };
 
-// --- MODIFICATION: Updated props interface ---
 interface BookingWidgetComponentProps {
   booking?: ReservationDetails;
   userProfile: UserProfile;
   isActive: boolean;
-  onConfirm: (newBookingId?: string) => void;
-  realBookingsCount: number; // Prop to receive the count
+  onConfirm: (newBookingData?: ReservationDetails) => void;
+  realBookingsCount: number;
   isEditMode?: boolean;
 }
 
@@ -53,7 +52,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   userProfile, 
   isActive, 
   onConfirm,
-  realBookingsCount, // --- MODIFICATION: Destructure the prop ---
+  realBookingsCount,
   isEditMode = false,
 }) => {
   const isNewBooking = !booking;
@@ -77,13 +76,24 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
         setSeats(booking.guests);
         setBranch(booking.branch as unknown as BranchId);
         setMessage(booking.message || '');
-        setBookingName(booking.bookingName);
+        setBookingName(booking.bookingName);        
     } else if (isNewBooking) {
         const now = new Date();
         now.setHours(19, 0, 0, 0);
         setDate(now);
     }
   }, [isEditing, booking, isNewBooking]);
+
+  const checkBranchStatus = async () => {
+        // Check to see if the branch is opnen/closed
+        const branchDetails = await getBranchDetails(branch) as BranchDetails;
+
+        if (!branchDetails || typeof branchDetails === 'string' || branchDetails.restaurant === null || branchDetails.restaurant === undefined) {
+            throw new Error("Invalid branch code or missing restaurant details.");
+        }
+
+        return branchDetails.open;
+  }
 
   const isRebookable = useMemo(() => {
     if (!booking) return false;
@@ -104,16 +114,17 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   };
   const statusInfo = getStatusStyle(booking?.status);
 
-  const createBookingData = (newId: string) => {
+  const createBookingData = (newId: string): ReservationDetails => {
     return {
       userId: userProfile.userId,
       branch: branch,
       dateOfArrival: Timestamp.fromDate(date),
       guests: seats,
-      message: message,
-      bookingName: bookingName,
+      // --- FIX: Add fallbacks to prevent 'undefined' ---
+      message: message || '', 
+      bookingName: bookingName || 'My Booking',
       seat: "Any",
-      nagName: userProfile.nagName,
+      nagName: userProfile.nagName || 'Guest User', // Using default from profile screen
       
       id: newId,
       status: 0,
@@ -125,15 +136,13 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   const handleCreateBooking = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // --- MODIFICATION: Booking limit check ---
     if (realBookingsCount >= 5) {
       modalService.showError(
         'Booking Limit Reached',
         'Error please delete a booking to making a new booking.'
       );
-      return; // Stop the function
+      return;
     }
-    // --- End of modification ---
 
     if (!userProfile?.userId) return modalService.showError('Error', 'Could not find User ID.');
     setLoading(true);
@@ -141,9 +150,27 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
       const newDocRef = doc(collection(db, 'nagbookings'));
       const newId = newDocRef.id;
       const newBookingData = createBookingData(newId);
+  
+      const currentBranchStatus = await checkBranchStatus();
+
+      // This is for await
+      if (!currentBranchStatus || currentBranchStatus === null || currentBranchStatus === undefined) {
+          modalService.showError('Branch Closed', 'The selected branch is currently closed. Please choose a different branch.');
+          setLoading(false);
+          return;
+      }
+      
+      if (currentBranchStatus !== true) {
+          modalService.showError('Branch Closed', 'The selected branch is currently closed. Please choose a different branch.');
+          setLoading(false);
+          return;
+      }
+
       await setDoc(newDocRef, newBookingData);
-      onConfirm(newId);
-  } catch {
+      onConfirm(newBookingData);
+  // --- FIX: Add error logging ---
+  } catch (error) { 
+      console.log("Booking creation failed:", error); // <-- This will show the real error
       modalService.showError('Booking Failed', 'There was a problem creating your booking. Please try again.');
     } finally { setLoading(false); }
   };
@@ -157,6 +184,21 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
     const bookingIdToUpdate = booking.id;
     setLoading(true);
     try {
+        const currentBranchStatus = await checkBranchStatus();
+
+        // This is for await
+        if (!currentBranchStatus || currentBranchStatus === null || currentBranchStatus === undefined) {
+            modalService.showError('Branch Closed', 'The selected branch is currently closed. Please choose a different branch.');
+            setLoading(false);
+            return;
+        }
+        // This is for closed
+        if (currentBranchStatus !== true) {
+            modalService.showError('Branch Closed', 'The selected branch is currently closed. Please choose a different branch.');
+            setLoading(false);
+            return;
+        }
+
         await cancelReservation(bookingIdToUpdate);
         
         const newDocRef = doc(collection(db, 'nagbookings'));
@@ -166,8 +208,10 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
 
         setIsEditing(false);
         setShowOptions(false);
-        onConfirm(newId);
-  } catch {
+        onConfirm(newBookingData);
+  // --- FIX: Add error logging ---
+  } catch (error) {
+        console.log("Booking update failed:", error); // <-- This will show the real error
         modalService.showError('Update Failed', "There was a problem updating your booking. Please try again.");
     } finally {
         setLoading(false);
@@ -190,18 +234,12 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
     setLoading(true);
 
     try {
-        // Assuming cancelReservation handles the API call to update the status to cancelled/deleted
         await cancelReservation(bookingIdToDelete);
-        
-        // Optional: Provide success feedback
         modalService.showSuccess('Success', 'Booking has been successfully deleted.'); 
-
   } catch {
-        // Use the centralized error modal for reporting failure
         modalService.showError('Error', 'Could not delete the booking.');
     } finally {
         setLoading(false);
-        // Hide options menu regardless of success/failure
         setShowOptions(false); 
     }
 };
@@ -227,6 +265,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
   const handleBranchSelect = (selectedBranchId: BranchId) => { setTempBranch(selectedBranchId); };
   
   const handleDatePartChange = (part: 'date' | 'hour' | 'minute' | 'period', value: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
     const newDate = new Date(date);
     switch (part) {
         case 'date':

@@ -90,7 +90,12 @@ const SignupScreen = () => {
 
     router.replace(nextUrl as any);
   } catch (error: any) {
-    modalService.showError('Sign Up Failed', error.message || 'An unknown error occurred.');
+      if (error.code === 'auth/email-already-in-use') {
+        modalService.showError('Sign Up Failed', 'The email address is already in use by another account.');
+      }else {
+        modalService.showError('Sign Up Failed', 'Could not create account. Please try again later.');
+      }
+    
   } finally {
     setLoading(false);
   }

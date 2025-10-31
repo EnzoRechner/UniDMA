@@ -30,15 +30,9 @@ export function onSnapshotStaffBookings(
             }
 
             // Type assertions/checks are needed here for a real implementation
-            const staffBranch = staffData.branch;
-            const staffRestaurant = staffData.restaurant;
-            const staffRole = staffData.role;
-
-            if (staffBranch === null || staffBranch === undefined || staffRestaurant === null || staffRestaurant === undefined) {
-                console.log("Staff document is missing branch or restaurant data.");
-                callback([]);
-                return;
-            }
+            const staffBranch = (staffData as any).branch;
+            const staffRestaurant = (staffData as any).restaurant;
+            const staffRole = (staffData as any).role;
             
             const now = Timestamp.now(); 
             const bookingsCollectionRef = collection(db, 'nagbookings');
@@ -51,8 +45,15 @@ export function onSnapshotStaffBookings(
 
             // Role-based filtering:
             if (staffRole === 3) { // Super Admin: Filter by Restaurant
-                queryConstraints.push(where('restaurant', '==', staffRestaurant));
-            } else if (staffRole === 1 || staffRole === 2) { // Staff: Filter by Branch
+                // Default to restaurant 0 if missing (Die Nag Uil)
+                const restaurantId = (staffRestaurant === null || staffRestaurant === undefined) ? 0 : staffRestaurant;
+                queryConstraints.push(where('restaurant', '==', restaurantId));
+            } else if (staffRole === 1 || staffRole === 2) { // Staff/Admin: Filter by Branch
+                if (staffBranch === null || staffBranch === undefined) {
+                    console.log("Staff/Admin document is missing branch data.");
+                    callback([]);
+                    return;
+                }
                 queryConstraints.push(where('branch', '==', staffBranch));
             } else {
                 console.log(`User ${staffId} has invalid role: ${staffRole}. No bookings fetched.`);
