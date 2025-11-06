@@ -43,6 +43,8 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
   const [branchRestaurant, setBranchRestaurant] = useState<RestaurantId>(0 as RestaurantId);
   const [branchOpen, setBranchOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  
   // ---------------------------
   // Updated handleAddBranch
   // ---------------------------
@@ -109,7 +111,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
       const snapshot = await getDocs(collection(db, "Branch"));
       const branchNumber = snapshot.size + 1; // e.g., 1, 2, 3
       const branchCode = branchNumber; // numeric branch code
-
+      
       const newBranch: Omit<BranchDetails, "id"> = {
         Coord: branchCoord,
         address: branchAddress,
@@ -258,7 +260,15 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
               style={[styles.button, { backgroundColor: "#C89A5B" }]}
               onPress={() => {
                 // empty fields before displaying modal
-                setBranchName("");
+
+                const hasNumbers = /\d/;
+                const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/;
+                if (hasNumbers.test(branchName) || hasSpecialChar.test(branchName)){
+                  modalService.showError('Incorrect value', 'Please enter only Characters no numbers or special characters');
+                }
+                else{
+                  setBranchName(branchName);
+                };
                 setBranchAddress("");
                 setBranchCapacity(0);
                 setBranchRestaurant((user?.restaurant ?? 0) as RestaurantId);
@@ -298,15 +308,36 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
               style={styles.input}
               placeholder="Branch Name"
               placeholderTextColor="#aaa"
+              
               value={branchName}
-              onChangeText={setBranchName}
+              
+              onChangeText={(t) =>{
+                const hasNumbers = /\d/;
+                const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/;
+                if (hasNumbers.test(t) || hasSpecialChar.test(t)){
+                  return;
+                }
+                else{
+                  setBranchName(t);
+                };
+              }
+              }
             />
             <TextInput
               style={styles.input}
               placeholder="Address"
               placeholderTextColor="#aaa"
               value={branchAddress}
-              onChangeText={setBranchAddress}
+              onChangeText={(t) =>{           
+                const hasSpecialChar = /[!@#$%^&*().?":{}|<>]/;
+                if ( hasSpecialChar.test(t)){
+                  return;
+                }
+                else{
+                  setBranchAddress(t);
+                };
+              }
+            }
             />
             <TextInput
               style={styles.input}
