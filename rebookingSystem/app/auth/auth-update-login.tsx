@@ -64,7 +64,7 @@ const UpdateLoginScreen = () => {
                 </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.toggleButton} onPress={() => router.back()}>
+              <TouchableOpacity style={styles.toggleButton} onPress={() => router.push('../auth/auth-login')}>
                 <Text style={styles.toggleText}>Back to Sign In</Text>
               </TouchableOpacity>
             </View>
