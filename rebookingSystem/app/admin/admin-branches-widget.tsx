@@ -267,7 +267,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
                   modalService.showError('Incorrect value', 'Please enter only Characters no numbers or special characters');
                 }
                 else{
-                  setBranchName(branchName);
+                  setBranchName("");
                 };
                 setBranchAddress("");
                 setBranchCapacity(0);
@@ -312,6 +312,7 @@ const BranchWidget: React.FC<BranchWidgetProps> = ({ open }) => {
               value={branchName}
               
               onChangeText={(t) =>{
+               
                 const hasNumbers = /\d/;
                 const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/;
                 if (hasNumbers.test(t) || hasSpecialChar.test(t)){
