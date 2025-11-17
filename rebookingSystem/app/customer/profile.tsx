@@ -7,7 +7,7 @@ import {
   Bell,
   Calendar,
   ChevronRight,
-  Edit3,
+  Undo2,
   Heart,
   LogOut,
   PersonStandingIcon,
@@ -16,7 +16,6 @@ import {
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -85,6 +84,17 @@ export default function ProfileScreen() {
     load();
   }, []);
 
+  const handleBack = () => {
+    // If there's no history stack (e.g., deep link or first screen),
+    // router.back() will throw "The action 'GO_BACK' was not handled".
+    // Guard it and fall back to the Admin Dashboard.
+    if (router.canGoBack && router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/customer/customer-page');
+    }
+  };
+
   const handleSaveName = async () => {
     if (!userId) return;
     const newName = nameInput.trim();
@@ -127,6 +137,7 @@ export default function ProfileScreen() {
 
   const renderStatCard = (stat: typeof profileStats[0], index: number) => (
     <View key={index} style={styles.statCard}>
+
       <BlurView intensity={25} tint="dark" style={styles.statBlur}>
         <View style={[styles.statIcon, { backgroundColor: `${stat.color}20` }]}>
           <stat.icon size={20} color={stat.color} />
@@ -134,6 +145,7 @@ export default function ProfileScreen() {
         <Text style={styles.statValue}>{stat.value}</Text>
         <Text style={styles.statLabel}>{stat.label}</Text>
       </BlurView>
+      
     </View>
   );
 
@@ -214,10 +226,16 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <Text style={styles.title}>Profile</Text>
+
+            <View style={styles.headerTop}>
+              <Text style={styles.title}>Profile</Text>
+
+              <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
+                <Undo2 size={22} color="#C89A5B" /> 
+              </TouchableOpacity>
            
-          </View>
+            </View>
+          
         </View>
 
         <BlurView intensity={25} tint="dark" style={styles.profileCard}>
@@ -291,7 +309,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 20,
     paddingBottom: 30,
     alignItems: 'center',
   },
@@ -310,6 +328,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 3 },
     textShadowRadius: 6,
   },
+  iconButton: { padding: 5 },
   editButton: {
     width: 40,
     height: 40,
