@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
-import { Calendar, Check, ChevronDown, ChevronUp, MessageSquare, User, Users, X } from 'lucide-react-native';
+import { Calendar, Check, ChevronDown, ChevronUp, MessageSquare, Users, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,

@@ -562,13 +562,6 @@ export default function StaffManagementScreen() {
                   <Text style={styles.actionButtonText}>Remove {activeType === 'ADMIN' ? 'Admin' : 'Staff'}</Text>
                 </LinearGradient>
               </TouchableOpacity>
-              {userRole === 3 && (
-                <TouchableOpacity style={[styles.actionButton, { marginTop: 8 }]} onPress={() => openChangeBranchForUser(staff)}>
-                  <LinearGradient colors={["#3B82F6", "#1D4ED8"]} style={styles.actionButtonGradient}>
-                    <Text style={styles.actionButtonText}>Change Branch</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              )}
             </BlurView>
           </View>
         ))}
