@@ -167,6 +167,8 @@ export default function ProfileScreen() {
         onPress={() => {
             if (item.label === 'Notifications') {
                 setNotificationModalVisible(true);
+                //If we want we could use this to show its still in progress
+                modalService.showError('Currently Unavailable','This feature is still in developement');
             } else if (item.label === 'Personal Info') {
                 setIsEditingName(true);
             } else if (item.label === 'Password Reset') {

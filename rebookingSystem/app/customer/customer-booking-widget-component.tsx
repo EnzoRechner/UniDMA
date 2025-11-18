@@ -330,7 +330,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
               </View>
               <View style={styles.fieldContainer}><TouchableOpacity onPress={() => setSeatPickerVisible(true)} style={styles.pickerButton}><Users size={18} color="#C89A5B" /><Text style={styles.inputText}>{displaySeats}</Text></TouchableOpacity></View>
               <View style={styles.fieldContainer}><TouchableOpacity onPress={() => setBranchPickerVisible(true)} style={styles.pickerButton}><Building size={18} color="#C89A5B" /><Text style={styles.inputText}>{displayBranch}</Text></TouchableOpacity></View>
-              <View style={styles.fieldContainer}><View style={styles.inputWrapper}><MessageSquare size={18} color="#C89A5B" style={{marginRight: 8}} /><TextInput value={message} onChangeText={setMessage} placeholder="Message (optional)" placeholderTextColor="#999" style={styles.textInput} multiline /></View></View>
+              <View style={styles.fieldContainer}><View style={styles.inputWrapper}><MessageSquare size={18} color="#C89A5B" style={{marginRight: 8}} /><TextInput value={message} onChangeText={setMessage} placeholder="Message (optional)" placeholderTextColor="#999" style={styles.textInput} multiline /*added these to fix the button going off the screen */maxLength={250} numberOfLines={3}/></View></View>
             </>
           ) : (
             booking && (
@@ -396,7 +396,7 @@ const BookingWidgetComponent: FC<BookingWidgetComponentProps> = ({
 };
 
 const styles = StyleSheet.create({
-    widgetContainer: { width: '100%', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(200, 154, 91, 0.4)', minHeight: 520 },
+    widgetContainer: { width: '100%', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(200, 154, 91, 0.4)', minHeight: 550 },
     cardBlur: { flex: 1 },
     content: { padding: 20, justifyContent: 'space-between', flex: 1 },
     title: { fontSize: 22, fontFamily: 'PlayfairDisplay-Bold', color: 'white', marginBottom: 10, textAlign: 'center' },
