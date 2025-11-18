@@ -160,7 +160,7 @@ const SignupScreen = () => {
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     // we did not add a password length limit
-                    maxLength={15}
+                    maxLength={20}
                   />
                   <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
                     {showPassword ? <EyeOff size={20} color="#666666" /> : <Eye size={20} color="#666666" />}
